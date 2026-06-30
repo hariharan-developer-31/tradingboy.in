@@ -179,7 +179,9 @@ export default function App() {
       return;
     }
 
-    const { data, error } = await supabase.from('course_orders').insert({
+    const orderId = crypto.randomUUID();
+    const { error } = await supabase.from('course_orders').insert({
+      id: orderId,
       course_name: COURSE_NAME,
       full_name: form.name,
       email: form.email,
@@ -191,7 +193,7 @@ export default function App() {
       final_amount: payableAmount,
       payment_status: 'pending',
       source: 'website',
-    }).select('id').single();
+    });
 
     if (error) {
       setStatus('error');
@@ -199,7 +201,7 @@ export default function App() {
     }
 
     setStatus('success');
-    window.location.href = buildUpiUrl(payableAmount, data.id);
+    window.location.href = buildUpiUrl(payableAmount, orderId);
   };
 
   const loadAdminCoupons = async () => {
