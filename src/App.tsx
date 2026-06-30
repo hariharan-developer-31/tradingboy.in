@@ -4,6 +4,11 @@ import { isSupabaseConfigured, supabase } from './lib/supabase';
 
 const navLinks = ['Course', 'About', 'Results', 'FAQ'];
 
+const COURSE_NAME = 'Complete Forex Mastery';
+const COURSE_PRICE = 7199;
+const UPI_ID = 'harishsankar023@okaxis';
+const ADMIN_PASSCODE = import.meta.env.VITE_ADMIN_PASSCODE || '';
+
 const modules = [
   'Market structure and liquidity mapping',
   'High-probability forex entry models',
@@ -43,6 +48,21 @@ type FormState = {
   email: string;
   phone: string;
   plan: string;
+  coupon: string;
+};
+
+type Coupon = {
+  id: string;
+  code: string;
+  discount_type: 'fixed' | 'percent';
+  discount_value: number;
+  active: boolean;
+};
+
+type AdminCouponForm = {
+  code: string;
+  discountType: 'fixed' | 'percent';
+  discountValue: string;
 };
 
 export default function App() {
@@ -53,9 +73,22 @@ export default function App() {
     name: '',
     email: '',
     phone: '',
-    plan: 'Complete Forex Mastery',
+    plan: COURSE_NAME,
+    coupon: '',
   });
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [coupon, setCoupon] = useState<Coupon | null>(null);
+  const [couponStatus, setCouponStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminPasscode, setAdminPasscode] = useState('');
+  const [adminCoupons, setAdminCoupons] = useState<Coupon[]>([]);
+  const [adminForm, setAdminForm] = useState<AdminCouponForm>({
+    code: '',
+    discountType: 'fixed',
+    discountValue: '',
+  });
+  const [adminStatus, setAdminStatus] = useState('');
 
   useEffect(() => {
     const handleScroll = () => setHasScrolled(window.scrollY > 24);
@@ -66,12 +99,76 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const syncAdminHash = () => setAdminOpen(window.location.hash === '#admin');
+
+    syncAdminHash();
+    window.addEventListener('hashchange', syncAdminHash);
+
+    return () => window.removeEventListener('hashchange', syncAdminHash);
+  }, []);
+
+  const discountAmount = useMemo(() => {
+    if (!coupon) return 0;
+
+    if (coupon.discount_type === 'percent') {
+      return Math.min(Math.round((COURSE_PRICE * coupon.discount_value) / 100), COURSE_PRICE);
+    }
+
+    return Math.min(coupon.discount_value, COURSE_PRICE);
+  }, [coupon]);
+
+  const payableAmount = COURSE_PRICE - discountAmount;
+
   const statusMessage = useMemo(() => {
-    if (status === 'success') return 'Request received. We will contact you with payment and course access details.';
+    if (status === 'success') return 'Redirecting to your UPI app. Complete the payment to confirm course access.';
     if (status === 'error') return 'Could not submit right now. Check Supabase env values or try again.';
     if (!isSupabaseConfigured) return 'Supabase is not configured yet. Add Vercel env variables before launch.';
     return '';
   }, [status]);
+
+  const applyCoupon = async () => {
+    const code = form.coupon.trim().toUpperCase();
+
+    setCoupon(null);
+    if (!code) {
+      setCouponStatus('idle');
+      return;
+    }
+
+    if (!supabase) {
+      setCouponStatus('invalid');
+      return;
+    }
+
+    setCouponStatus('checking');
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('id, code, discount_type, discount_value, active')
+      .eq('code', code)
+      .eq('active', true)
+      .maybeSingle();
+
+    if (error || !data) {
+      setCouponStatus('invalid');
+      return;
+    }
+
+    setCoupon(data as Coupon);
+    setCouponStatus('valid');
+  };
+
+  const buildUpiUrl = (amount: number, orderId: string) => {
+    const params = new URLSearchParams({
+      pa: UPI_ID,
+      pn: 'Trading Boy Academy',
+      am: amount.toString(),
+      cu: 'INR',
+      tn: `${COURSE_NAME} - ${orderId}`,
+    });
+
+    return `upi://pay?${params.toString()}`;
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,13 +179,19 @@ export default function App() {
       return;
     }
 
-    const { error } = await supabase.from('course_orders').insert({
+    const { data, error } = await supabase.from('course_orders').insert({
+      course_name: COURSE_NAME,
       full_name: form.name,
       email: form.email,
       phone: form.phone,
       plan: form.plan,
+      coupon_code: coupon?.code || null,
+      original_amount: COURSE_PRICE,
+      discount_amount: discountAmount,
+      final_amount: payableAmount,
+      payment_status: 'pending',
       source: 'website',
-    });
+    }).select('id').single();
 
     if (error) {
       setStatus('error');
@@ -96,7 +199,89 @@ export default function App() {
     }
 
     setStatus('success');
-    setForm({ name: '', email: '', phone: '', plan: 'Complete Forex Mastery' });
+    window.location.href = buildUpiUrl(payableAmount, data.id);
+  };
+
+  const loadAdminCoupons = async () => {
+    if (!supabase) {
+      setAdminStatus('Supabase is not configured.');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('id, code, discount_type, discount_value, active')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      setAdminStatus('Could not load coupons.');
+      return;
+    }
+
+    setAdminCoupons((data || []) as Coupon[]);
+  };
+
+  const unlockAdmin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!ADMIN_PASSCODE || adminPasscode !== ADMIN_PASSCODE) {
+      setAdminStatus('Invalid admin passcode.');
+      return;
+    }
+
+    setAdminUnlocked(true);
+    setAdminStatus('');
+    await loadAdminCoupons();
+  };
+
+  const saveCoupon = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!supabase) {
+      setAdminStatus('Supabase is not configured.');
+      return;
+    }
+
+    const value = Number(adminForm.discountValue);
+    if (!adminForm.code.trim() || Number.isNaN(value) || value <= 0) {
+      setAdminStatus('Enter a valid coupon code and discount.');
+      return;
+    }
+
+    const { error } = await supabase.from('coupons').upsert(
+      {
+        code: adminForm.code.trim().toUpperCase(),
+        discount_type: adminForm.discountType,
+        discount_value: value,
+        active: true,
+      },
+      { onConflict: 'code' },
+    );
+
+    if (error) {
+      setAdminStatus('Could not save coupon.');
+      return;
+    }
+
+    setAdminForm({ code: '', discountType: 'fixed', discountValue: '' });
+    setAdminStatus('Coupon saved.');
+    await loadAdminCoupons();
+  };
+
+  const toggleCoupon = async (couponItem: Coupon) => {
+    if (!supabase) return;
+
+    const { error } = await supabase
+      .from('coupons')
+      .update({ active: !couponItem.active })
+      .eq('id', couponItem.id);
+
+    if (error) {
+      setAdminStatus('Could not update coupon.');
+      return;
+    }
+
+    await loadAdminCoupons();
   };
 
   return (
@@ -201,7 +386,7 @@ export default function App() {
       <main>
         <section id="home" className="relative min-h-screen overflow-hidden">
           <img
-            src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=2200&q=85"
+            src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=2200&q=90"
             alt=""
             className="absolute inset-0 h-full w-full object-cover"
           />
@@ -250,6 +435,20 @@ export default function App() {
                 A focused forex course covering structure, liquidity, confirmations, trade management,
                 and psychology so students can build a repeatable process.
               </p>
+              <div className="mt-8 border border-electric/40 bg-black p-6 shadow-glow">
+                <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Course Price</div>
+                <div className="mt-3 font-inter text-4xl font-bold text-white">Rs. {COURSE_PRICE.toLocaleString('en-IN')}</div>
+                <p className="mt-3 font-inter text-sm leading-relaxed text-white/60">
+                  Includes structured lessons, strategy breakdowns, risk training, and live-market learning.
+                </p>
+                <button
+                  onClick={() => setModalOpen(true)}
+                  className="group mt-6 bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline"
+                >
+                  Pay Now
+                  <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -356,6 +555,7 @@ export default function App() {
             <div>
               <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Enroll Now</div>
               <h2 className="mt-2 font-podium text-4xl uppercase text-white">Buy the course</h2>
+              <p className="mt-2 font-inter text-sm text-white/60">Payable amount: Rs. {payableAmount.toLocaleString('en-IN')}</p>
             </div>
             <button onClick={() => setModalOpen(false)} aria-label="Close checkout form">
               <X className="h-7 w-7 text-white" />
@@ -390,10 +590,54 @@ export default function App() {
               onChange={(event) => setForm({ ...form, plan: event.target.value })}
               className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric"
             >
-              <option>Complete Forex Mastery</option>
-              <option>Mentorship + Live Sessions</option>
-              <option>One-to-One Strategy Call</option>
+              <option>{COURSE_NAME}</option>
             </select>
+
+            <div className="flex gap-3">
+              <input
+                value={form.coupon}
+                onChange={(event) => {
+                  setForm({ ...form, coupon: event.target.value });
+                  setCoupon(null);
+                  setCouponStatus('idle');
+                }}
+                placeholder="Coupon code"
+                className="min-w-0 flex-1 border border-white/10 bg-black px-4 py-3 font-inter text-sm uppercase text-white outline-none transition placeholder:normal-case placeholder:text-white/35 focus:border-electric"
+              />
+              <button
+                type="button"
+                onClick={applyCoupon}
+                disabled={couponStatus === 'checking'}
+                className="border border-electric px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-electric hover:text-black disabled:opacity-60"
+              >
+                {couponStatus === 'checking' ? 'Checking' : 'Apply'}
+              </button>
+            </div>
+
+            {couponStatus === 'valid' && coupon && (
+              <p className="font-inter text-sm text-electric">
+                Coupon {coupon.code} applied. You saved Rs. {discountAmount.toLocaleString('en-IN')}.
+              </p>
+            )}
+
+            {couponStatus === 'invalid' && (
+              <p className="font-inter text-sm text-red-300">Invalid or inactive coupon code.</p>
+            )}
+
+            <div className="space-y-2 border border-white/10 bg-black p-4 font-inter text-sm">
+              <div className="flex justify-between text-white/60">
+                <span>Course price</span>
+                <span>Rs. {COURSE_PRICE.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-white/60">
+                <span>Discount</span>
+                <span>- Rs. {discountAmount.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between border-t border-white/10 pt-3 text-base font-bold text-white">
+                <span>Total</span>
+                <span>Rs. {payableAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
 
             {statusMessage && (
               <p className={`font-inter text-sm ${status === 'success' ? 'text-electric' : 'text-white/55'}`}>
@@ -405,10 +649,115 @@ export default function App() {
               disabled={status === 'sending'}
               className="group w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {status === 'sending' ? 'Submitting...' : 'Submit Purchase Request'}
+              {status === 'sending' ? 'Redirecting...' : 'Pay Now With UPI'}
               <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </button>
           </form>
+        </div>
+      </div>
+
+      <div
+        className={`fixed inset-0 z-[70] overflow-y-auto bg-black/90 px-4 py-8 backdrop-blur-sm transition ${
+          adminOpen ? 'visible opacity-100' : 'invisible opacity-0'
+        }`}
+      >
+        <div className="mx-auto max-w-4xl bg-ink p-6 shadow-glow sm:p-8">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div>
+              <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
+              <h2 className="mt-2 font-podium text-4xl uppercase text-white">Coupon Management</h2>
+            </div>
+            <button
+              onClick={() => {
+                window.location.hash = '';
+                setAdminOpen(false);
+              }}
+              aria-label="Close admin panel"
+            >
+              <X className="h-7 w-7 text-white" />
+            </button>
+          </div>
+
+          {!adminUnlocked ? (
+            <form onSubmit={unlockAdmin} className="max-w-md space-y-4">
+              <input
+                type="password"
+                value={adminPasscode}
+                onChange={(event) => setAdminPasscode(event.target.value)}
+                placeholder="Admin passcode"
+                className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+              />
+              <button className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                Unlock Admin
+              </button>
+            </form>
+          ) : (
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+              <form onSubmit={saveCoupon} className="space-y-4">
+                <input
+                  value={adminForm.code}
+                  onChange={(event) => setAdminForm({ ...adminForm, code: event.target.value })}
+                  placeholder="Coupon code"
+                  className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm uppercase text-white outline-none transition placeholder:normal-case placeholder:text-white/35 focus:border-electric"
+                />
+                <select
+                  value={adminForm.discountType}
+                  onChange={(event) =>
+                    setAdminForm({ ...adminForm, discountType: event.target.value as 'fixed' | 'percent' })
+                  }
+                  className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric"
+                >
+                  <option value="fixed">Fixed amount discount</option>
+                  <option value="percent">Percentage discount</option>
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  value={adminForm.discountValue}
+                  onChange={(event) => setAdminForm({ ...adminForm, discountValue: event.target.value })}
+                  placeholder={adminForm.discountType === 'fixed' ? 'Discount amount in Rs.' : 'Discount percentage'}
+                  className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+                />
+                <button className="w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                  Save Coupon
+                </button>
+              </form>
+
+              <div className="space-y-3">
+                {adminCoupons.length === 0 ? (
+                  <div className="border border-white/10 p-5 font-inter text-sm text-white/55">No coupons yet.</div>
+                ) : (
+                  adminCoupons.map((couponItem) => (
+                    <div
+                      key={couponItem.id}
+                      className="flex flex-col gap-4 border border-white/10 bg-black p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <div className="font-inter text-lg font-bold text-white">{couponItem.code}</div>
+                        <div className="font-inter text-sm text-white/55">
+                          {couponItem.discount_type === 'percent'
+                            ? `${couponItem.discount_value}% off`
+                            : `Rs. ${couponItem.discount_value.toLocaleString('en-IN')} off`}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleCoupon(couponItem)}
+                        className={`px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest transition ${
+                          couponItem.active
+                            ? 'border border-white/20 text-white hover:border-red-300 hover:text-red-300'
+                            : 'bg-electric text-black hover:bg-skyline'
+                        }`}
+                      >
+                        {couponItem.active ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {adminStatus && <p className="mt-5 font-inter text-sm text-white/60">{adminStatus}</p>}
         </div>
       </div>
     </div>
