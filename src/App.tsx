@@ -7,7 +7,6 @@ const navLinks = ['Course', 'About', 'Results', 'FAQ'];
 const COURSE_NAME = 'Complete Forex Mastery';
 const COURSE_PRICE = 7199;
 const UPI_ID = 'harishsankar023@okaxis';
-const ADMIN_PASSCODE = import.meta.env.VITE_ADMIN_PASSCODE || '';
 
 const modules = [
   'Market structure and liquidity mapping',
@@ -51,6 +50,13 @@ type FormState = {
   coupon: string;
 };
 
+type CompressedImage = {
+  name: string;
+  type: string;
+  dataUrl: string;
+  size: number;
+};
+
 type Coupon = {
   id: string;
   code: string;
@@ -59,15 +65,47 @@ type Coupon = {
   active: boolean;
 };
 
+type CourseOrder = {
+  id: string;
+  course_name: string | null;
+  full_name: string;
+  email: string;
+  phone: string;
+  coupon_code: string | null;
+  original_amount: number;
+  discount_amount: number;
+  final_amount: number;
+  payment_status: string;
+  created_at: string;
+};
+
+type ManagedCourse = {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  drive_url: string | null;
+  active: boolean;
+  created_at: string;
+};
+
 type AdminCouponForm = {
   code: string;
   discountType: 'fixed' | 'percent';
   discountValue: string;
 };
 
+type AdminCourseForm = {
+  id: string | null;
+  title: string;
+  description: string;
+  price: string;
+  driveUrl: string;
+};
+
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -77,16 +115,28 @@ export default function App() {
     coupon: '',
   });
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [paymentScreenshot, setPaymentScreenshot] = useState<CompressedImage | null>(null);
+  const [screenshotStatus, setScreenshotStatus] = useState('');
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [couponStatus, setCouponStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
   const [adminCoupons, setAdminCoupons] = useState<Coupon[]>([]);
+  const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
+  const [adminCourses, setAdminCourses] = useState<ManagedCourse[]>([]);
+  const [adminView, setAdminView] = useState<'orders' | 'coupons' | 'courses'>('orders');
   const [adminForm, setAdminForm] = useState<AdminCouponForm>({
     code: '',
     discountType: 'fixed',
     discountValue: '',
+  });
+  const [courseForm, setCourseForm] = useState<AdminCourseForm>({
+    id: null,
+    title: '',
+    description: '',
+    price: COURSE_PRICE.toString(),
+    driveUrl: '',
   });
   const [adminStatus, setAdminStatus] = useState('');
 
@@ -100,13 +150,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const syncAdminHash = () => setAdminOpen(window.location.hash === '#admin');
+    const syncHashPage = () => {
+      setAdminOpen(window.location.hash === '#admin');
+      setCheckoutOpen(window.location.hash === '#checkout');
+    };
 
-    syncAdminHash();
-    window.addEventListener('hashchange', syncAdminHash);
+    syncHashPage();
+    window.addEventListener('hashchange', syncHashPage);
 
-    return () => window.removeEventListener('hashchange', syncAdminHash);
+    return () => window.removeEventListener('hashchange', syncHashPage);
   }, []);
+
+  const openCheckout = () => {
+    setStatus('idle');
+    window.location.hash = 'checkout';
+  };
+
+  const closeHashPage = () => {
+    window.location.hash = '';
+    setAdminOpen(false);
+    setCheckoutOpen(false);
+  };
 
   const discountAmount = useMemo(() => {
     if (!coupon) return 0;
@@ -121,8 +185,8 @@ export default function App() {
   const payableAmount = COURSE_PRICE - discountAmount;
 
   const statusMessage = useMemo(() => {
-    if (status === 'success') return 'Redirecting to your UPI app. Complete the payment to confirm course access.';
-    if (status === 'error') return 'Could not submit right now. Check Supabase env values or try again.';
+    if (status === 'success') return 'Receipt sent. Redirecting to your UPI app.';
+    if (status === 'error') return 'Could not submit right now. Check checkout API, Supabase, or mail settings.';
     if (!isSupabaseConfigured) return 'Supabase is not configured yet. Add Vercel env variables before launch.';
     return '';
   }, [status]);
@@ -170,79 +234,228 @@ export default function App() {
     return `upi://pay?${params.toString()}`;
   };
 
+  const compressImage = async (file: File): Promise<CompressedImage> => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = reject;
+      image.src = objectUrl;
+    });
+
+    URL.revokeObjectURL(objectUrl);
+
+    let maxWidth = 1200;
+    let quality = 0.82;
+    let dataUrl = '';
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const scale = Math.min(1, maxWidth / image.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Could not compress image.');
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+      const estimatedBytes = Math.round((dataUrl.length * 3) / 4);
+      if (estimatedBytes <= 100 * 1024) {
+        return {
+          name: file.name.replace(/\.[^.]+$/, '.jpg'),
+          type: 'image/jpeg',
+          dataUrl,
+          size: estimatedBytes,
+        };
+      }
+
+      if (quality > 0.42) {
+        quality -= 0.1;
+      } else {
+        maxWidth = Math.round(maxWidth * 0.82);
+        quality = 0.62;
+      }
+    }
+
+    const finalBytes = Math.round((dataUrl.length * 3) / 4);
+    if (finalBytes > 100 * 1024) {
+      throw new Error('Could not compress below 100KB. Try a clearer cropped screenshot.');
+    }
+
+    return {
+      name: file.name.replace(/\.[^.]+$/, '.jpg'),
+      type: 'image/jpeg',
+      dataUrl,
+      size: finalBytes,
+    };
+  };
+
+  const handleScreenshotChange = async (file?: File) => {
+    setPaymentScreenshot(null);
+
+    if (!file) {
+      setScreenshotStatus('');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setScreenshotStatus('Please upload an image file.');
+      return;
+    }
+
+    try {
+      setScreenshotStatus('Compressing screenshot...');
+      const compressed = await compressImage(file);
+      setPaymentScreenshot(compressed);
+      setScreenshotStatus(`Screenshot ready (${Math.ceil(compressed.size / 1024)}KB).`);
+    } catch (error) {
+      setScreenshotStatus(error instanceof Error ? error.message : 'Could not compress screenshot.');
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus('sending');
 
-    if (!supabase) {
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          couponCode: coupon?.code || form.coupon,
+          paymentScreenshot,
+        }),
+      });
+      const text = await response.text();
+      const result = text ? JSON.parse(text) : {};
+
+      if (!response.ok) {
+        setStatus('error');
+        return;
+      }
+
+      setStatus('success');
+      window.location.href = buildUpiUrl(result.payableAmount, result.orderId);
+    } catch {
       setStatus('error');
-      return;
     }
-
-    const orderId = crypto.randomUUID();
-    const { error } = await supabase.from('course_orders').insert({
-      id: orderId,
-      course_name: COURSE_NAME,
-      full_name: form.name,
-      email: form.email,
-      phone: form.phone,
-      plan: form.plan,
-      coupon_code: coupon?.code || null,
-      original_amount: COURSE_PRICE,
-      discount_amount: discountAmount,
-      final_amount: payableAmount,
-      payment_status: 'pending',
-      source: 'website',
-    });
-
-    if (error) {
-      setStatus('error');
-      return;
-    }
-
-    setStatus('success');
-    window.location.href = buildUpiUrl(payableAmount, orderId);
   };
 
   const loadAdminCoupons = async () => {
-    if (!supabase) {
-      setAdminStatus('Supabase is not configured.');
-      return;
+    const result = await adminRequest<{ data: Coupon[] }>('coupons');
+
+    setAdminCoupons(result.data || []);
+  };
+
+  const loadAdminOrders = async () => {
+    const result = await adminRequest<{ data: CourseOrder[] }>('orders');
+
+    setAdminOrders(result.data || []);
+  };
+
+  const loadAdminCourses = async () => {
+    const result = await adminRequest<{ data: ManagedCourse[] }>('courses');
+
+    setAdminCourses(result.data || []);
+  };
+
+  const adminRequest = async <T,>(action: string, payload: Record<string, unknown> = {}): Promise<T> => {
+    const response = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, passcode: adminPasscode, ...payload }),
+    });
+    const text = await response.text();
+    const result = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Admin request failed.');
     }
 
-    const { data, error } = await supabase
-      .from('coupons')
-      .select('id, code, discount_type, discount_value, active')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      setAdminStatus('Could not load coupons.');
-      return;
-    }
-
-    setAdminCoupons((data || []) as Coupon[]);
+    return result as T;
   };
 
   const unlockAdmin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!ADMIN_PASSCODE || adminPasscode !== ADMIN_PASSCODE) {
-      setAdminStatus('Invalid admin passcode.');
-      return;
+    try {
+      setAdminStatus('');
+      await loadAdminOrders();
+      await loadAdminCoupons();
+      await loadAdminCourses();
+      setAdminUnlocked(true);
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not unlock admin.');
     }
+  };
 
-    setAdminUnlocked(true);
-    setAdminStatus('');
-    await loadAdminCoupons();
+  const updateOrderStatus = async (orderId: string, paymentStatus: string) => {
+    try {
+      await adminRequest('updateOrder', { orderId, paymentStatus });
+      await loadAdminOrders();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not update payment status.');
+    }
+  };
+
+  const downloadOrdersCsv = () => {
+    const headers = [
+      'Order ID',
+      'Date',
+      'Time',
+      'Name',
+      'Email',
+      'Phone',
+      'Course',
+      'Coupon',
+      'Original Amount',
+      'Discount',
+      'Final Amount',
+      'Payment Status',
+    ];
+
+    const rows = adminOrders.map((order) => {
+      const date = new Date(order.created_at);
+
+      return [
+        order.id,
+        date.toLocaleDateString('en-IN'),
+        date.toLocaleTimeString('en-IN'),
+        order.full_name,
+        order.email,
+        order.phone,
+        order.course_name || COURSE_NAME,
+        order.coupon_code || '',
+        order.original_amount,
+        order.discount_amount,
+        order.final_amount,
+        order.payment_status,
+      ];
+    });
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = `trading-boy-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const saveCoupon = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    if (!supabase) {
-      setAdminStatus('Supabase is not configured.');
-      return;
-    }
 
     const value = Number(adminForm.discountValue);
     if (!adminForm.code.trim() || Number.isNaN(value) || value <= 0) {
@@ -250,67 +463,116 @@ export default function App() {
       return;
     }
 
-    const { error } = await supabase.from('coupons').upsert(
-      {
-        code: adminForm.code.trim().toUpperCase(),
-        discount_type: adminForm.discountType,
-        discount_value: value,
-        active: true,
-      },
-      { onConflict: 'code' },
-    );
-
-    if (error) {
-      setAdminStatus('Could not save coupon.');
-      return;
+    try {
+      await adminRequest('saveCoupon', {
+        code: adminForm.code,
+        discountType: adminForm.discountType,
+        discountValue: value,
+      });
+      setAdminForm({ code: '', discountType: 'fixed', discountValue: '' });
+      setAdminStatus('Coupon saved.');
+      await loadAdminCoupons();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not save coupon.');
     }
-
-    setAdminForm({ code: '', discountType: 'fixed', discountValue: '' });
-    setAdminStatus('Coupon saved.');
-    await loadAdminCoupons();
   };
 
   const toggleCoupon = async (couponItem: Coupon) => {
-    if (!supabase) return;
+    try {
+      await adminRequest('toggleCoupon', { couponId: couponItem.id, active: !couponItem.active });
+      await loadAdminCoupons();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not update coupon.');
+    }
+  };
 
-    const { error } = await supabase
-      .from('coupons')
-      .update({ active: !couponItem.active })
-      .eq('id', couponItem.id);
+  const saveCourse = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-    if (error) {
-      setAdminStatus('Could not update coupon.');
+    const price = Number(courseForm.price);
+    if (!courseForm.title.trim() || Number.isNaN(price) || price <= 0) {
+      setAdminStatus('Enter a valid course title and price.');
       return;
     }
 
-    await loadAdminCoupons();
+    try {
+      await adminRequest('saveCourse', {
+        id: courseForm.id,
+        title: courseForm.title,
+        description: courseForm.description,
+        price,
+        driveUrl: courseForm.driveUrl,
+      });
+      setCourseForm({ id: null, title: '', description: '', price: COURSE_PRICE.toString(), driveUrl: '' });
+      setAdminStatus('Course saved.');
+      await loadAdminCourses();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not save course.');
+    }
+  };
+
+  const editCourse = (courseItem: ManagedCourse) => {
+    setCourseForm({
+      id: courseItem.id,
+      title: courseItem.title,
+      description: courseItem.description || '',
+      price: courseItem.price.toString(),
+      driveUrl: courseItem.drive_url || '',
+    });
+    setAdminStatus('');
+  };
+
+  const toggleCourse = async (courseItem: ManagedCourse) => {
+    try {
+      await adminRequest('toggleCourse', { courseId: courseItem.id, active: !courseItem.active });
+      await loadAdminCourses();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not update course.');
+    }
+  };
+
+  const deleteCourse = async (courseItem: ManagedCourse) => {
+    if (!window.confirm(`Delete "${courseItem.title}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await adminRequest('deleteCourse', { courseId: courseItem.id });
+      if (courseForm.id === courseItem.id) {
+        setCourseForm({ id: null, title: '', description: '', price: COURSE_PRICE.toString(), driveUrl: '' });
+      }
+      setAdminStatus('Course deleted.');
+      await loadAdminCourses();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not delete course.');
+    }
   };
 
   return (
     <div className="min-h-screen bg-ink text-white">
       <header
-        className={`fixed inset-x-0 top-0 z-40 px-6 py-5 transition-all duration-500 sm:px-10 lg:px-16 lg:py-7 ${
+        className={`fixed inset-x-0 top-0 z-40 px-5 py-3 transition-all duration-500 sm:px-8 lg:px-12 lg:py-4 ${
           hasScrolled
             ? 'border-b border-white/10 bg-ink/90 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl'
             : 'border-b border-transparent bg-transparent'
         }`}
       >
         <nav className="flex items-center justify-between">
-          <a href="#home" className="flex items-center gap-3" aria-label="Trading Boy home">
-            <span className="relative block h-9 w-9 border-b-[7px] border-l-[7px] border-electric">
-              <span className="absolute -right-1 top-0 h-7 w-[7px] rotate-[-28deg] bg-electric" />
+          <a href="#home" className="flex items-center gap-2.5" aria-label="Trading Boy home">
+            <span className="relative block h-7 w-7 border-b-[5px] border-l-[5px] border-electric">
+              <span className="absolute -right-0.5 top-0 h-5 w-[5px] rotate-[-28deg] bg-electric" />
             </span>
-            <span className="font-podium text-2xl font-bold uppercase tracking-wider text-white sm:text-3xl">
+            <span className="font-podium text-xl font-bold uppercase tracking-wider text-white sm:text-2xl">
               Trading Boy
             </span>
           </a>
 
-          <div className="hidden items-center gap-8 md:flex lg:gap-12">
+          <div className="hidden items-center gap-7 md:flex lg:gap-10">
             {navLinks.map((link) => (
               <a
                 key={link}
                 href={`#${link.toLowerCase()}`}
-                className="font-inter text-sm uppercase tracking-widest text-white/80 transition hover:text-white"
+                className="font-inter text-xs uppercase tracking-widest text-white/80 transition hover:text-white"
               >
                 {link}
               </a>
@@ -318,8 +580,8 @@ export default function App() {
           </div>
 
           <button
-            onClick={() => setModalOpen(true)}
-            className="group hidden items-center gap-2 border border-white/30 px-6 py-3 font-inter text-xs uppercase tracking-widest text-white transition hover:border-electric hover:bg-white/10 md:flex"
+            onClick={openCheckout}
+            className="group hidden items-center gap-2 border border-white/30 px-4 py-2.5 font-inter text-[11px] uppercase tracking-widest text-white transition hover:border-electric hover:bg-white/10 md:flex"
           >
             Enroll Now
             <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
@@ -343,8 +605,8 @@ export default function App() {
           menuOpen ? 'visible opacity-100' : 'invisible opacity-0'
         }`}
       >
-        <div className="flex items-center justify-between px-6 py-5 sm:px-10">
-          <span className="font-podium text-2xl font-bold uppercase tracking-wider text-white sm:text-3xl">
+        <div className="flex items-center justify-between px-5 py-4 sm:px-8">
+          <span className="font-podium text-xl font-bold uppercase tracking-wider text-white sm:text-2xl">
             Trading Boy
           </span>
           <button onClick={() => setMenuOpen(false)} aria-label="Close menu">
@@ -371,7 +633,7 @@ export default function App() {
           <button
             onClick={() => {
               setMenuOpen(false);
-              setModalOpen(true);
+              openCheckout();
             }}
             className="border border-white/30 px-7 py-4 font-inter text-xs uppercase tracking-widest text-white transition-all duration-500"
             style={{
@@ -385,6 +647,7 @@ export default function App() {
         </div>
       </div>
 
+      {!checkoutOpen && !adminOpen && (
       <main>
         <section id="home" className="relative min-h-screen overflow-hidden">
           <img
@@ -415,7 +678,7 @@ export default function App() {
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-4 animate-fade-up-delay-3 sm:gap-6 lg:mt-10">
                 <button
-                  onClick={() => setModalOpen(true)}
+                  onClick={openCheckout}
                   className="group bg-electric px-5 py-3 font-inter text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline sm:px-7 sm:py-4 sm:text-xs"
                 >
                   Buy Course
@@ -444,7 +707,7 @@ export default function App() {
                   Includes structured lessons, strategy breakdowns, risk training, and live-market learning.
                 </p>
                 <button
-                  onClick={() => setModalOpen(true)}
+                  onClick={openCheckout}
                   className="group mt-6 bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline"
                 >
                   Pay Now
@@ -484,7 +747,7 @@ export default function App() {
                 with a written plan.
               </p>
               <button
-                onClick={() => setModalOpen(true)}
+                onClick={openCheckout}
                 className="group mt-8 border border-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-electric hover:text-black"
               >
                 Join The Course
@@ -539,27 +802,29 @@ export default function App() {
           </div>
         </section>
       </main>
+      )}
 
+      {!checkoutOpen && !adminOpen && (
       <footer className="border-t border-white/10 bg-ink px-6 py-8 sm:px-10 lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 font-inter text-xs uppercase tracking-widest text-white/50 sm:flex-row sm:items-center sm:justify-between">
           <span>Trading Boy Academy</span>
           <span>Forex education. Risk-first training.</span>
         </div>
       </footer>
+      )}
 
-      <div
-        className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm transition ${
-          modalOpen ? 'visible opacity-100' : 'invisible opacity-0'
-        }`}
-      >
-        <div className="w-full max-w-lg bg-ink p-6 shadow-glow sm:p-8">
+      {checkoutOpen && (
+      <main className="min-h-screen bg-ink px-4 pb-16 pt-28 sm:px-8 lg:px-12">
+        <div className="mx-auto w-full max-w-2xl border border-white/10 bg-black p-6 shadow-glow sm:p-8">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
               <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Enroll Now</div>
-              <h2 className="mt-2 font-podium text-4xl uppercase text-white">Buy the course</h2>
+              <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">
+                Buy the course
+              </h2>
               <p className="mt-2 font-inter text-sm text-white/60">Payable amount: Rs. {payableAmount.toLocaleString('en-IN')}</p>
             </div>
-            <button onClick={() => setModalOpen(false)} aria-label="Close checkout form">
+            <button onClick={closeHashPage} aria-label="Close checkout page">
               <X className="h-7 w-7 text-white" />
             </button>
           </div>
@@ -594,6 +859,19 @@ export default function App() {
             >
               <option>{COURSE_NAME}</option>
             </select>
+
+            <div>
+              <label className="mb-2 block font-inter text-xs uppercase tracking-widest text-white/45">
+                Payment screenshot
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => handleScreenshotChange(event.target.files?.[0])}
+                className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white file:mr-4 file:border-0 file:bg-electric file:px-4 file:py-2 file:font-inter file:text-xs file:font-bold file:uppercase file:tracking-widest file:text-black"
+              />
+              {screenshotStatus && <p className="mt-2 font-inter text-sm text-white/55">{screenshotStatus}</p>}
+            </div>
 
             <div className="flex gap-3">
               <input
@@ -656,24 +934,21 @@ export default function App() {
             </button>
           </form>
         </div>
-      </div>
+      </main>
+      )}
 
-      <div
-        className={`fixed inset-0 z-[70] overflow-y-auto bg-black/90 px-4 py-8 backdrop-blur-sm transition ${
-          adminOpen ? 'visible opacity-100' : 'invisible opacity-0'
-        }`}
-      >
-        <div className="mx-auto max-w-4xl bg-ink p-6 shadow-glow sm:p-8">
+      {adminOpen && (
+      <main className="min-h-screen bg-black px-4 pb-16 pt-28 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-6xl bg-ink p-6 shadow-glow sm:p-8">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
               <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
-              <h2 className="mt-2 font-podium text-4xl uppercase text-white">Coupon Management</h2>
+              <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">
+                Course Admin
+              </h2>
             </div>
             <button
-              onClick={() => {
-                window.location.hash = '';
-                setAdminOpen(false);
-              }}
+              onClick={closeHashPage}
               aria-label="Close admin panel"
             >
               <X className="h-7 w-7 text-white" />
@@ -694,74 +969,345 @@ export default function App() {
               </button>
             </form>
           ) : (
-            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-              <form onSubmit={saveCoupon} className="space-y-4">
-                <input
-                  value={adminForm.code}
-                  onChange={(event) => setAdminForm({ ...adminForm, code: event.target.value })}
-                  placeholder="Coupon code"
-                  className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm uppercase text-white outline-none transition placeholder:normal-case placeholder:text-white/35 focus:border-electric"
-                />
-                <select
-                  value={adminForm.discountType}
-                  onChange={(event) =>
-                    setAdminForm({ ...adminForm, discountType: event.target.value as 'fixed' | 'percent' })
-                  }
-                  className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric"
-                >
-                  <option value="fixed">Fixed amount discount</option>
-                  <option value="percent">Percentage discount</option>
-                </select>
-                <input
-                  type="number"
-                  min="1"
-                  value={adminForm.discountValue}
-                  onChange={(event) => setAdminForm({ ...adminForm, discountValue: event.target.value })}
-                  placeholder={adminForm.discountType === 'fixed' ? 'Discount amount in Rs.' : 'Discount percentage'}
-                  className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
-                />
-                <button className="w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
-                  Save Coupon
-                </button>
-              </form>
+            <div>
+              <div className="mb-6 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setAdminView('orders')}
+                    className={`px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest transition ${
+                      adminView === 'orders' ? 'bg-electric text-black' : 'border border-white/15 text-white'
+                    }`}
+                  >
+                    Purchases
+                  </button>
+                  <button
+                    onClick={() => setAdminView('coupons')}
+                    className={`px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest transition ${
+                      adminView === 'coupons' ? 'bg-electric text-black' : 'border border-white/15 text-white'
+                    }`}
+                  >
+                    Coupons
+                  </button>
+                  <button
+                    onClick={() => setAdminView('courses')}
+                    className={`px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest transition ${
+                      adminView === 'courses' ? 'bg-electric text-black' : 'border border-white/15 text-white'
+                    }`}
+                  >
+                    Courses
+                  </button>
+                </div>
 
-              <div className="space-y-3">
-                {adminCoupons.length === 0 ? (
-                  <div className="border border-white/10 p-5 font-inter text-sm text-white/55">No coupons yet.</div>
-                ) : (
-                  adminCoupons.map((couponItem) => (
-                    <div
-                      key={couponItem.id}
-                      className="flex flex-col gap-4 border border-white/10 bg-black p-4 sm:flex-row sm:items-center sm:justify-between"
+                {adminView === 'orders' && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={loadAdminOrders}
+                      className="border border-white/15 px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric"
                     >
-                      <div>
-                        <div className="font-inter text-lg font-bold text-white">{couponItem.code}</div>
-                        <div className="font-inter text-sm text-white/55">
-                          {couponItem.discount_type === 'percent'
-                            ? `${couponItem.discount_value}% off`
-                            : `Rs. ${couponItem.discount_value.toLocaleString('en-IN')} off`}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => toggleCoupon(couponItem)}
-                        className={`px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest transition ${
-                          couponItem.active
-                            ? 'border border-white/20 text-white hover:border-red-300 hover:text-red-300'
-                            : 'bg-electric text-black hover:bg-skyline'
-                        }`}
-                      >
-                        {couponItem.active ? 'Deactivate' : 'Activate'}
-                      </button>
-                    </div>
-                  ))
+                      Refresh
+                    </button>
+                    <button
+                      onClick={downloadOrdersCsv}
+                      disabled={adminOrders.length === 0}
+                      className="bg-electric px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Download CSV
+                    </button>
+                  </div>
                 )}
               </div>
+
+              {adminView === 'orders' ? (
+                <div className="space-y-4">
+                  <div className="border border-electric/30 bg-electric/10 p-4 font-inter text-sm leading-relaxed text-white/75">
+                    Before changing an order to <strong className="text-white">paid</strong>, manually share the private
+                    Google Drive course folder with the student's email shown below. When you save the paid status, the
+                    student receives the course access email with the Drive link.
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="border border-white/10 bg-black p-4">
+                      <div className="font-inter text-xs uppercase tracking-widest text-white/45">Orders</div>
+                      <div className="mt-2 font-inter text-3xl font-bold text-white">{adminOrders.length}</div>
+                    </div>
+                    <div className="border border-white/10 bg-black p-4">
+                      <div className="font-inter text-xs uppercase tracking-widest text-white/45">Gross Amount</div>
+                      <div className="mt-2 font-inter text-3xl font-bold text-white">
+                        Rs.{' '}
+                        {adminOrders
+                          .reduce((total, order) => total + order.final_amount, 0)
+                          .toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                    <div className="border border-white/10 bg-black p-4">
+                      <div className="font-inter text-xs uppercase tracking-widest text-white/45">Pending</div>
+                      <div className="mt-2 font-inter text-3xl font-bold text-white">
+                        {adminOrders.filter((order) => order.payment_status === 'pending').length}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto border border-white/10">
+                    <table className="min-w-[1050px] w-full border-collapse bg-black font-inter text-sm">
+                      <thead className="bg-white/[0.04] text-left text-xs uppercase tracking-widest text-white/45">
+                        <tr>
+                          <th className="px-4 py-4">Date / Time</th>
+                          <th className="px-4 py-4">Student</th>
+                          <th className="px-4 py-4">Contact</th>
+                          <th className="px-4 py-4">Coupon</th>
+                          <th className="px-4 py-4">Amount</th>
+                          <th className="px-4 py-4">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminOrders.length === 0 ? (
+                          <tr>
+                            <td className="px-4 py-5 text-white/55" colSpan={6}>
+                              No purchases yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          adminOrders.map((order) => {
+                            const createdAt = new Date(order.created_at);
+
+                            return (
+                              <tr key={order.id} className="border-t border-white/10 align-top">
+                                <td className="px-4 py-4 text-white/70">
+                                  <div>{createdAt.toLocaleDateString('en-IN')}</div>
+                                  <div className="mt-1 text-xs text-white/40">
+                                    {createdAt.toLocaleTimeString('en-IN')}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <div className="font-semibold text-white">{order.full_name}</div>
+                                  <div className="mt-1 max-w-[160px] truncate text-xs text-white/40">{order.id}</div>
+                                </td>
+                                <td className="px-4 py-4 text-white/70">
+                                  <div>{order.email}</div>
+                                  <div className="mt-1">{order.phone}</div>
+                                </td>
+                                <td className="px-4 py-4 text-white/70">
+                                  <div>{order.coupon_code || '-'}</div>
+                                  <div className="mt-1 text-xs text-white/40">
+                                    Saved Rs. {order.discount_amount.toLocaleString('en-IN')}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-4 text-white">
+                                  <div className="font-bold">Rs. {order.final_amount.toLocaleString('en-IN')}</div>
+                                  <div className="mt-1 text-xs text-white/40">
+                                    Base Rs. {order.original_amount.toLocaleString('en-IN')}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <select
+                                    value={order.payment_status}
+                                    onChange={(event) => updateOrderStatus(order.id, event.target.value)}
+                                    className="border border-white/10 bg-ink px-3 py-2 font-inter text-xs uppercase tracking-widest text-white outline-none focus:border-electric"
+                                  >
+                                    <option value="pending">Pending</option>
+                                    <option value="under_review">Under Review</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="cancelled">Cancelled</option>
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : adminView === 'coupons' ? (
+                <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+                  <form onSubmit={saveCoupon} className="space-y-4">
+                    <input
+                      value={adminForm.code}
+                      onChange={(event) => setAdminForm({ ...adminForm, code: event.target.value })}
+                      placeholder="Coupon code"
+                      className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm uppercase text-white outline-none transition placeholder:normal-case placeholder:text-white/35 focus:border-electric"
+                    />
+                    <select
+                      value={adminForm.discountType}
+                      onChange={(event) =>
+                        setAdminForm({ ...adminForm, discountType: event.target.value as 'fixed' | 'percent' })
+                      }
+                      className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric"
+                    >
+                      <option value="fixed">Fixed amount discount</option>
+                      <option value="percent">Percentage discount</option>
+                    </select>
+                    <input
+                      type="number"
+                      min="1"
+                      value={adminForm.discountValue}
+                      onChange={(event) => setAdminForm({ ...adminForm, discountValue: event.target.value })}
+                      placeholder={adminForm.discountType === 'fixed' ? 'Discount amount in Rs.' : 'Discount percentage'}
+                      className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+                    />
+                    <button className="w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                      Save Coupon
+                    </button>
+                  </form>
+
+                  <div className="space-y-3">
+                    {adminCoupons.length === 0 ? (
+                      <div className="border border-white/10 p-5 font-inter text-sm text-white/55">No coupons yet.</div>
+                    ) : (
+                      adminCoupons.map((couponItem) => (
+                        <div
+                          key={couponItem.id}
+                          className="flex flex-col gap-4 border border-white/10 bg-black p-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div>
+                            <div className="font-inter text-lg font-bold text-white">{couponItem.code}</div>
+                            <div className="font-inter text-sm text-white/55">
+                              {couponItem.discount_type === 'percent'
+                                ? `${couponItem.discount_value}% off`
+                                : `Rs. ${couponItem.discount_value.toLocaleString('en-IN')} off`}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => toggleCoupon(couponItem)}
+                            className={`px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest transition ${
+                              couponItem.active
+                                ? 'border border-white/20 text-white hover:border-red-300 hover:text-red-300'
+                                : 'bg-electric text-black hover:bg-skyline'
+                            }`}
+                          >
+                            {couponItem.active ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+                  <form onSubmit={saveCourse} className="space-y-4">
+                    <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">
+                      {courseForm.id ? 'Edit Course' : 'Create Course'}
+                    </div>
+                    <input
+                      value={courseForm.title}
+                      onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })}
+                      placeholder="Course title"
+                      className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+                    />
+                    <textarea
+                      value={courseForm.description}
+                      onChange={(event) => setCourseForm({ ...courseForm, description: event.target.value })}
+                      placeholder="Course description"
+                      rows={4}
+                      className="w-full resize-none border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={courseForm.price}
+                      onChange={(event) => setCourseForm({ ...courseForm, price: event.target.value })}
+                      placeholder="Price in Rs."
+                      className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+                    />
+                    <input
+                      value={courseForm.driveUrl}
+                      onChange={(event) => setCourseForm({ ...courseForm, driveUrl: event.target.value })}
+                      placeholder="Private Google Drive folder URL"
+                      className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+                    />
+                    <div className="flex flex-wrap gap-3">
+                      <button className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                        {courseForm.id ? 'Update Course' : 'Save Course'}
+                      </button>
+                      {courseForm.id && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCourseForm({
+                              id: null,
+                              title: '',
+                              description: '',
+                              price: COURSE_PRICE.toString(),
+                              driveUrl: '',
+                            })
+                          }
+                          className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric"
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
+                    </div>
+                  </form>
+
+                  <div className="space-y-3">
+                    {adminCourses.length === 0 ? (
+                      <div className="border border-white/10 p-5 font-inter text-sm text-white/55">
+                        No courses yet.
+                      </div>
+                    ) : (
+                      adminCourses.map((courseItem) => (
+                        <div key={courseItem.id} className="border border-white/10 bg-black p-5">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="font-inter text-lg font-bold text-white">{courseItem.title}</div>
+                              <div className="mt-1 font-inter text-sm text-white/55">
+                                Rs. {courseItem.price.toLocaleString('en-IN')} ·{' '}
+                                {courseItem.active ? 'Active' : 'Inactive'}
+                              </div>
+                              {courseItem.description && (
+                                <p className="mt-3 font-inter text-sm leading-relaxed text-white/60">
+                                  {courseItem.description}
+                                </p>
+                              )}
+                              {courseItem.drive_url && (
+                                <a
+                                  href={courseItem.drive_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="mt-3 block truncate font-inter text-sm text-electric"
+                                >
+                                  {courseItem.drive_url}
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => editCourse(courseItem)}
+                                className="border border-white/15 px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => toggleCourse(courseItem)}
+                                className={`px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest transition ${
+                                  courseItem.active
+                                    ? 'border border-white/20 text-white hover:border-red-300 hover:text-red-300'
+                                    : 'bg-electric text-black hover:bg-skyline'
+                                }`}
+                              >
+                                {courseItem.active ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <button
+                                onClick={() => deleteCourse(courseItem)}
+                                className="border border-red-300/50 px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest text-red-200 transition hover:bg-red-300 hover:text-black"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {adminStatus && <p className="mt-5 font-inter text-sm text-white/60">{adminStatus}</p>}
         </div>
-      </div>
+      </main>
+      )}
     </div>
   );
 }

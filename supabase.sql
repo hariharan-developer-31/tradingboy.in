@@ -10,6 +10,7 @@ create table if not exists public.course_orders (
   discount_amount integer not null default 0,
   final_amount integer not null default 7199,
   payment_status text not null default 'pending',
+  payment_screenshot_path text,
   source text default 'website',
   created_at timestamptz not null default now()
 );
@@ -20,10 +21,13 @@ alter table public.course_orders add column if not exists original_amount intege
 alter table public.course_orders add column if not exists discount_amount integer not null default 0;
 alter table public.course_orders add column if not exists final_amount integer not null default 7199;
 alter table public.course_orders add column if not exists payment_status text not null default 'pending';
+alter table public.course_orders add column if not exists payment_screenshot_path text;
 
 alter table public.course_orders enable row level security;
 
 drop policy if exists "Allow public course order inserts" on public.course_orders;
+drop policy if exists "Allow frontend course order reads" on public.course_orders;
+drop policy if exists "Allow frontend payment status updates" on public.course_orders;
 
 create policy "Allow public course order inserts"
 on public.course_orders
@@ -49,11 +53,52 @@ create policy "Allow public coupon reads"
 on public.coupons
 for select
 to anon
-using (true);
+using (active = true);
 
-create policy "Allow frontend coupon management"
-on public.coupons
-for all
+create table if not exists public.courses (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  price integer not null default 7199 check (price > 0),
+  drive_url text,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.courses enable row level security;
+
+drop policy if exists "Allow public active course reads" on public.courses;
+
+create policy "Allow public active course reads"
+on public.courses
+for select
 to anon
-using (true)
-with check (true);
+using (active = true);
+
+insert into public.courses (title, description, price, drive_url, active)
+select
+  'Complete Forex Mastery',
+  'A structured forex trading course covering market structure, liquidity, risk management, and live execution.',
+  7199,
+  null,
+  true
+where not exists (
+  select 1 from public.courses where title = 'Complete Forex Mastery'
+);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('payment-proofs', 'payment-proofs', false, 102400, array['image/jpeg'])
+on conflict (id) do update
+set
+  public = false,
+  file_size_limit = 102400,
+  allowed_mime_types = array['image/jpeg'];
+
+drop policy if exists "Service role can manage payment proofs" on storage.objects;
+
+create policy "Service role can manage payment proofs"
+on storage.objects
+for all
+to service_role
+using (bucket_id = 'payment-proofs')
+with check (bucket_id = 'payment-proofs');
