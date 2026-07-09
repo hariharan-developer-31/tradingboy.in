@@ -497,10 +497,18 @@ export default function App() {
               <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-950/20 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.12)] animate-hero-kicker">
                 Live Trading Education
               </div>
-              <h1 className="mt-8 max-w-6xl font-podium text-[clamp(3.35rem,7.4vw,6.7rem)] font-bold uppercase leading-[0.9] tracking-normal text-white animate-hero-title">
-                Trade Price Action.
-                <br />
-                <span className="bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Master Structure.</span>
+              <h1 className="mt-8 w-full font-podium font-bold uppercase tracking-normal text-white animate-hero-title">
+                <span className="block text-[clamp(2.05rem,10.8vw,3.55rem)] leading-[0.9] md:hidden">
+                  <span className="block whitespace-nowrap">Trade Price</span>
+                  <span className="block whitespace-nowrap">
+                    Action. <span className="bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Master</span>
+                  </span>
+                  <span className="block whitespace-nowrap bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Structure.</span>
+                </span>
+                <span className="hidden leading-[0.88] md:block md:text-[clamp(2.85rem,6.8vw,6.7rem)]">
+                  <span className="block whitespace-nowrap">Trade Price Action.</span>
+                  <span className="block whitespace-nowrap bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Master Structure.</span>
+                </span>
               </h1>
               <p className="mx-auto mt-8 max-w-2xl font-inter text-sm leading-relaxed text-white/58 sm:text-base animate-hero-copy">
                 Practical trading courses for serious learners who want process, risk control, and disciplined execution.
