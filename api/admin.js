@@ -52,10 +52,12 @@ const paidAccessHtml = (order) => `
       <h2 style="margin:0 0 20px">Course Access Approved</h2>
       <p>Hi ${order.full_name},</p>
       <p>Your payment is verified. Your course access is now approved.</p>
-      <p><strong>Important:</strong> open the course using this same email address: <strong>${order.email}</strong>. The private Google Drive folder must be manually shared with that email by the admin.</p>
-      <p style="margin:28px 0">
-        <a href="${driveCourseUrl || '#'}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:bold;padding:14px 20px;display:inline-block">Open Course Drive Folder</a>
-      </p>
+      <p><strong>Important:</strong> open the course using this same email address: <strong>${order.email}</strong>.</p>
+      ${
+        order.course_drive_url || driveCourseUrl
+          ? `<p style="margin:28px 0"><a href="${order.course_drive_url || driveCourseUrl}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:bold;padding:14px 20px;display:inline-block">Open Course Drive Folder</a></p>`
+          : '<p>The team will share your course access by email within 12 hours.</p>'
+      }
       <table style="width:100%;border-collapse:collapse;margin-top:20px">
         <tr><td style="padding:8px 0;color:#9ca3af">Order ID</td><td style="padding:8px 0;text-align:right">${order.id}</td></tr>
         <tr><td style="padding:8px 0;color:#9ca3af">Amount</td><td style="padding:8px 0;text-align:right">${formatAmount(order.final_amount)}</td></tr>
@@ -110,7 +112,7 @@ export default async function handler(req, res) {
     const { data, error } = await admin
       .from('course_orders')
       .select(
-        'id, course_name, full_name, email, phone, coupon_code, original_amount, discount_amount, final_amount, payment_status, created_at',
+        'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, created_at',
       )
       .order('created_at', { ascending: false });
 
@@ -124,11 +126,6 @@ export default async function handler(req, res) {
   }
 
   if (action === 'updateOrder') {
-    if (body.paymentStatus === 'paid' && !driveCourseUrl) {
-      json(res, 500, { error: 'DRIVE_COURSE_URL is missing. Add the private Google Drive folder link first.' });
-      return;
-    }
-
     const { data, error } = await admin
       .from('course_orders')
       .update({ payment_status: body.paymentStatus })
@@ -141,13 +138,19 @@ export default async function handler(req, res) {
       return;
     }
 
+    let courseDriveUrl = null;
+    if (data.course_name) {
+      const { data: course } = await admin.from('courses').select('drive_url').eq('title', data.course_name).maybeSingle();
+      courseDriveUrl = course?.drive_url || null;
+    }
+    const emailOrder = { ...data, course_drive_url: courseDriveUrl };
     const emailSent = await sendEmail({
       to: data.email,
       subject:
         data.payment_status === 'paid'
           ? 'Trading Boy course access approved'
           : `Trading Boy payment status: ${data.payment_status}`,
-      html: data.payment_status === 'paid' ? paidAccessHtml(data) : statusHtml(data),
+      html: data.payment_status === 'paid' ? paidAccessHtml(emailOrder) : statusHtml(data),
     });
 
     json(res, 200, { ok: true, emailSent });
@@ -172,7 +175,7 @@ export default async function handler(req, res) {
   if (action === 'courses') {
     const { data, error } = await admin
       .from('courses')
-      .select('id, title, description, price, drive_url, active, created_at')
+      .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, active, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -186,17 +189,21 @@ export default async function handler(req, res) {
 
   if (action === 'saveCourse') {
     const title = String(body.title || '').trim();
-    const price = Number(body.price);
+    const normalPrice = Number(body.normalPrice);
+    const offerPrice = Number(body.offerPrice);
 
-    if (!title || Number.isNaN(price) || price <= 0) {
-      json(res, 400, { error: 'Valid title and price are required.' });
+    if (!title || Number.isNaN(normalPrice) || normalPrice <= 0 || Number.isNaN(offerPrice) || offerPrice <= 0) {
+      json(res, 400, { error: 'Valid title, normal price, and offer price are required.' });
       return;
     }
 
     const payload = {
       title,
       description: String(body.description || '').trim() || null,
-      price,
+      thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
+      normal_price: normalPrice,
+      offer_price: offerPrice,
+      price: offerPrice,
       drive_url: String(body.driveUrl || '').trim() || null,
     };
     const query = body.id

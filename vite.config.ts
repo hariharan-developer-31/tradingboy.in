@@ -27,16 +27,32 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         const fullName = String(body.name || '').trim();
         const email = String(body.email || '').trim();
         const phone = String(body.phone || '').trim();
+        const tradingExperience = String(body.tradingExperience || '').trim();
+        const requestedCourseName = String(body.courseName || 'Complete Forex Mastery').trim();
         const couponCode = String(body.couponCode || '').trim().toUpperCase();
         const paymentScreenshot = body.paymentScreenshot;
+        const termsAccepted = body.termsAccepted === true;
 
-        if (!fullName || !email || !phone) {
-          sendJson(res, 400, { error: 'Name, email, and phone are required.' });
+        if (!fullName || !email || !phone || !tradingExperience || !termsAccepted) {
+          sendJson(res, 400, { error: 'Name, email, phone, trading experience, and terms acceptance are required.' });
           return;
         }
 
         const admin = createClient(supabaseUrl, serviceRoleKey);
-        const coursePrice = 7199;
+        const courses = [
+          { name: 'Complete Forex Mastery', price: 7199 },
+          { name: 'Blueprint to Become a Funded Trader', price: 5399 },
+        ];
+        const { data: courseData } = await admin
+          .from('courses')
+          .select('title, price, offer_price, active')
+          .eq('title', requestedCourseName)
+          .eq('active', true)
+          .maybeSingle();
+        const fallbackCourse = courses.find((course) => course.name === requestedCourseName) || courses[0];
+        const selectedCourse = courseData
+          ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price) }
+          : fallbackCourse;
         let discountAmount = 0;
         let appliedCoupon = null;
 
@@ -52,8 +68,8 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             appliedCoupon = data.code;
             discountAmount =
               data.discount_type === 'percent'
-                ? Math.min(Math.round((coursePrice * data.discount_value) / 100), coursePrice)
-                : Math.min(data.discount_value, coursePrice);
+                ? Math.min(Math.round((selectedCourse.price * data.discount_value) / 100), selectedCourse.price)
+                : Math.min(data.discount_value, selectedCourse.price);
           }
         }
 
@@ -84,15 +100,18 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
 
         const order = {
           id: orderId,
-          course_name: 'Complete Forex Mastery',
+          course_name: selectedCourse.name,
           full_name: fullName,
           email,
           phone,
-          plan: 'Complete Forex Mastery',
+          trading_experience: tradingExperience,
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+          plan: selectedCourse.name,
           coupon_code: appliedCoupon,
-          original_amount: coursePrice,
+          original_amount: selectedCourse.price,
           discount_amount: discountAmount,
-          final_amount: coursePrice - discountAmount,
+          final_amount: selectedCourse.price - discountAmount,
           payment_status: 'pending',
           payment_screenshot_path: paymentScreenshotPath,
           source: 'website',
@@ -106,7 +125,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
 
         const emailSent = await sendMail(env, {
           to: email,
-          subject: 'Trading Boy receipt - Complete Forex Mastery',
+          subject: `Trading Boy receipt - ${selectedCourse.name}`,
           html: receiptHtml(order),
         });
 
@@ -147,7 +166,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           const { data, error } = await admin
             .from('course_orders')
             .select(
-              'id, course_name, full_name, email, phone, coupon_code, original_amount, discount_amount, final_amount, payment_status, created_at',
+              'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, created_at',
             )
             .order('created_at', { ascending: false });
 
@@ -156,13 +175,6 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         }
 
         if (body.action === 'updateOrder') {
-          if (body.paymentStatus === 'paid' && !env.DRIVE_COURSE_URL) {
-            sendJson(res, 500, {
-              error: 'DRIVE_COURSE_URL is missing. Add the private Google Drive folder link first.',
-            });
-            return;
-          }
-
           const { data, error } = await admin
             .from('course_orders')
             .update({ payment_status: body.paymentStatus })
@@ -175,13 +187,19 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             return;
           }
 
+          let courseDriveUrl = null;
+          if (data.course_name) {
+            const { data: course } = await admin.from('courses').select('drive_url').eq('title', data.course_name).maybeSingle();
+            courseDriveUrl = course?.drive_url || null;
+          }
+          const emailOrder = { ...data, course_drive_url: courseDriveUrl };
           const emailSent = await sendMail(env, {
             to: data.email,
             subject:
               data.payment_status === 'paid'
                 ? 'Trading Boy course access approved'
                 : `Trading Boy payment status: ${data.payment_status}`,
-            html: data.payment_status === 'paid' ? paidAccessHtml(env, data) : statusHtml(data),
+            html: data.payment_status === 'paid' ? paidAccessHtml(env, emailOrder) : statusHtml(data),
           });
 
           sendJson(res, 200, { ok: true, emailSent });
@@ -201,7 +219,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (body.action === 'courses') {
           const { data, error } = await admin
             .from('courses')
-            .select('id, title, description, price, drive_url, active, created_at')
+            .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, active, created_at')
             .order('created_at', { ascending: false });
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
@@ -210,17 +228,21 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
 
         if (body.action === 'saveCourse') {
           const title = String(body.title || '').trim();
-          const price = Number(body.price);
+          const normalPrice = Number(body.normalPrice);
+          const offerPrice = Number(body.offerPrice);
 
-          if (!title || Number.isNaN(price) || price <= 0) {
-            sendJson(res, 400, { error: 'Valid title and price are required.' });
+          if (!title || Number.isNaN(normalPrice) || normalPrice <= 0 || Number.isNaN(offerPrice) || offerPrice <= 0) {
+            sendJson(res, 400, { error: 'Valid title, normal price, and offer price are required.' });
             return;
           }
 
           const payload = {
             title,
             description: String(body.description || '').trim() || null,
-            price,
+            thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
+            normal_price: normalPrice,
+            offer_price: offerPrice,
+            price: offerPrice,
             drive_url: String(body.driveUrl || '').trim() || null,
           };
           const query = body.id
@@ -362,10 +384,12 @@ const paidAccessHtml = (env: Record<string, string>, order: any) => `
       <h2 style="margin:0 0 20px">Course Access Approved</h2>
       <p>Hi ${order.full_name},</p>
       <p>Your payment is verified. Your course access is now approved.</p>
-      <p><strong>Important:</strong> open the course using this same email address: <strong>${order.email}</strong>. The private Google Drive folder must be manually shared with that email by the admin.</p>
-      <p style="margin:28px 0">
-        <a href="${env.DRIVE_COURSE_URL}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:bold;padding:14px 20px;display:inline-block">Open Course Drive Folder</a>
-      </p>
+      <p><strong>Important:</strong> open the course using this same email address: <strong>${order.email}</strong>.</p>
+      ${
+        order.course_drive_url || env.DRIVE_COURSE_URL
+          ? `<p style="margin:28px 0"><a href="${order.course_drive_url || env.DRIVE_COURSE_URL}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:bold;padding:14px 20px;display:inline-block">Open Course Drive Folder</a></p>`
+          : '<p>The team will share your course access by email within 12 hours.</p>'
+      }
       <table style="width:100%;border-collapse:collapse;margin-top:20px">
         <tr><td style="padding:8px 0;color:#9ca3af">Order ID</td><td style="padding:8px 0;text-align:right">${order.id}</td></tr>
         <tr><td style="padding:8px 0;color:#9ca3af">Amount</td><td style="padding:8px 0;text-align:right">${formatAmount(order.final_amount)}</td></tr>

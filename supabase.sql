@@ -4,6 +4,9 @@ create table if not exists public.course_orders (
   full_name text not null,
   email text not null,
   phone text not null,
+  trading_experience text,
+  terms_accepted boolean not null default false,
+  terms_accepted_at timestamptz,
   plan text not null,
   coupon_code text,
   original_amount integer not null default 7199,
@@ -22,6 +25,9 @@ alter table public.course_orders add column if not exists discount_amount intege
 alter table public.course_orders add column if not exists final_amount integer not null default 7199;
 alter table public.course_orders add column if not exists payment_status text not null default 'pending';
 alter table public.course_orders add column if not exists payment_screenshot_path text;
+alter table public.course_orders add column if not exists trading_experience text;
+alter table public.course_orders add column if not exists terms_accepted boolean not null default false;
+alter table public.course_orders add column if not exists terms_accepted_at timestamptz;
 
 alter table public.course_orders enable row level security;
 
@@ -59,6 +65,9 @@ create table if not exists public.courses (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   description text,
+  thumbnail_url text,
+  normal_price integer,
+  offer_price integer,
   price integer not null default 7199 check (price > 0),
   drive_url text,
   active boolean not null default true,
@@ -66,6 +75,9 @@ create table if not exists public.courses (
 );
 
 alter table public.courses enable row level security;
+alter table public.courses add column if not exists thumbnail_url text;
+alter table public.courses add column if not exists normal_price integer;
+alter table public.courses add column if not exists offer_price integer;
 
 drop policy if exists "Allow public active course reads" on public.courses;
 
@@ -85,6 +97,29 @@ select
 where not exists (
   select 1 from public.courses where title = 'Complete Forex Mastery'
 );
+
+update public.courses
+set
+  normal_price = coalesce(normal_price, 7199),
+  offer_price = coalesce(offer_price, 7199)
+where title = 'Complete Forex Mastery';
+
+insert into public.courses (title, description, price, drive_url, active)
+select
+  'Blueprint to Become a Funded Trader',
+  'Gold trading and gold futures training with funded account rules, evaluation strategy, drawdown control, and risk-first execution.',
+  5399,
+  null,
+  true
+where not exists (
+  select 1 from public.courses where title = 'Blueprint to Become a Funded Trader'
+);
+
+update public.courses
+set
+  normal_price = coalesce(normal_price, 26999),
+  offer_price = coalesce(offer_price, 5399)
+where title = 'Blueprint to Become a Funded Trader';
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('payment-proofs', 'payment-proofs', false, 102400, array['image/jpeg'])

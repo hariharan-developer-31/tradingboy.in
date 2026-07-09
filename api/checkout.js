@@ -3,6 +3,10 @@ import { randomUUID } from 'node:crypto';
 
 const COURSE_NAME = 'Complete Forex Mastery';
 const COURSE_PRICE = 7199;
+const COURSES = [
+  { name: COURSE_NAME, price: COURSE_PRICE },
+  { name: 'Blueprint to Become a Funded Trader', price: 5399 },
+];
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -89,15 +93,28 @@ export default async function handler(req, res) {
   const fullName = String(body.name || '').trim();
   const email = String(body.email || '').trim();
   const phone = String(body.phone || '').trim();
+  const tradingExperience = String(body.tradingExperience || '').trim();
+  const requestedCourseName = String(body.courseName || COURSE_NAME).trim();
   const couponCode = String(body.couponCode || '').trim().toUpperCase();
   const paymentScreenshot = body.paymentScreenshot;
+  const termsAccepted = body.termsAccepted === true;
 
-  if (!fullName || !email || !phone) {
-    json(res, 400, { error: 'Name, email, and phone are required.' });
+  if (!fullName || !email || !phone || !tradingExperience || !termsAccepted) {
+    json(res, 400, { error: 'Name, email, phone, trading experience, and terms acceptance are required.' });
     return;
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
+  const { data: courseData } = await admin
+    .from('courses')
+    .select('title, price, offer_price, active')
+    .eq('title', requestedCourseName)
+    .eq('active', true)
+    .maybeSingle();
+  const fallbackCourse = COURSES.find((course) => course.name === requestedCourseName) || COURSES[0];
+  const selectedCourse = courseData
+    ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price) }
+    : fallbackCourse;
   let discountAmount = 0;
   let appliedCoupon = null;
 
@@ -113,12 +130,12 @@ export default async function handler(req, res) {
       appliedCoupon = data.code;
       discountAmount =
         data.discount_type === 'percent'
-          ? Math.min(Math.round((COURSE_PRICE * data.discount_value) / 100), COURSE_PRICE)
-          : Math.min(data.discount_value, COURSE_PRICE);
+          ? Math.min(Math.round((selectedCourse.price * data.discount_value) / 100), selectedCourse.price)
+          : Math.min(data.discount_value, selectedCourse.price);
     }
   }
 
-  const finalAmount = COURSE_PRICE - discountAmount;
+  const finalAmount = selectedCourse.price - discountAmount;
   const orderId = randomUUID();
   let paymentScreenshotPath = null;
 
@@ -146,13 +163,16 @@ export default async function handler(req, res) {
 
   const order = {
     id: orderId,
-    course_name: COURSE_NAME,
+    course_name: selectedCourse.name,
     full_name: fullName,
     email,
     phone,
-    plan: COURSE_NAME,
+    trading_experience: tradingExperience,
+    terms_accepted: true,
+    terms_accepted_at: new Date().toISOString(),
+    plan: selectedCourse.name,
     coupon_code: appliedCoupon,
-    original_amount: COURSE_PRICE,
+    original_amount: selectedCourse.price,
     discount_amount: discountAmount,
     final_amount: finalAmount,
     payment_status: 'pending',
@@ -169,7 +189,7 @@ export default async function handler(req, res) {
 
   const emailSent = await sendEmail({
     to: email,
-    subject: `Trading Boy receipt - ${COURSE_NAME}`,
+    subject: `Trading Boy receipt - ${selectedCourse.name}`,
     html: receiptHtml(order),
   });
 
