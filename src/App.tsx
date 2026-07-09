@@ -485,28 +485,25 @@ export default function App() {
 
       {!checkoutOpen && !adminOpen && (
         <main>
-          <section id="home" className="relative flex min-h-screen items-center overflow-hidden bg-[#03070d] pt-28 lg:pt-32">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(37,174,244,0.14),rgba(3,7,13,0.24)_34%,#03070d_72%)] animate-soft-drift" />
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 origin-left bg-[linear-gradient(90deg,rgba(37,174,244,0.24),rgba(37,174,244,0.07)_46%,transparent)] blur-[2px] animate-edge-breathe" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 origin-right bg-[linear-gradient(270deg,rgba(37,174,244,0.28),rgba(37,174,244,0.08)_48%,transparent)] blur-[2px] animate-edge-breathe" />
-            <div className="pointer-events-none absolute inset-x-4 top-4 bottom-4 rounded-[2rem] border border-electric/20 shadow-[inset_0_0_90px_rgba(37,174,244,0.18)] sm:inset-x-7 sm:rounded-[2.5rem] animate-fade-in" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink to-transparent" />
+          <section id="home" className="relative flex min-h-screen items-center overflow-hidden bg-[#070b10] pt-28 lg:pt-32">
+            <div className="pointer-events-none absolute inset-0 bg-grid-pattern opacity-25 animate-grid-pan" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(37,174,244,0.16),rgba(7,11,16,0.58)_38%,#070b10_74%)] animate-soft-drift" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-[42%] origin-left bg-[linear-gradient(90deg,rgba(37,174,244,0.22),rgba(37,174,244,0.055)_45%,transparent)] blur-[3px] animate-edge-breathe" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-[42%] origin-right bg-[linear-gradient(270deg,rgba(37,174,244,0.2),rgba(37,174,244,0.055)_45%,transparent)] blur-[3px] animate-edge-breathe" />
+            <div className="pointer-events-none absolute left-1/2 top-[38%] h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-electric/10 blur-[120px]" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
 
             <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-6 py-16 text-center sm:px-10 lg:px-16">
-              <div className="flex max-w-xl items-center justify-center gap-6 overflow-hidden font-inter text-[10px] font-bold uppercase tracking-widest text-white/35 sm:gap-10 animate-hero-kicker">
-                <span>Forex</span>
-                <span>Gold Trading</span>
-                <span>Funded Accounts</span>
+              <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-950/20 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.12)] animate-hero-kicker">
+                Live Trading Education
               </div>
-              <h1 className="mt-8 max-w-4xl font-podium text-[clamp(3.2rem,8vw,6.6rem)] font-bold uppercase leading-[0.82] tracking-normal text-white animate-hero-title">
-                Premium
+              <h1 className="mt-8 max-w-6xl font-podium text-[clamp(3.35rem,7.4vw,6.7rem)] font-bold uppercase leading-[0.9] tracking-normal text-white animate-hero-title">
+                Trade Price Action.
                 <br />
-                Trading
-                <br />
-                <span className="bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Education</span>
+                <span className="bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Master Structure.</span>
               </h1>
-              <p className="mx-auto mt-8 max-w-xl font-inter text-sm leading-relaxed text-white/58 sm:text-base animate-hero-copy">
-                Structured forex, gold, and funded account training for traders who want clean execution and disciplined risk.
+              <p className="mx-auto mt-8 max-w-2xl font-inter text-sm leading-relaxed text-white/58 sm:text-base animate-hero-copy">
+                Practical trading courses for serious learners who want process, risk control, and disciplined execution.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-4 animate-hero-actions">
                 <button onClick={() => openCheckout()} className="group inline-flex items-center justify-center rounded-full bg-electric px-7 py-4 font-inter text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline">
