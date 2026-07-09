@@ -12,7 +12,7 @@
     min-width: 320px;
     background: #0f1113;
     color: white;
-    font-family: Inter, system-ui, sans-serif;
+    font-family: 'Righteous', system-ui, sans-serif;
   }
 
   button,
@@ -26,7 +26,7 @@
 
 @layer utilities {
   .font-podium {
-    font-family: "FSP DEMO - PODIUM Sharp 4.11", Impact, sans-serif;
+    font-family: 'Righteous', sans-serif;
   }
 
   @keyframes fade-up {
@@ -99,4 +99,90 @@
     opacity: 0;
     animation: scale-in 0.55s ease-out forwards;
   }
+
+  .bg-grid-pattern {
+    background-size: 32px 32px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  }
+
+  .shadow-neon-blue {
+    box-shadow: 0 0 25px rgba(37, 174, 244, 0.25);
+  }
+
+  .shadow-neon-green {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.3);
+  }
+
+  .shadow-neon-red {
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.3);
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 0.15;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(1.05);
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 8s ease-in-out infinite;
+  }
+
+  @keyframes grid-pan {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 32px 32px;
+    }
+  }
+
+  .animate-grid-pan {
+    animation: grid-pan 20s linear infinite;
+  }
+
+  @keyframes scanline {
+    0% {
+      top: -100%;
+    }
+    100% {
+      top: 100%;
+    }
+  }
+
+  .animate-scanline {
+    animation: scanline 8s linear infinite;
+  }
+
+  @keyframes float-slow {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-8px) rotate(0.3deg);
+    }
+  }
+
+  .animate-float-slow {
+    animation: float-slow 6s ease-in-out infinite;
+  }
+
+  @keyframes float-slower {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-12px) rotate(-0.3deg);
+    }
+  }
+
+  .animate-float-slower {
+    animation: float-slower 8s ease-in-out infinite;
+  }
 }
+

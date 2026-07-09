@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, Crown, X } from 'lucide-react';
+import { ArrowUpRight, Crown, X, TrendingUp, Activity } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 
 const navLinks = ['Course', 'About', 'Results', 'FAQ'];
@@ -139,6 +139,230 @@ export default function App() {
     driveUrl: '',
   });
   const [adminStatus, setAdminStatus] = useState('');
+
+  // Trading Session Ticker State
+  const [activeSession, setActiveSession] = useState('London & New York');
+  
+  // Candlestick Ticking Simulation State
+  const initialCandles = useMemo(() => [
+    { open: 1.0810, high: 1.0818, low: 1.0805, close: 1.0815 },
+    { open: 1.0815, high: 1.0825, low: 1.0812, close: 1.0822 },
+    { open: 1.0822, high: 1.0824, low: 1.0815, close: 1.0818 },
+    { open: 1.0818, high: 1.0830, low: 1.0816, close: 1.0828 },
+    { open: 1.0828, high: 1.0832, low: 1.0822, close: 1.0825 },
+    { open: 1.0825, high: 1.0827, low: 1.0818, close: 1.0820 },
+    { open: 1.0820, high: 1.0835, low: 1.0819, close: 1.0833 },
+    { open: 1.0833, high: 1.0842, low: 1.0830, close: 1.0840 },
+    { open: 1.0840, high: 1.0844, low: 1.0835, close: 1.0838 },
+    { open: 1.0838, high: 1.0848, low: 1.0836, close: 1.0845 },
+    { open: 1.0845, high: 1.0855, low: 1.0842, close: 1.0850 },
+    { open: 1.0850, high: 1.0852, low: 1.0840, close: 1.0842 },
+    { open: 1.0842, high: 1.0858, low: 1.0838, close: 1.0855 },
+    { open: 1.0855, high: 1.0865, low: 1.0850, close: 1.0862 },
+  ], []);
+
+  const [candles, setCandles] = useState(initialCandles);
+  const [currentPrice, setCurrentPrice] = useState(1.0862);
+  const [priceDirection, setPriceDirection] = useState<'up' | 'down' | 'neutral'>('neutral');
+
+  // Trade feed log mock state
+  const [trades, setTrades] = useState([
+    { id: 1, pair: 'EURUSD', type: 'BUY', price: '1.08582', size: '2.0 Lots', time: '14:20:11', status: 'profit' },
+    { id: 2, pair: 'GBPUSD', type: 'SELL', price: '1.27180', size: '1.5 Lots', time: '14:20:45', status: 'loss' },
+    { id: 3, pair: 'XAUUSD', type: 'BUY', price: '2352.40', size: '0.8 Lots', time: '14:21:02', status: 'profit' },
+    { id: 4, pair: 'USDCAD', type: 'BUY', price: '1.36850', size: '3.0 Lots', time: '14:21:30', status: 'profit' },
+  ]);
+
+  // Coordinates for crosshair hover
+  const [hoverCoords, setHoverCoords] = useState<{ x: number; y: number } | null>(null);
+
+  // Constants for chart layouts
+  const paddingTop = 20;
+  const paddingBottom = 20;
+  const paddingLeft = 15;
+  const paddingRight = 60;
+  const chartHeight = 250;
+  const chartWidth = 500 - paddingLeft - paddingRight;
+
+  // Active Session calculation
+  useEffect(() => {
+    const getActiveSession = () => {
+      const utcHour = new Date().getUTCHours();
+      const sessions = [];
+      if (utcHour >= 8 && utcHour < 16) sessions.push('London');
+      if (utcHour >= 13 && utcHour < 21) sessions.push('New York');
+      if (utcHour >= 0 && utcHour < 9) sessions.push('Tokyo');
+      if (sessions.length === 0) return 'Sydney';
+      return sessions.join(' & ');
+    };
+    setActiveSession(getActiveSession());
+  }, []);
+
+  // Price ticking effect (simulates standard tick changes)
+  useEffect(() => {
+    const priceInterval = setInterval(() => {
+      const isUp = Math.random() > 0.46; // slight bullish bias
+      const change = (Math.random() * 0.00015) * (isUp ? 1 : -1);
+      setCurrentPrice(prev => {
+        const nextPrice = parseFloat((prev + change).toFixed(5));
+        setPriceDirection(nextPrice > prev ? 'up' : 'down');
+        
+        // Update the last candle
+        setCandles(prevCandles => {
+          const updated = [...prevCandles];
+          if (updated.length === 0) return prevCandles;
+          const lastIndex = updated.length - 1;
+          const last = updated[lastIndex];
+          const newClose = nextPrice;
+          const newHigh = Math.max(last.high, nextPrice);
+          const newLow = Math.min(last.low, nextPrice);
+          
+          updated[lastIndex] = {
+            ...last,
+            close: newClose,
+            high: newHigh,
+            low: newLow,
+          };
+          return updated;
+        });
+
+        return nextPrice;
+      });
+    }, 1000);
+
+    return () => clearInterval(priceInterval);
+  }, []);
+
+  // Periodic new candle append
+  useEffect(() => {
+    const newCandleInterval = setInterval(() => {
+      setCandles(prevCandles => {
+        const updated = [...prevCandles];
+        const last = updated[updated.length - 1];
+        const newOpen = last.close;
+        const newCandle = {
+          open: newOpen,
+          high: newOpen,
+          low: newOpen,
+          close: newOpen,
+        };
+        if (updated.length >= 16) {
+          updated.shift();
+        }
+        return [...updated, newCandle];
+      });
+    }, 10000); // add a new candle every 10 seconds
+
+    return () => clearInterval(newCandleInterval);
+  }, []);
+
+  // Live order book tick updates
+  useEffect(() => {
+    const orderInterval = setInterval(() => {
+      const pairs = ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY', 'AUDUSD'];
+      const types = ['BUY', 'SELL'] as const;
+      const randomPair = pairs[Math.floor(Math.random() * pairs.length)];
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      
+      let basePrice = 1.08450;
+      if (randomPair === 'XAUUSD') basePrice = 2350.50;
+      if (randomPair === 'USDJPY') basePrice = 156.20;
+      if (randomPair === 'GBPUSD') basePrice = 1.27120;
+      
+      const randomPrice = parseFloat((basePrice + (Math.random() - 0.5) * (basePrice * 0.005)).toFixed(randomPair === 'XAUUSD' ? 2 : 5));
+      const randomSize = ((Math.random() * 4.5) + 0.5).toFixed(1) + ' Lots';
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      
+      const newItem = {
+        id: Date.now(),
+        pair: randomPair,
+        type: randomType,
+        price: randomPrice.toString(),
+        size: randomSize,
+        time: timeStr,
+        status: Math.random() > 0.4 ? 'profit' : 'loss'
+      };
+
+      setTrades(prev => [newItem, ...prev.slice(0, 3)]);
+    }, 3800);
+
+    return () => clearInterval(orderInterval);
+  }, []);
+
+  // Compute boundaries for candle Y autoscaling
+  const { minPrice, maxPrice } = useMemo(() => {
+    let min = Infinity;
+    let max = -Infinity;
+    candles.forEach(c => {
+      if (c.low < min) min = c.low;
+      if (c.high > max) max = c.high;
+    });
+    const diff = max - min || 0.001;
+    return {
+      minPrice: min - diff * 0.12,
+      maxPrice: max + diff * 0.12,
+    };
+  }, [candles]);
+
+  // Compute SMAs
+  const sma5 = useMemo(() => {
+    const period = 5;
+    return candles.map((_, idx) => {
+      if (idx < period - 1) return null;
+      const slice = candles.slice(idx - period + 1, idx + 1);
+      const sum = slice.reduce((acc, c) => acc + c.close, 0);
+      return sum / period;
+    });
+  }, [candles]);
+
+  const sma10 = useMemo(() => {
+    const period = 8;
+    return candles.map((_, idx) => {
+      if (idx < period - 1) return null;
+      const slice = candles.slice(idx - period + 1, idx + 1);
+      const sum = slice.reduce((acc, c) => acc + c.close, 0);
+      return sum / period;
+    });
+  }, [candles]);
+
+  // Calculate SVG Polyline paths for SMAs
+  const sma5Path = useMemo(() => {
+    const points = sma5
+      .map((val, idx) => {
+        if (val === null) return null;
+        const x = paddingLeft + (idx * (chartWidth / (candles.length - 1)));
+        const y = chartHeight - paddingBottom - ((val - minPrice) / (maxPrice - minPrice)) * (chartHeight - paddingTop - paddingBottom);
+        return `${x},${y}`;
+      })
+      .filter(Boolean)
+      .join(' ');
+    return points ? `M ${points}` : '';
+  }, [sma5, minPrice, maxPrice, chartWidth, chartHeight, candles.length]);
+
+  const sma10Path = useMemo(() => {
+    const points = sma10
+      .map((val, idx) => {
+        if (val === null) return null;
+        const x = paddingLeft + (idx * (chartWidth / (candles.length - 1)));
+        const y = chartHeight - paddingBottom - ((val - minPrice) / (maxPrice - minPrice)) * (chartHeight - paddingTop - paddingBottom);
+        return `${x},${y}`;
+      })
+      .filter(Boolean)
+      .join(' ');
+    return points ? `M ${points}` : '';
+  }, [sma10, minPrice, maxPrice, chartWidth, chartHeight, candles.length]);
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setHoverCoords({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setHoverCoords(null);
+  };
 
   useEffect(() => {
     const handleScroll = () => setHasScrolled(window.scrollY > 24);
@@ -649,43 +873,330 @@ export default function App() {
 
       {!checkoutOpen && !adminOpen && (
       <main>
-        <section id="home" className="relative min-h-screen overflow-hidden">
-          <img
-            src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=2200&q=90"
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/78" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(37,174,244,0.24),transparent_28%),radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.08),transparent_16%),linear-gradient(180deg,rgba(15,17,19,0.78),rgba(0,0,0,0.92))]" />
+        <section id="home" className="relative min-h-screen overflow-hidden bg-ink pt-28 lg:pt-32 flex items-center">
+          {/* Modern Cyber Backgrounds */}
+          <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none animate-grid-pan" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-ink pointer-events-none" />
+          
+          {/* Soft neon ambient glows */}
+          <div className="absolute -top-30 left-1/4 h-[350px] w-[350px] rounded-full bg-electric/10 blur-[130px] pointer-events-none animate-pulse-glow" style={{ animationDelay: '0s' }} />
+          <div className="absolute top-1/3 -right-30 h-[400px] w-[400px] rounded-full bg-emerald-500/10 blur-[140px] pointer-events-none animate-pulse-glow" style={{ animationDelay: '2.5s' }} />
+          
+          {/* Running scanner laser */}
+          <div className="absolute inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-electric/20 to-transparent pointer-events-none animate-scanline" />
 
-          <div className="relative z-10 flex min-h-screen items-center justify-center px-6 pb-14 pt-28 text-center sm:px-10 lg:px-16">
-            <div className="mx-auto max-w-5xl">
-              <div className="mb-6 flex items-center justify-center gap-3 font-inter text-xs uppercase tracking-[0.3em] text-white/70 animate-fade-up sm:text-sm lg:mb-8">
-                <Crown className="h-4 w-4 text-electric" />
-                Forex Trading Education
+          <div className="relative z-10 w-full max-w-5xl mx-auto px-6 py-16 sm:px-10 lg:px-16 flex flex-col items-center text-center space-y-12 sm:space-y-16">
+            
+            {/* Centered Copywriting (Headline, badge, paragraph) */}
+            <div className="max-w-3xl flex flex-col items-center space-y-6 animate-fade-up">
+              {/* Mini Status Badge */}
+              <div className="inline-flex items-center gap-2 border border-emerald-500/30 bg-emerald-950/20 px-3.5 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest text-emerald-400">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+                </span>
+                {activeSession} Live Session
               </div>
 
-              <h1 className="font-podium text-[clamp(3rem,8vw,7.8rem)] font-bold uppercase leading-[0.92] tracking-tight text-white animate-fade-up-delay-1">
-                A Smarter Way
-                <br />
-                To Master Forex
-              </h1>
+              <div className="space-y-4">
+                <h1 className="font-podium text-[clamp(2.2rem,6vw,4.8rem)] font-bold uppercase leading-[0.94] tracking-tight text-white">
+                  Trade Price Action.
+                  <br />
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-electric via-skyline to-white">
+                    Master Structure.
+                  </span>
+                </h1>
+                
+                <p className="max-w-2xl mx-auto font-inter text-sm sm:text-base leading-relaxed text-white/55">
+                  Institutional models, liquidity execution, and psychological protocols. Built for serious traders who want process, not prediction.
+                </p>
+              </div>
 
-              <p className="mx-auto mt-6 max-w-3xl font-inter text-base leading-relaxed text-white/75 animate-fade-up-delay-2 sm:text-xl lg:mt-8">
-                Learn forex with a disciplined course built around price action, risk control,
-                and live market execution. Built for traders who want structure, not signals.
-              </p>
-
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 animate-fade-up-delay-3 sm:gap-6 lg:mt-10">
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
                 <button
                   onClick={openCheckout}
-                  className="group bg-electric px-5 py-3 font-inter text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline sm:px-7 sm:py-4 sm:text-xs"
+                  className="group relative inline-flex items-center justify-center bg-electric px-6 py-3.5 font-inter text-[11px] font-bold uppercase tracking-widest text-black shadow-glow hover:bg-skyline hover:shadow-neon-blue transition-all duration-300 rounded"
                 >
-                  Buy Course
-                  <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  Access Masterclass
+                  <ArrowUpRight className="ml-2 h-4 w-4 transition duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </button>
+                <a
+                  href="#course"
+                  className="border border-white/10 hover:border-white/30 px-6 py-3.5 font-inter text-[11px] font-bold uppercase tracking-widest text-white/70 hover:text-white transition rounded"
+                >
+                  View Syllabus
+                </a>
               </div>
             </div>
+
+            {/* Centered Terminal Container with Parallax Overlays */}
+            <div className="w-full max-w-2xl relative animate-fade-up-delay-1 px-4">
+              
+              {/* Secondary Floating Asset Card (Parallax float-slower) */}
+              <div className="absolute -top-6 -left-2 sm:-left-8 z-30 flex items-center gap-3 border border-emerald-500/30 bg-black/90 px-3 py-2 rounded-lg shadow-2xl animate-float-slower">
+                <div className="bg-emerald-500/20 p-1.5 rounded">
+                  <TrendingUp className="h-4 w-4 text-emerald-400" />
+                </div>
+                <div className="text-left font-mono">
+                  <div className="text-[8px] text-white/40 uppercase font-semibold">Active Position</div>
+                  <div className="text-xs font-bold text-emerald-400">
+                    +$1,894.20 <span className="text-[9px] text-white/40 font-normal">EURUSD</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Third Floating Target Metric (Parallax float-slow with delay) */}
+              <div className="absolute -bottom-6 -right-2 sm:-right-8 z-30 hidden sm:flex items-center gap-3 border border-electric/30 bg-black/90 px-3.5 py-2.5 rounded-lg shadow-2xl animate-float-slow" style={{ animationDelay: '1.5s' }}>
+                <div className="bg-electric/20 p-1.5 rounded">
+                  <Activity className="h-4 w-4 text-electric" />
+                </div>
+                <div className="text-left font-mono">
+                  <div className="text-[8px] text-white/40 uppercase font-semibold">Execution Ratio</div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    1:3.2 RR <span className="text-[9px] text-emerald-400 font-semibold">(Win)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Terminal Shell (Parallax float-slow) */}
+              <div className="relative border border-white/10 bg-black/60 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-md overflow-hidden animate-float-slow mx-auto">
+                
+                {/* Custom Window Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-white/[0.01]">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                    </div>
+                    <span className="text-[9px] font-mono text-white/30 tracking-wider uppercase ml-1">
+                      Trading Boy Terminal v2.5
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded text-[9px] font-mono text-emerald-400">
+                    <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                    LIVE
+                  </div>
+                </div>
+
+                {/* Subheader info panel */}
+                <div className="grid grid-cols-2 gap-px bg-white/5 border-b border-white/5 text-left font-mono text-xs">
+                  <div className="bg-black/60 p-3 flex items-center justify-between">
+                    <div>
+                      <div className="text-[9px] text-white/30 uppercase">Instrument</div>
+                      <div className="font-semibold text-white mt-0.5">EURUSD</div>
+                    </div>
+                    <span className="text-[10px] text-white/40 bg-white/5 px-1.5 py-0.5 rounded">M15</span>
+                  </div>
+                  <div className="bg-black/60 p-3">
+                    <div className="text-[9px] text-white/30 uppercase">Live Bid/Ask</div>
+                    <div className={`font-semibold mt-0.5 transition-colors duration-300 ${
+                      priceDirection === 'up' ? 'text-emerald-400' : priceDirection === 'down' ? 'text-rose-400' : 'text-white'
+                    }`}>
+                      {currentPrice.toFixed(5)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SVG Candlestick Workspace */}
+                <div className="relative p-2 pt-4 bg-black/30">
+                  <svg
+                    width="100%"
+                    height="250"
+                    viewBox="0 0 500 250"
+                    preserveAspectRatio="none"
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={handleMouseLeave}
+                    className="cursor-crosshair overflow-visible select-none"
+                  >
+                    {/* Horizontal gridlines */}
+                    {[0, 1, 2, 3, 4].map(lineIdx => {
+                      const yVal = paddingTop + (lineIdx * (250 - paddingTop - paddingBottom) / 4);
+                      return (
+                        <line
+                          key={lineIdx}
+                          x1={paddingLeft}
+                          y1={yVal}
+                          x2={500 - paddingRight}
+                          y2={yVal}
+                          stroke="rgba(255,255,255,0.03)"
+                          strokeWidth="1"
+                        />
+                      );
+                    })}
+
+                    {/* Vertical gridlines */}
+                    {[0, 1, 2, 3, 4, 5].map(lineIdx => {
+                      const xVal = paddingLeft + (lineIdx * (500 - paddingLeft - paddingRight) / 5);
+                      return (
+                        <line
+                          key={lineIdx}
+                          x1={xVal}
+                          y1={paddingTop}
+                          x2={xVal}
+                          y2={250 - paddingBottom}
+                          stroke="rgba(255,255,255,0.03)"
+                          strokeWidth="1"
+                        />
+                      );
+                    })}
+
+                    {/* Price coordinate labels on Right Y-Axis */}
+                    {[0, 1, 2, 3, 4].map(lineIdx => {
+                      const yVal = paddingTop + (lineIdx * (250 - paddingTop - paddingBottom) / 4);
+                      const labelPrice = maxPrice - (lineIdx * (maxPrice - minPrice) / 4);
+                      return (
+                        <text
+                          key={lineIdx}
+                          x={500 - paddingRight + 6}
+                          y={yVal + 3}
+                          fill="rgba(255,255,255,0.25)"
+                          fontSize="7.5"
+                          fontFamily="monospace"
+                          textAnchor="start"
+                        >
+                          {labelPrice.toFixed(5)}
+                        </text>
+                      );
+                    })}
+
+                    {/* Order block zones */}
+                    <rect
+                      x={paddingLeft}
+                      y={chartHeight - paddingBottom - ((1.0825 - minPrice) / (maxPrice - minPrice)) * (chartHeight - paddingTop - paddingBottom) - 8}
+                      width={500 - paddingLeft - paddingRight}
+                      height="16"
+                      fill="rgba(16, 185, 129, 0.04)"
+                      stroke="rgba(16, 185, 129, 0.1)"
+                      strokeWidth="1"
+                      strokeDasharray="2 2"
+                    />
+
+                    {/* Double SMA Indicator paths */}
+                    {sma5Path && (
+                      <path
+                        d={sma5Path}
+                        fill="none"
+                        stroke="rgba(37, 174, 244, 0.4)"
+                        strokeWidth="1.2"
+                      />
+                    )}
+                    {sma10Path && (
+                      <path
+                        d={sma10Path}
+                        fill="none"
+                        stroke="rgba(245, 158, 11, 0.4)"
+                        strokeWidth="1.2"
+                      />
+                    )}
+
+                    {/* SVG Candles */}
+                    {candles.map((candle, idx) => {
+                      const x = paddingLeft + (idx * (chartWidth / (candles.length - 1)));
+                      const isBullish = candle.close >= candle.open;
+                      const color = isBullish ? '#10b981' : '#ef4444';
+                      const highY = chartHeight - paddingBottom - ((candle.high - minPrice) / (maxPrice - minPrice)) * (chartHeight - paddingTop - paddingBottom);
+                      const lowY = chartHeight - paddingBottom - ((candle.low - minPrice) / (maxPrice - minPrice)) * (chartHeight - paddingTop - paddingBottom);
+                      const openY = chartHeight - paddingBottom - ((candle.open - minPrice) / (maxPrice - minPrice)) * (chartHeight - paddingTop - paddingBottom);
+                      const closeY = chartHeight - paddingBottom - ((candle.close - minPrice) / (maxPrice - minPrice)) * (chartHeight - paddingTop - paddingBottom);
+
+                      const bodyTop = Math.min(openY, closeY);
+                      const bodyBottom = Math.max(openY, closeY);
+                      const bodyHeight = Math.max(1.5, bodyBottom - bodyTop);
+
+                      return (
+                        <g key={idx}>
+                          {/* Candle Wick */}
+                          <line x1={x} y1={highY} x2={x} y2={lowY} stroke={color} strokeWidth="1" />
+                          {/* Candle Body */}
+                          <rect
+                            x={x - 5}
+                            y={bodyTop}
+                            width="10"
+                            height={bodyHeight}
+                            fill={isBullish ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'}
+                            stroke={color}
+                            strokeWidth="0.8"
+                            rx="0.5"
+                          />
+                        </g>
+                      );
+                    })}
+
+                    {/* Interactive Crosshair overlay */}
+                    {hoverCoords && hoverCoords.x >= paddingLeft && hoverCoords.x <= 500 - paddingRight && hoverCoords.y >= paddingTop && hoverCoords.y <= 250 - paddingBottom && (
+                      <g>
+                        <line
+                          x1={paddingLeft}
+                          y1={hoverCoords.y}
+                          x2={500 - paddingRight}
+                          y2={hoverCoords.y}
+                          stroke="rgba(255,255,255,0.3)"
+                          strokeWidth="0.8"
+                          strokeDasharray="2 2"
+                        />
+                        <line
+                          x1={hoverCoords.x}
+                          y1={paddingTop}
+                          x2={hoverCoords.x}
+                          y2={250 - paddingBottom}
+                          stroke="rgba(255,255,255,0.3)"
+                          strokeWidth="0.8"
+                          strokeDasharray="2 2"
+                        />
+                        <rect
+                          x={500 - paddingRight + 2}
+                          y={hoverCoords.y - 7}
+                          width="44"
+                          height="14"
+                          fill="#000"
+                          stroke="#25aef4"
+                          strokeWidth="0.8"
+                          rx="1.5"
+                        />
+                        <text
+                          x={500 - paddingRight + 5}
+                          y={hoverCoords.y + 3}
+                          fill="#25aef4"
+                          fontSize="7.5"
+                          fontFamily="monospace"
+                        >
+                          {(maxPrice - ((hoverCoords.y - paddingTop) / (250 - paddingTop - paddingBottom)) * (maxPrice - minPrice)).toFixed(5)}
+                        </text>
+                      </g>
+                    )}
+                  </svg>
+                </div>
+
+                {/* Trade logs */}
+                <div className="border-t border-white/5 bg-black/90 p-3 font-mono text-[10px]">
+                  <div className="text-white/30 text-[8px] uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <span>LIVE TICK LOG</span>
+                    <span>ACTIVE CONNECTIONS: 3</span>
+                  </div>
+                  <div className="space-y-1 text-left">
+                    {trades.slice(0, 3).map((t, idx) => (
+                      <div key={t.id || idx} className="flex justify-between items-center pb-0.5 border-b border-white/[0.02]">
+                        <span className="text-white/20">{t.time}</span>
+                        <span className="font-semibold text-white/70">{t.pair}</span>
+                        <span className={`px-1 text-[7px] font-bold rounded ${
+                          t.type === 'BUY' ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/10' : 'bg-rose-950 text-rose-400 border border-rose-500/10'
+                        }`}>
+                          {t.type}
+                        </span>
+                        <span className="text-white/50">{t.size}</span>
+                        <span className={`font-semibold ${t.status === 'profit' ? 'text-emerald-400' : 'text-white/50'}`}>
+                          {t.status === 'profit' ? 'PROFIT' : 'PENDING'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </section>
 

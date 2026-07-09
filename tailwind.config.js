@@ -9,8 +9,8 @@ export default {
         skyline: '#48c4ff',
       },
       fontFamily: {
-        podium: ['"FSP DEMO - PODIUM Sharp 4.11"', 'Impact', 'sans-serif'],
-        inter: ['Inter', 'system-ui', 'sans-serif'],
+        podium: ['Righteous', 'sans-serif'],
+        inter: ['Righteous', 'sans-serif'],
       },
       boxShadow: {
         glow: '0 0 40px rgba(37, 174, 244, 0.28)',

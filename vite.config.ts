@@ -399,5 +399,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), localAdminApi(env)],
+    server: {
+      fs: {
+        strict: false,
+      },
+    },
   };
 });
