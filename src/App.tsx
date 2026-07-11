@@ -163,6 +163,7 @@ export default function App() {
   const [paymentSeconds, setPaymentSeconds] = useState(180);
   const [paymentPromptOpen, setPaymentPromptOpen] = useState(false);
   const [promptedAt, setPromptedAt] = useState<number[]>([]);
+  const [paymentScreenshot, setPaymentScreenshot] = useState<{ dataUrl: string; name: string } | null>(null);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'error'>('idle');
   const [createdOrderId, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -374,6 +375,37 @@ export default function App() {
     }
   };
 
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX = 800;
+        if (width > height && width > MAX) {
+          height *= MAX / width;
+          width = MAX;
+        } else if (height > MAX) {
+          width *= MAX / height;
+          height = MAX;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setPaymentScreenshot({ dataUrl, name: file.name });
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const submitPaymentConfirmation = async () => {
     setSubmitStatus('sending');
     try {
@@ -388,6 +420,7 @@ export default function App() {
           courseName: selectedCourse.title,
           termsAccepted: joinForm.termsAccepted,
           couponCode: appliedCoupon?.code,
+          paymentScreenshot,
         }),
       });
       const text = await response.text();
@@ -887,19 +920,36 @@ export default function App() {
                     Timer: {Math.floor(paymentSeconds / 60)}:{String(paymentSeconds % 60).padStart(2, '0')}. Keep this page open after paying.
                   </div>
                   <div className="mt-6 flex flex-wrap gap-3">
-                    <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-white font-inter text-sm font-bold text-gray-800 transition hover:opacity-80">
-                      GPay
+                    <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-white transition hover:opacity-80">
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-4 object-contain" />
                     </a>
-                    <a href={upiUrl} className="flex h-12 w-28 items-center justify-center rounded bg-[#5f259f] font-inter text-sm font-bold text-white transition hover:opacity-80">
-                      PhonePe
+                    <a href={upiUrl} className="flex h-12 w-28 items-center justify-center rounded bg-[#5f259f] transition hover:opacity-80">
+                      <img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/phonepe-logo-icon.svg" alt="PhonePe" className="h-6 filter brightness-0 invert object-contain" />
                     </a>
-                    <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-[#002970] font-inter text-sm font-bold text-white transition hover:opacity-80">
-                      Paytm
+                    <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-[#002970] transition hover:opacity-80">
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-4 filter brightness-0 invert object-contain" />
                     </a>
                     <a href={upiUrl} className="flex h-12 px-4 items-center justify-center rounded border border-white/20 bg-transparent font-inter text-sm font-bold text-white transition hover:bg-white/5">
                       Other UPI
                     </a>
                   </div>
+                  
+                  <div className="mt-8 border-t border-white/10 pt-6">
+                    <label className="block text-xs font-bold uppercase tracking-widest text-electric mb-3">Attach Payment Proof (Optional)</label>
+                    <div className="flex items-center gap-4">
+                      <label className="cursor-pointer border border-white/20 bg-black px-4 py-3 text-xs font-bold text-white transition hover:bg-white/10 uppercase tracking-widest">
+                        Upload Image
+                        <input type="file" accept="image/*" onChange={handleScreenshotUpload} className="hidden" />
+                      </label>
+                      {paymentScreenshot && <span className="text-sm text-white/70 truncate w-40">{paymentScreenshot.name}</span>}
+                    </div>
+                    {paymentScreenshot && (
+                      <button onClick={submitPaymentConfirmation} disabled={submitStatus === 'sending'} className="mt-6 w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">
+                        {submitStatus === 'sending' ? 'Submitting...' : 'Submit Proof & Complete'}
+                      </button>
+                    )}
+                  </div>
+
                   {submitStatus === 'error' && <p className="mt-4 text-sm text-red-300">Could not store your payment confirmation. Try again.</p>}
                 </div>
               </div>
