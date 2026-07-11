@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, RefreshCcw, Ticket, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Plus, RefreshCcw, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
 const UPI_ID = 'harishsankar023@okaxis';
@@ -178,6 +178,8 @@ export default function App() {
     expiresAt: '',
     maxUses: '',
   });
+  const [showCourseForm, setShowCourseForm] = useState(false);
+  const [showCouponForm, setShowCouponForm] = useState(false);
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentCourseFilter, setPaymentCourseFilter] = useState('all');
@@ -424,6 +426,7 @@ export default function App() {
 
   const resetCourseForm = () => {
     setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', normalPrice: '', offerPrice: '', driveUrl: '' });
+    setShowCourseForm(false);
   };
 
   const saveCourse = async (event: FormEvent<HTMLFormElement>) => {
@@ -462,6 +465,7 @@ export default function App() {
       offerPrice: String(course.offer_price || course.price),
       driveUrl: course.drive_url || '',
     });
+    setShowCourseForm(true);
     setAdminSection('courses');
     setAdminStatus('');
   };
@@ -484,6 +488,7 @@ export default function App() {
       setSubmitStatus('sending');
       await adminRequest('saveCoupon', { ...couponForm });
       setCouponForm({ id: null, code: '', discountType: 'percent', discountValue: '', expiresAt: '', maxUses: '' });
+      setShowCouponForm(false);
       setAdminStatus('Coupon saved.');
       await loadAdminCoupons();
     } catch (error) {
@@ -966,32 +971,46 @@ export default function App() {
                     </div>
                     {adminStatus && <div className="mb-5 border border-white/10 bg-black p-4 font-inter text-sm text-white/70">{adminStatus}</div>}
                     {adminSection === 'coupons' ? (
-                      <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-                        <form onSubmit={saveCoupon} className="space-y-4 border border-white/10 bg-black p-5 min-w-0">
-                          <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Add Coupon</div>
-                          <input required value={couponForm.code} onChange={(event) => setCouponForm({ ...couponForm, code: event.target.value.toUpperCase() })} placeholder="Coupon Code (e.g. SUMMER20)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <select value={couponForm.discountType} onChange={(event) => setCouponForm({ ...couponForm, discountType: event.target.value as 'fixed' | 'percent' })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric">
-                              <option value="percent">Percentage (%)</option>
-                              <option value="fixed">Fixed Amount (Rs.)</option>
-                            </select>
-                            <input required type="number" min="1" value={couponForm.discountValue} onChange={(event) => setCouponForm({ ...couponForm, discountValue: event.target.value })} placeholder={couponForm.discountType === 'percent' ? 'Discount %' : 'Amount off'} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                      <div className="space-y-6">
+                        {!showCouponForm && (
+                          <div className="flex justify-end">
+                            <button onClick={() => setShowCouponForm(true)} className="flex items-center gap-2 bg-electric px-6 py-3 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                              <Plus className="h-4 w-4" />
+                              Add Coupon
+                            </button>
                           </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="flex flex-col">
-                              <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Expiration Date (Optional)</label>
-                              <input type="date" value={couponForm.expiresAt} onChange={(event) => setCouponForm({ ...couponForm, expiresAt: event.target.value })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                            </div>
-                            <div className="flex flex-col">
-                              <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Max Uses (Optional)</label>
-                              <input type="number" min="1" value={couponForm.maxUses} onChange={(event) => setCouponForm({ ...couponForm, maxUses: event.target.value })} placeholder="e.g. 50" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                            </div>
-                          </div>
-                          <button type="submit" disabled={submitStatus === 'sending'} className="w-full bg-electric px-4 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">
-                            Save Coupon
-                          </button>
-                        </form>
-                        <div className="border border-white/10 bg-black min-w-0">
+                        )}
+                        <div className={showCouponForm ? "grid gap-8 lg:grid-cols-[0.8fr_1.2fr]" : "block"}>
+                          {showCouponForm && (
+                            <form onSubmit={saveCoupon} className="space-y-4 border border-white/10 bg-black p-5 min-w-0">
+                              <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Add Coupon</div>
+                              <input required value={couponForm.code} onChange={(event) => setCouponForm({ ...couponForm, code: event.target.value.toUpperCase() })} placeholder="Coupon Code (e.g. SUMMER20)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <select value={couponForm.discountType} onChange={(event) => setCouponForm({ ...couponForm, discountType: event.target.value as 'fixed' | 'percent' })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric">
+                                  <option value="percent">Percentage (%)</option>
+                                  <option value="fixed">Fixed Amount (Rs.)</option>
+                                </select>
+                                <input required type="number" min="1" value={couponForm.discountValue} onChange={(event) => setCouponForm({ ...couponForm, discountValue: event.target.value })} placeholder={couponForm.discountType === 'percent' ? 'Discount %' : 'Amount off'} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                              </div>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="flex flex-col">
+                                  <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Expiration Date (Optional)</label>
+                                  <input type="date" value={couponForm.expiresAt} onChange={(event) => setCouponForm({ ...couponForm, expiresAt: event.target.value })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Max Uses (Optional)</label>
+                                  <input type="number" min="1" value={couponForm.maxUses} onChange={(event) => setCouponForm({ ...couponForm, maxUses: event.target.value })} placeholder="e.g. 50" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-3">
+                                <button type="submit" disabled={submitStatus === 'sending'} className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">
+                                  Save Coupon
+                                </button>
+                                <button type="button" onClick={() => { setCouponForm({ id: null, code: '', discountType: 'percent', discountValue: '', expiresAt: '', maxUses: '' }); setShowCouponForm(false); }} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>
+                              </div>
+                            </form>
+                          )}
+                          <div className="border border-white/10 bg-black min-w-0">
                           <div className="overflow-x-auto">
                             <table className="w-full text-left font-inter text-sm text-white">
                               <thead className="bg-white/5 uppercase tracking-wider text-white/50 text-xs">
@@ -1043,28 +1062,38 @@ export default function App() {
                             </table>
                           </div>
                         </div>
+                        </div>
                       </div>
                     ) : adminSection === 'courses' ? (
-                  <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-                    <form onSubmit={saveCourse} className="space-y-4 border border-white/10 bg-black p-5 min-w-0">
-                      <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">{courseForm.id ? 'Edit Course' : 'Add Course'}</div>
-                      <input value={courseForm.thumbnailUrl} onChange={(event) => setCourseForm({ ...courseForm, thumbnailUrl: event.target.value })} placeholder="Thumbnail image URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                      <input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Name of the course" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                      <textarea value={courseForm.description} onChange={(event) => setCourseForm({ ...courseForm, description: event.target.value })} placeholder="Description" rows={5} className="w-full resize-none border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <input type="number" min="1" value={courseForm.normalPrice} onChange={(event) => setCourseForm({ ...courseForm, normalPrice: event.target.value })} placeholder="Normal price" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                        <input type="number" min="1" value={courseForm.offerPrice} onChange={(event) => setCourseForm({ ...courseForm, offerPrice: event.target.value })} placeholder="Offer price" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                  <div className="space-y-6">
+                    {!showCourseForm && !courseForm.id && (
+                      <div className="flex justify-end">
+                        <button onClick={() => setShowCourseForm(true)} className="flex items-center gap-2 bg-electric px-6 py-3 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                          <Plus className="h-4 w-4" />
+                          Add Course
+                        </button>
                       </div>
-                      <div className="border border-white/10 bg-ink p-4 font-inter text-sm text-white/60">Auto offer: {offerPercent(Number(courseForm.normalPrice), Number(courseForm.offerPrice))}% Off</div>
-                      <input value={courseForm.driveUrl} onChange={(event) => setCourseForm({ ...courseForm, driveUrl: event.target.value })} placeholder="Private Google Drive folder URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                      <div className="flex flex-wrap gap-3">
-                        <button className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">{courseForm.id ? 'Update Course' : 'Add Course'}</button>
-                        {courseForm.id && (
-                          <button type="button" onClick={resetCourseForm} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel Edit</button>
-                        )}
-                      </div>
-                    </form>
-                    <div className="grid gap-4 min-w-0">
+                    )}
+                    <div className={showCourseForm || courseForm.id ? "grid gap-8 lg:grid-cols-[0.8fr_1.2fr]" : "block"}>
+                      {(showCourseForm || courseForm.id) && (
+                        <form onSubmit={saveCourse} className="space-y-4 border border-white/10 bg-black p-5 min-w-0">
+                          <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">{courseForm.id ? 'Edit Course' : 'Add Course'}</div>
+                          <input value={courseForm.thumbnailUrl} onChange={(event) => setCourseForm({ ...courseForm, thumbnailUrl: event.target.value })} placeholder="Thumbnail image URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                          <input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Name of the course" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                          <textarea value={courseForm.description} onChange={(event) => setCourseForm({ ...courseForm, description: event.target.value })} placeholder="Description" rows={5} className="w-full resize-none border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <input type="number" min="1" value={courseForm.normalPrice} onChange={(event) => setCourseForm({ ...courseForm, normalPrice: event.target.value })} placeholder="Normal price" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            <input type="number" min="1" value={courseForm.offerPrice} onChange={(event) => setCourseForm({ ...courseForm, offerPrice: event.target.value })} placeholder="Offer price" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                          </div>
+                          <div className="border border-white/10 bg-ink p-4 font-inter text-sm text-white/60">Auto offer: {offerPercent(Number(courseForm.normalPrice), Number(courseForm.offerPrice))}% Off</div>
+                          <input value={courseForm.driveUrl} onChange={(event) => setCourseForm({ ...courseForm, driveUrl: event.target.value })} placeholder="Private Google Drive folder URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                          <div className="flex flex-wrap gap-3">
+                            <button className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">{courseForm.id ? 'Update Course' : 'Save Course'}</button>
+                            <button type="button" onClick={resetCourseForm} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>
+                          </div>
+                        </form>
+                      )}
+                      <div className="grid gap-4 min-w-0">
                       {adminCourses.length === 0 ? (
                         <div className="border border-white/10 p-5 font-inter text-sm text-white/55">No courses yet.</div>
                       ) : (
@@ -1093,6 +1122,7 @@ export default function App() {
                       )}
                     </div>
                   </div>
+                </div>
                 ) : (
                   <div className="space-y-5">
                     <div className="grid gap-3 lg:grid-cols-[1fr_180px_220px_auto_auto]">
