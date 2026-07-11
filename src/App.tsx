@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Plus, RefreshCcw, Ticket, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
 const UPI_ID = 'harishsankar023@okaxis';
@@ -941,8 +941,8 @@ export default function App() {
                     <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-white transition hover:opacity-80">
                       <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-4 object-contain" />
                     </a>
-                    <a href={upiUrl} className="flex h-12 w-28 items-center justify-center rounded bg-[#5f259f] transition hover:opacity-80">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg" alt="PhonePe" className="h-6 object-contain" />
+                    <a href={upiUrl} className="flex h-12 w-32 items-center justify-center rounded bg-[#5f259f] text-white transition hover:opacity-80">
+                      <span className="flex items-center gap-1.5 font-bold tracking-tight text-[15px]"><Smartphone className="h-4 w-4" /> PhonePe</span>
                     </a>
                     <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-[#002970] transition hover:opacity-80">
                       <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-4 filter brightness-0 invert object-contain" />
@@ -1408,6 +1408,13 @@ export default function App() {
               Accept To Join Course
             </button>
           </div>
+        </div>
+      )}
+
+      {submitStatus === 'sending' && joinStep === 'proof' && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-electric border-t-transparent"></div>
+          <p className="mt-4 font-inter text-sm font-bold uppercase tracking-widest text-white">Uploading Proof...</p>
         </div>
       )}
 
