@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'node:crypto';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -9,6 +10,11 @@ const json = (res, status, body) => {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify(body));
+};
+
+const decodeDataUrl = (dataUrl) => {
+  const [, base64 = ''] = String(dataUrl).split(',');
+  return Buffer.from(base64, 'base64');
 };
 
 const readBody = async (req) => {
@@ -200,12 +206,36 @@ export default async function handler(req, res) {
     const payload = {
       title,
       description: String(body.description || '').trim() || null,
-      thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
       normal_price: normalPrice,
       offer_price: offerPrice,
       price: offerPrice,
       drive_url: String(body.driveUrl || '').trim() || null,
     };
+
+    if (body.thumbnailDataUrl) {
+      const buffer = decodeDataUrl(body.thumbnailDataUrl);
+      if (buffer.byteLength > 5 * 1024 * 1024) {
+        json(res, 400, { error: 'Image must be below 5MB.' });
+        return;
+      }
+      const imageId = randomUUID();
+      const imagePath = `${imageId}.jpg`;
+      const { error: uploadError } = await admin.storage
+        .from('course-thumbnails')
+        .upload(imagePath, buffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        json(res, 500, { error: uploadError.message });
+        return;
+      }
+      const { data: publicUrlData } = admin.storage.from('course-thumbnails').getPublicUrl(imagePath);
+      payload.thumbnail_url = publicUrlData.publicUrl;
+    } else if (body.thumbnailUrl !== undefined) {
+      payload.thumbnail_url = String(body.thumbnailUrl || '').trim() || null;
+    }
     const query = body.id
       ? admin.from('courses').update(payload).eq('id', body.id)
       : admin.from('courses').insert(payload);

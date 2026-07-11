@@ -130,6 +130,7 @@ type AdminCourseForm = {
   title: string;
   description: string;
   thumbnailUrl: string;
+  thumbnailDataUrl?: string;
   normalPrice: string;
   offerPrice: string;
   driveUrl: string;
@@ -425,7 +426,7 @@ export default function App() {
   };
 
   const resetCourseForm = () => {
-    setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', normalPrice: '', offerPrice: '', driveUrl: '' });
+    setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', thumbnailDataUrl: undefined, normalPrice: '', offerPrice: '', driveUrl: '' });
     setShowCourseForm(false);
   };
 
@@ -443,6 +444,7 @@ export default function App() {
         title: courseForm.title,
         description: courseForm.description,
         thumbnailUrl: courseForm.thumbnailUrl,
+        thumbnailDataUrl: courseForm.thumbnailDataUrl,
         normalPrice,
         offerPrice,
         driveUrl: courseForm.driveUrl,
@@ -1091,7 +1093,29 @@ export default function App() {
                               </div>
                               <button type="button" onClick={resetCourseForm} aria-label="Close course form"><X className="h-6 w-6 text-white/50 hover:text-white transition" /></button>
                             </div>
-                            <input value={courseForm.thumbnailUrl} onChange={(event) => setCourseForm({ ...courseForm, thumbnailUrl: event.target.value })} placeholder="Thumbnail image URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            <div className="flex flex-col gap-2">
+                              <label className="font-inter text-xs text-white/50 uppercase tracking-widest">Course Thumbnail</label>
+                              <div className="flex items-center gap-4">
+                                {(courseForm.thumbnailDataUrl || courseForm.thumbnailUrl) && (
+                                  <img src={courseForm.thumbnailDataUrl || courseForm.thumbnailUrl} alt="Thumbnail preview" className="h-16 w-24 object-cover border border-white/10" />
+                                )}
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onload = (event) => {
+                                        setCourseForm({ ...courseForm, thumbnailDataUrl: event.target?.result as string });
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                  className="w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition cursor-pointer"
+                                />
+                              </div>
+                            </div>
                             <input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Name of the course" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <textarea value={courseForm.description} onChange={(event) => setCourseForm({ ...courseForm, description: event.target.value })} placeholder="Description" rows={5} className="w-full resize-none border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <div className="grid gap-3 sm:grid-cols-2">

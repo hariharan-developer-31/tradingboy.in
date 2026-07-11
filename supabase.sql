@@ -145,3 +145,26 @@ for all
 to service_role
 using (bucket_id = 'payment-proofs')
 with check (bucket_id = 'payment-proofs');
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('course-thumbnails', 'course-thumbnails', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+on conflict (id) do update
+set
+  public = true,
+  file_size_limit = 5242880,
+  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+drop policy if exists "Allow public course thumbnail reads" on storage.objects;
+create policy "Allow public course thumbnail reads"
+on storage.objects
+for select
+to anon
+using (bucket_id = 'course-thumbnails');
+
+drop policy if exists "Service role can manage course thumbnails" on storage.objects;
+create policy "Service role can manage course thumbnails"
+on storage.objects
+for all
+to service_role
+using (bucket_id = 'course-thumbnails')
+with check (bucket_id = 'course-thumbnails');
