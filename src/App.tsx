@@ -150,6 +150,7 @@ export default function App() {
   const [hasScrolled, setHasScrolled] = useState(false);
   const [publicCourses, setPublicCourses] = useState<PublicCourse[]>(fallbackCourses);
   const [joinStep, setJoinStep] = useState<'details' | 'payment' | 'thanks' | 'failed'>('details');
+  const [formErrors, setFormErrors] = useState<{name?: string; email?: string; phone?: string; tradingExperience?: string}>({});
   const [joinForm, setJoinForm] = useState<JoinForm>({
     name: '',
     email: '',
@@ -319,6 +320,25 @@ export default function App() {
 
   const beginPayment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    const errors: {name?: string; email?: string; phone?: string; tradingExperience?: string} = {};
+    if (!joinForm.name.trim() || joinForm.name.trim().length < 2) {
+      errors.name = 'Please enter a valid full name.';
+    }
+    if (!/^\\S+@\\S+\\.\\S+$/.test(joinForm.email)) {
+      errors.email = 'Please enter a valid email address.';
+    }
+    const phoneDigits = joinForm.phone.replace(/\\D/g, '');
+    if (phoneDigits.length < 10) {
+      errors.phone = 'Please enter a valid phone number (at least 10 digits).';
+    }
+    if (!joinForm.tradingExperience) {
+      errors.tradingExperience = 'Please select your trading experience.';
+    }
+    
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     if (!joinForm.termsAccepted) {
       setTermsOpen(true);
       return;
@@ -768,21 +788,33 @@ export default function App() {
             </div>
 
             {joinStep === 'details' && (
-              <form onSubmit={beginPayment} className="space-y-4">
+              <form onSubmit={beginPayment} className="space-y-4" noValidate>
                 <div className="w-full border border-white/10 bg-white/5 px-4 py-3 font-inter text-sm text-white/70">
                   {joinForm.courseName}
                 </div>
-                <input required value={joinForm.name} onChange={(event) => setJoinForm({ ...joinForm, name: event.target.value })} placeholder="Full name" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                <input required type="email" value={joinForm.email} onChange={(event) => setJoinForm({ ...joinForm, email: event.target.value })} placeholder="Email address" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                <input required value={joinForm.phone} onChange={(event) => setJoinForm({ ...joinForm, phone: event.target.value })} placeholder="Phone or WhatsApp" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                <select required value={joinForm.tradingExperience} onChange={(event) => setJoinForm({ ...joinForm, tradingExperience: event.target.value })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric">
-                  <option value="">Trading experience</option>
-                  <option>Beginner</option>
-                  <option>Less than 1 year</option>
-                  <option>1 to 3 years</option>
-                  <option>More than 3 years</option>
-                  <option>Funded account trader</option>
-                </select>
+                <div>
+                  <input required value={joinForm.name} onChange={(event) => { setJoinForm({ ...joinForm, name: event.target.value }); setFormErrors({...formErrors, name: ''}); }} placeholder="Full name" className={`w-full border ${formErrors.name ? 'border-red-500' : 'border-white/10'} bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric`} />
+                  {formErrors.name && <p className="mt-1 font-inter text-[11px] font-medium text-red-500">{formErrors.name}</p>}
+                </div>
+                <div>
+                  <input required type="email" value={joinForm.email} onChange={(event) => { setJoinForm({ ...joinForm, email: event.target.value }); setFormErrors({...formErrors, email: ''}); }} placeholder="Email address" className={`w-full border ${formErrors.email ? 'border-red-500' : 'border-white/10'} bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric`} />
+                  {formErrors.email && <p className="mt-1 font-inter text-[11px] font-medium text-red-500">{formErrors.email}</p>}
+                </div>
+                <div>
+                  <input required value={joinForm.phone} onChange={(event) => { setJoinForm({ ...joinForm, phone: event.target.value }); setFormErrors({...formErrors, phone: ''}); }} placeholder="Phone or WhatsApp" className={`w-full border ${formErrors.phone ? 'border-red-500' : 'border-white/10'} bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric`} />
+                  {formErrors.phone && <p className="mt-1 font-inter text-[11px] font-medium text-red-500">{formErrors.phone}</p>}
+                </div>
+                <div>
+                  <select required value={joinForm.tradingExperience} onChange={(event) => { setJoinForm({ ...joinForm, tradingExperience: event.target.value }); setFormErrors({...formErrors, tradingExperience: ''}); }} className={`w-full border ${formErrors.tradingExperience ? 'border-red-500' : 'border-white/10'} bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric`}>
+                    <option value="">Trading experience</option>
+                    <option>Beginner</option>
+                    <option>Less than 1 year</option>
+                    <option>1 to 3 years</option>
+                    <option>More than 3 years</option>
+                    <option>Funded account trader</option>
+                  </select>
+                  {formErrors.tradingExperience && <p className="mt-1 font-inter text-[11px] font-medium text-red-500">{formErrors.tradingExperience}</p>}
+                </div>
                 <label className="flex cursor-pointer items-start gap-3 border border-white/10 bg-white/[0.03] p-4 font-inter text-sm text-white/70">
                   <input
                     type="checkbox"
