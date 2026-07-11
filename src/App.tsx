@@ -572,7 +572,7 @@ export default function App() {
             ))}
           </div>
           <button onClick={() => openCheckout()} className="group hidden items-center gap-2 border border-white/30 px-4 py-2.5 font-inter text-[11px] uppercase tracking-widest text-white transition hover:border-electric hover:bg-white/10 md:flex">
-            Enroll Now
+            Join Now
             <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </button>
           <button type="button" className="space-y-1.5 md:hidden" onClick={() => setMenuOpen(true)}>
@@ -598,13 +598,13 @@ export default function App() {
             </a>
           ))}
           <button onClick={() => { setMenuOpen(false); openCheckout(); }} className="border border-white/30 px-7 py-4 font-inter text-xs uppercase tracking-widest text-white">
-            Enroll Now
+            Join Now
           </button>
         </div>
       </div>
       )}
 
-      {!checkoutOpen && !adminOpen && (
+      {!adminOpen && (
         <main>
           <section id="home" className="relative flex min-h-screen items-center overflow-hidden bg-[#070b10] pt-28 lg:pt-32">
             <div className="pointer-events-none absolute inset-0 bg-grid-pattern opacity-25 animate-grid-pan" />
@@ -634,12 +634,12 @@ export default function App() {
               <p className="mx-auto mt-8 max-w-2xl font-inter text-sm leading-relaxed text-white/58 sm:text-base animate-hero-copy">
                 Practical trading courses for serious learners who want process, risk control, and disciplined execution.
               </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 animate-hero-actions">
-                <button onClick={() => openCheckout()} className="group inline-flex items-center justify-center rounded-full bg-electric px-7 py-4 font-inter text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline">
+              <div className="mt-8 flex flex-nowrap items-center justify-center gap-3 sm:gap-4 animate-hero-actions">
+                <button onClick={() => openCheckout()} className="group inline-flex items-center justify-center rounded-full bg-electric px-5 py-3.5 sm:px-7 sm:py-4 font-inter text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline whitespace-nowrap">
                   Join Course
                   <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </button>
-                <a href="#course" className="rounded-full border border-white/12 bg-white/[0.03] px-7 py-4 font-inter text-[11px] font-bold uppercase tracking-widest text-white/75 transition hover:border-electric/60 hover:text-white">
+                <a href="#course" className="rounded-full border border-white/12 bg-white/[0.03] px-5 py-3.5 sm:px-7 sm:py-4 font-inter text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-white/75 transition hover:border-electric/60 hover:text-white whitespace-nowrap">
                   View Courses
                 </a>
               </div>
@@ -743,7 +743,7 @@ export default function App() {
         </main>
       )}
 
-      {!checkoutOpen && !adminOpen && (
+      {!adminOpen && (
         <footer className="border-t border-white/10 bg-ink px-6 py-8 sm:px-10 lg:px-16">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 font-inter text-xs uppercase tracking-widest text-white/50 sm:flex-row sm:items-center sm:justify-between">
             <span>Trading Boy Academy</span>
@@ -753,8 +753,8 @@ export default function App() {
       )}
 
       {checkoutOpen && (
-        <main className="page-enter min-h-screen bg-ink px-4 pb-16 pt-28 sm:px-8 lg:px-12">
-          <div className="mx-auto w-full max-w-3xl border border-white/10 bg-black p-6 shadow-glow sm:p-8 smooth-card">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-12 sm:p-8 overflow-y-auto page-enter">
+          <div className="w-full max-w-3xl border border-white/10 bg-black p-6 shadow-glow sm:p-8 smooth-card my-auto">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Join Course</div>
@@ -885,7 +885,7 @@ export default function App() {
               </div>
             )}
           </div>
-        </main>
+        </div>
       )}
 
       {adminOpen && (
