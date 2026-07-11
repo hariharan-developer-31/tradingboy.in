@@ -87,6 +87,7 @@ type JoinForm = {
   tradingExperience: string;
   courseName: string;
   termsAccepted: boolean;
+  remarks: string;
 };
 
 type CourseOrder = {
@@ -149,7 +150,7 @@ export default function App() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [publicCourses, setPublicCourses] = useState<PublicCourse[]>(fallbackCourses);
-  const [joinStep, setJoinStep] = useState<'details' | 'payment' | 'thanks' | 'failed'>('details');
+  const [joinStep, setJoinStep] = useState<'details' | 'payment' | 'proof' | 'thanks' | 'failed'>('details');
   const [formErrors, setFormErrors] = useState<{name?: string; email?: string; phone?: string; tradingExperience?: string}>({});
   const [joinForm, setJoinForm] = useState<JoinForm>({
     name: '',
@@ -158,6 +159,7 @@ export default function App() {
     tradingExperience: '',
     courseName: DEFAULT_COURSE,
     termsAccepted: false,
+    remarks: '',
   });
   const [termsOpen, setTermsOpen] = useState(false);
   const [paymentSeconds, setPaymentSeconds] = useState(180);
@@ -420,6 +422,7 @@ export default function App() {
           courseName: selectedCourse.title,
           termsAccepted: joinForm.termsAccepted,
           couponCode: appliedCoupon?.code,
+          remarks: joinForm.remarks,
           paymentScreenshot,
         }),
       });
@@ -924,7 +927,7 @@ export default function App() {
                       <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-4 object-contain" />
                     </a>
                     <a href={upiUrl} className="flex h-12 w-28 items-center justify-center rounded bg-[#5f259f] transition hover:opacity-80">
-                      <img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/phonepe-logo-icon.svg" alt="PhonePe" className="h-6 filter brightness-0 invert object-contain" />
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg" alt="PhonePe" className="h-6 object-contain" />
                     </a>
                     <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-[#002970] transition hover:opacity-80">
                       <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-4 filter brightness-0 invert object-contain" />
@@ -933,24 +936,56 @@ export default function App() {
                       Other UPI
                     </a>
                   </div>
-                  
-                  <div className="mt-8 border-t border-white/10 pt-6">
-                    <label className="block text-xs font-bold uppercase tracking-widest text-electric mb-3">Attach Payment Proof (Optional)</label>
+                </div>
+              </div>
+            )}
+
+            {joinStep === 'proof' && (
+              <div className="animate-scale-in border border-electric/30 bg-ink p-6 lg:p-8">
+                <h3 className="font-podium text-3xl uppercase leading-none text-white">Upload Payment Proof</h3>
+                <p className="mt-2 font-inter text-sm leading-relaxed text-white/70">
+                  Please upload a screenshot of your successful payment of {money(selectedOfferPrice)}. This is required to verify your enrollment.
+                </p>
+                
+                <div className="mt-8 space-y-6 font-inter">
+                  <div>
+                    <label className="mb-3 block text-xs font-bold uppercase tracking-widest text-electric">
+                      Payment Screenshot *
+                    </label>
                     <div className="flex items-center gap-4">
-                      <label className="cursor-pointer border border-white/20 bg-black px-4 py-3 text-xs font-bold text-white transition hover:bg-white/10 uppercase tracking-widest">
-                        Upload Image
+                      <label className="cursor-pointer border border-white/20 bg-black px-6 py-4 text-xs font-bold text-white transition hover:bg-white/10 uppercase tracking-widest">
+                        Select Image
                         <input type="file" accept="image/*" onChange={handleScreenshotUpload} className="hidden" />
                       </label>
-                      {paymentScreenshot && <span className="text-sm text-white/70 truncate w-40">{paymentScreenshot.name}</span>}
+                      {paymentScreenshot ? (
+                        <span className="text-sm text-green-400 font-bold truncate">✓ {paymentScreenshot.name} (Ready)</span>
+                      ) : (
+                        <span className="text-sm text-white/40">No file selected</span>
+                      )}
                     </div>
-                    {paymentScreenshot && (
-                      <button onClick={submitPaymentConfirmation} disabled={submitStatus === 'sending'} className="mt-6 w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">
-                        {submitStatus === 'sending' ? 'Submitting...' : 'Submit Proof & Complete'}
-                      </button>
-                    )}
                   </div>
 
-                  {submitStatus === 'error' && <p className="mt-4 text-sm text-red-300">Could not store your payment confirmation. Try again.</p>}
+                  <div>
+                    <label className="mb-3 block text-xs font-bold uppercase tracking-widest text-electric">
+                      UPI Transaction ID / Remarks (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={joinForm.remarks}
+                      onChange={(e) => setJoinForm({ ...joinForm, remarks: e.target.value })}
+                      placeholder="e.g. 312345678901"
+                      className="w-full border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+                    />
+                  </div>
+
+                  <button
+                    onClick={submitPaymentConfirmation}
+                    disabled={!paymentScreenshot || submitStatus === 'sending'}
+                    className="mt-6 w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {submitStatus === 'sending' ? 'Submitting...' : 'Submit Enrollment'}
+                  </button>
+                  {submitStatus === 'error' && <p className="mt-4 text-sm text-red-300">Could not submit your payment proof. Try again.</p>}
                 </div>
               </div>
             )}
@@ -1367,8 +1402,8 @@ export default function App() {
             <h3 className="font-podium text-3xl uppercase leading-none text-white">Did you complete the payment?</h3>
             <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">Select yes only after paying {money(selectedOfferPrice)} to {UPI_ID}.</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={submitPaymentConfirmation} disabled={submitStatus === 'sending'} className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-60">
-                {submitStatus === 'sending' ? 'Saving...' : 'Yes'}
+              <button onClick={() => { setPaymentPromptOpen(false); setJoinStep('proof'); }} className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                Yes
               </button>
               {paymentSeconds > 0 ? (
                 <button onClick={() => setPaymentPromptOpen(false)} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Wait</button>

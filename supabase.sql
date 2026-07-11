@@ -26,6 +26,7 @@ alter table public.course_orders add column if not exists final_amount integer n
 alter table public.course_orders add column if not exists payment_status text not null default 'pending';
 alter table public.course_orders add column if not exists payment_screenshot_path text;
 alter table public.course_orders add column if not exists trading_experience text;
+alter table public.course_orders add column if not exists remarks text;
 alter table public.course_orders add column if not exists terms_accepted boolean not null default false;
 alter table public.course_orders add column if not exists terms_accepted_at timestamptz;
 

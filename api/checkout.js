@@ -99,6 +99,8 @@ export default async function handler(req, res) {
   const paymentScreenshot = body.paymentScreenshot;
   const termsAccepted = body.termsAccepted === true;
 
+  const remarks = String(body.remarks || '').trim();
+
   if (!fullName || !email || !phone || !tradingExperience || !termsAccepted) {
     json(res, 400, { error: 'Name, email, phone, trading experience, and terms acceptance are required.' });
     return;
@@ -186,6 +188,7 @@ export default async function handler(req, res) {
     final_amount: finalAmount,
     payment_status: 'pending',
     payment_screenshot_path: paymentScreenshotPath,
+    remarks,
     source: 'website',
   };
 
