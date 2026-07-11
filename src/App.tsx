@@ -886,9 +886,20 @@ export default function App() {
                   <div className="mt-4 text-sm leading-relaxed text-white/60">
                     Timer: {Math.floor(paymentSeconds / 60)}:{String(paymentSeconds % 60).padStart(2, '0')}. Keep this page open after paying.
                   </div>
-                  <a href={upiUrl} className="mt-6 inline-flex bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
-                    Open UPI App
-                  </a>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-white font-inter text-sm font-bold text-gray-800 transition hover:opacity-80">
+                      GPay
+                    </a>
+                    <a href={upiUrl} className="flex h-12 w-28 items-center justify-center rounded bg-[#5f259f] font-inter text-sm font-bold text-white transition hover:opacity-80">
+                      PhonePe
+                    </a>
+                    <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-[#002970] font-inter text-sm font-bold text-white transition hover:opacity-80">
+                      Paytm
+                    </a>
+                    <a href={upiUrl} className="flex h-12 px-4 items-center justify-center rounded border border-white/20 bg-transparent font-inter text-sm font-bold text-white transition hover:bg-white/5">
+                      Other UPI
+                    </a>
+                  </div>
                   {submitStatus === 'error' && <p className="mt-4 text-sm text-red-300">Could not store your payment confirmation. Try again.</p>}
                 </div>
               </div>
