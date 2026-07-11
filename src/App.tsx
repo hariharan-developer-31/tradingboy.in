@@ -174,6 +174,10 @@ export default function App() {
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentCourseFilter, setPaymentCourseFilter] = useState('all');
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [courseForm, setCourseForm] = useState<AdminCourseForm>({
     id: null,
     title: '',
@@ -189,7 +193,16 @@ export default function App() {
     [joinForm.courseName, publicCourses],
   );
   const selectedNormalPrice = selectedCourse.normal_price || selectedCourse.price;
-  const selectedOfferPrice = selectedCourse.offer_price || selectedCourse.price;
+  let selectedOfferPrice = selectedCourse.offer_price || selectedCourse.price;
+
+  if (appliedCoupon) {
+    if (appliedCoupon.discount_type === 'percent') {
+      selectedOfferPrice = Math.max(0, selectedOfferPrice - Math.round((selectedOfferPrice * appliedCoupon.discount_value) / 100));
+    } else {
+      selectedOfferPrice = Math.max(0, selectedOfferPrice - appliedCoupon.discount_value);
+    }
+  }
+
   const upiUrl = useMemo(() => {
     const params = new URLSearchParams({
       pa: UPI_ID,
@@ -306,6 +319,31 @@ export default function App() {
     setJoinStep('payment');
   };
 
+  const validateCouponCode = async () => {
+    if (!couponInput.trim()) return;
+    setValidatingCoupon(true);
+    setCouponError('');
+    try {
+      const response = await fetch('/api/checkCoupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ couponCode: couponInput }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setCouponError(data.error || 'Invalid coupon.');
+        setAppliedCoupon(null);
+      } else {
+        setAppliedCoupon(data.coupon);
+      }
+    } catch {
+      setCouponError('Error checking coupon.');
+      setAppliedCoupon(null);
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
   const submitPaymentConfirmation = async () => {
     setSubmitStatus('sending');
     try {
@@ -319,6 +357,7 @@ export default function App() {
           tradingExperience: joinForm.tradingExperience,
           courseName: selectedCourse.title,
           termsAccepted: joinForm.termsAccepted,
+          couponCode: appliedCoupon?.code,
         }),
       });
       const text = await response.text();
@@ -747,13 +786,40 @@ export default function App() {
                 <div className="border border-white/10 bg-ink p-4 font-inter text-sm">
                   <div className="flex justify-between text-white/60">
                     <span>Normal price</span>
-                    <span className={offerPercent(selectedNormalPrice, selectedOfferPrice) > 0 ? 'line-through' : ''}>{money(selectedNormalPrice)}</span>
+                    <span className={offerPercent(selectedNormalPrice, selectedCourse.offer_price || selectedCourse.price) > 0 ? 'line-through' : ''}>{money(selectedNormalPrice)}</span>
                   </div>
-                  <div className="mt-2 flex justify-between text-white">
-                    <span>Offer price</span>
-                    <span className="font-bold">{money(selectedOfferPrice)}</span>
-                  </div>
+                  {appliedCoupon ? (
+                    <>
+                      <div className="mt-2 flex justify-between text-white/60">
+                        <span>Offer price</span>
+                        <span className="line-through">{money(selectedCourse.offer_price || selectedCourse.price)}</span>
+                      </div>
+                      <div className="mt-2 flex justify-between text-electric font-bold">
+                        <span>Coupon applied ({appliedCoupon.code})</span>
+                        <span>-{appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : money(appliedCoupon.discount_value)}</span>
+                      </div>
+                      <div className="mt-4 flex justify-between text-white border-t border-white/10 pt-4">
+                        <span>Final price</span>
+                        <span className="font-bold text-lg">{money(selectedOfferPrice)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-2 flex justify-between text-white">
+                      <span>Offer price</span>
+                      <span className="font-bold">{money(selectedOfferPrice)}</span>
+                    </div>
+                  )}
                 </div>
+
+                {!appliedCoupon && (
+                  <div className="flex gap-2">
+                    <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} placeholder="Promo code (optional)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
+                    <button type="button" onClick={validateCouponCode} disabled={validatingCoupon || !couponInput} className="bg-white/5 border border-white/10 px-6 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-white/10 disabled:opacity-50">
+                      Apply
+                    </button>
+                  </div>
+                )}
+                {couponError && <p className="font-inter text-xs text-red-400">{couponError}</p>}
                 <button className="group w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
                   Join Course
                   <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
