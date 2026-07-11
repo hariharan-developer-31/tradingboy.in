@@ -769,11 +769,7 @@ export default function App() {
 
             {joinStep === 'details' && (
               <form onSubmit={beginPayment} className="space-y-4">
-                <select value={joinForm.courseName} onChange={(event) => setJoinForm({ ...joinForm, courseName: event.target.value })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric">
-                  {publicCourses.map((course) => (
-                    <option key={course.id || course.title}>{course.title}</option>
-                  ))}
-                </select>
+
                 <input required value={joinForm.name} onChange={(event) => setJoinForm({ ...joinForm, name: event.target.value })} placeholder="Full name" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                 <input required type="email" value={joinForm.email} onChange={(event) => setJoinForm({ ...joinForm, email: event.target.value })} placeholder="Email address" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                 <input required value={joinForm.phone} onChange={(event) => setJoinForm({ ...joinForm, phone: event.target.value })} placeholder="Phone or WhatsApp" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
