@@ -325,7 +325,7 @@ export default function App() {
     if (!joinForm.name.trim() || joinForm.name.trim().length < 2) {
       errors.name = 'Please enter a valid full name.';
     }
-    if (!/^\\S+@\\S+\\.\\S+$/.test(joinForm.email)) {
+    if (!/^\\S+@\\S+\\.\\S+$/.test(joinForm.email.trim())) {
       errors.email = 'Please enter a valid email address.';
     }
     const phoneDigits = joinForm.phone.replace(/\\D/g, '');
