@@ -896,10 +896,6 @@ export default function App() {
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
                 <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
               </div>
-              <button onClick={closeHashPage} className="flex self-start sm:self-auto items-center gap-2 font-inter text-sm text-white/70 transition hover:text-white shrink-0" aria-label="Back to website">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Website
-              </button>
             </div>
             {!adminUnlocked ? (
               <form onSubmit={unlockAdmin} className="max-w-md space-y-4">
