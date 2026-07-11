@@ -766,7 +766,7 @@ export default function App() {
             ) : (
               <div>
                 {adminSection === 'home' ? (
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:grid-cols-2 lg:gap-10">
                     <button onClick={() => setAdminSection('courses')} className="group flex flex-col text-left border border-white/10 bg-black p-6 rounded-2xl transition-all hover:border-electric">
                       <div className="flex justify-between w-full mb-8">
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/30 transition-colors">
