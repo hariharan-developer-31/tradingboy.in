@@ -276,5 +276,17 @@ export default async function handler(req, res) {
     return;
   }
 
+  if (action === 'deleteCoupon') {
+    const { error } = await admin.from('coupons').delete().eq('id', body.couponId);
+
+    if (error) {
+      json(res, 500, { error: error.message });
+      return;
+    }
+
+    json(res, 200, { ok: true });
+    return;
+  }
+
   json(res, 400, { error: 'Unknown action.' });
 }

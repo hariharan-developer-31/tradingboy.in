@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, CreditCard, Crown, Edit3, RefreshCcw, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, CreditCard, Crown, Edit3, RefreshCcw, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
 const UPI_ID = 'harishsankar023@okaxis';
@@ -104,6 +104,22 @@ type CourseOrder = {
   created_at: string;
 };
 
+type Coupon = {
+  id: string;
+  code: string;
+  discount_type: 'fixed' | 'percent';
+  discount_value: number;
+  active: boolean;
+  created_at: string;
+};
+
+type AdminCouponForm = {
+  id: string | null;
+  code: string;
+  discountType: 'fixed' | 'percent';
+  discountValue: string;
+};
+
 type AdminCourseForm = {
   id: string | null;
   title: string;
@@ -144,10 +160,17 @@ export default function App() {
   const [createdOrderId, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
-  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments'>('home');
+  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons'>('home');
   const [adminStatus, setAdminStatus] = useState('');
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
   const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
+  const [adminCoupons, setAdminCoupons] = useState<Coupon[]>([]);
+  const [couponForm, setCouponForm] = useState<AdminCouponForm>({
+    id: null,
+    code: '',
+    discountType: 'percent',
+    discountValue: '',
+  });
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentCourseFilter, setPaymentCourseFilter] = useState('all');
@@ -335,12 +358,18 @@ export default function App() {
     setAdminOrders(result.data || []);
   };
 
+  const loadAdminCoupons = async () => {
+    const result = await adminRequest<{ data: Coupon[] }>('coupons');
+    setAdminCoupons(result.data || []);
+  };
+
   const unlockAdmin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       setAdminStatus('');
       await loadAdminCourses();
       await loadAdminOrders();
+      await loadAdminCoupons();
       setAdminUnlocked(true);
     } catch (error) {
       setAdminStatus(error instanceof Error ? error.message : 'Could not unlock admin.');
@@ -400,6 +429,41 @@ export default function App() {
       await loadAdminCourses();
     } catch (error) {
       setAdminStatus(error instanceof Error ? error.message : 'Could not delete course.');
+    }
+  };
+
+  const saveCoupon = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      setSubmitStatus('sending');
+      await adminRequest('saveCoupon', { ...couponForm });
+      setCouponForm({ id: null, code: '', discountType: 'percent', discountValue: '' });
+      setAdminStatus('Coupon saved.');
+      await loadAdminCoupons();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not save coupon.');
+    } finally {
+      setSubmitStatus('idle');
+    }
+  };
+
+  const toggleCouponStatus = async (couponId: string, currentStatus: boolean) => {
+    try {
+      await adminRequest('toggleCoupon', { couponId, active: !currentStatus });
+      await loadAdminCoupons();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not toggle coupon status.');
+    }
+  };
+
+  const deleteCoupon = async (coupon: Coupon) => {
+    if (!window.confirm(`Delete coupon "${coupon.code}"?`)) return;
+    try {
+      await adminRequest('deleteCoupon', { couponId: coupon.id });
+      setAdminStatus('Coupon deleted.');
+      await loadAdminCoupons();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not delete coupon.');
     }
   };
 
@@ -766,7 +830,7 @@ export default function App() {
             ) : (
               <div>
                 {adminSection === 'home' ? (
-                  <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:grid-cols-2 lg:gap-10">
+                  <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
                     <button onClick={() => setAdminSection('courses')} className="group flex flex-col text-left border border-white/10 bg-black p-6 rounded-2xl transition-all hover:border-electric">
                       <div className="flex justify-between w-full mb-8">
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/30 transition-colors">
@@ -798,6 +862,22 @@ export default function App() {
                         Review customer orders, update payment statuses, verify screenshots, and track revenue.
                       </p>
                     </button>
+
+                    <button onClick={() => setAdminSection('coupons')} className="group flex flex-col text-left border border-white/10 bg-black p-6 rounded-2xl transition-all hover:border-electric">
+                      <div className="flex justify-between w-full mb-8">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/30 transition-colors">
+                          <Ticket className="h-5 w-5" />
+                        </div>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-xs font-bold text-white transition-colors">
+                          {adminCoupons.length}
+                        </div>
+                      </div>
+                      <div className="font-inter text-xs font-bold uppercase tracking-[0.2em] text-white/50 mb-2">Promotions</div>
+                      <h3 className="font-podium text-3xl text-white mb-4 tracking-wide">Manage <span className="italic font-light">Coupons</span></h3>
+                      <p className="font-inter text-sm text-white/60 leading-relaxed">
+                        Create promotional codes, set percentage or flat discounts, and toggle coupon activity.
+                      </p>
+                    </button>
                   </div>
                 ) : (
                   <div>
@@ -808,11 +888,68 @@ export default function App() {
                       </button>
                       <div className="h-6 w-px bg-white/20"></div>
                       <div className="font-podium text-xl tracking-wider uppercase text-white">
-                        {adminSection === 'courses' ? 'Course Management' : 'Payment Management'}
+                        {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : 'Coupon Management'}
                       </div>
                     </div>
                     {adminStatus && <div className="mb-5 border border-white/10 bg-black p-4 font-inter text-sm text-white/70">{adminStatus}</div>}
-                    {adminSection === 'courses' ? (
+                    {adminSection === 'coupons' ? (
+                      <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
+                        <form onSubmit={saveCoupon} className="space-y-4 border border-white/10 bg-black p-5">
+                          <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Add Coupon</div>
+                          <input required value={couponForm.code} onChange={(event) => setCouponForm({ ...couponForm, code: event.target.value.toUpperCase() })} placeholder="Coupon Code (e.g. SUMMER20)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <select value={couponForm.discountType} onChange={(event) => setCouponForm({ ...couponForm, discountType: event.target.value as 'fixed' | 'percent' })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric">
+                              <option value="percent">Percentage (%)</option>
+                              <option value="fixed">Fixed Amount (Rs.)</option>
+                            </select>
+                            <input required type="number" min="1" value={couponForm.discountValue} onChange={(event) => setCouponForm({ ...couponForm, discountValue: event.target.value })} placeholder={couponForm.discountType === 'percent' ? 'Discount %' : 'Amount off'} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                          </div>
+                          <button type="submit" disabled={submitStatus === 'sending'} className="w-full bg-electric px-4 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">
+                            Save Coupon
+                          </button>
+                        </form>
+                        <div className="border border-white/10 bg-black">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left font-inter text-sm text-white">
+                              <thead className="bg-white/5 uppercase tracking-wider text-white/50 text-xs">
+                                <tr>
+                                  <th className="px-4 py-3">Code</th>
+                                  <th className="px-4 py-3">Discount</th>
+                                  <th className="px-4 py-3">Status</th>
+                                  <th className="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/10">
+                                {adminCoupons.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={4} className="px-4 py-8 text-center text-white/50">
+                                      No coupons found.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  adminCoupons.map((coupon) => (
+                                    <tr key={coupon.id} className="transition-colors hover:bg-white/5">
+                                      <td className="px-4 py-4 font-bold">{coupon.code}</td>
+                                      <td className="px-4 py-4">{coupon.discount_type === 'percent' ? `${coupon.discount_value}% Off` : money(coupon.discount_value)}</td>
+                                      <td className="px-4 py-4">
+                                        <button onClick={() => toggleCouponStatus(coupon.id, coupon.active)} className={`rounded-full px-3 py-1 text-xs font-bold transition hover:opacity-80 ${coupon.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                          {coupon.active ? 'Active' : 'Inactive'}
+                                        </button>
+                                      </td>
+                                      <td className="px-4 py-4 text-right">
+                                        <button onClick={() => deleteCoupon(coupon)} className="p-2 text-white/50 transition-colors hover:text-red-400" aria-label="Delete">
+                                          <Trash2 className="h-4 w-4 inline-block" />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    ) : adminSection === 'courses' ? (
                   <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
                     <form onSubmit={saveCourse} className="space-y-4 border border-white/10 bg-black p-5">
                       <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">{courseForm.id ? 'Edit Course' : 'Add Course'}</div>
