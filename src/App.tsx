@@ -325,10 +325,10 @@ export default function App() {
     if (!joinForm.name.trim() || joinForm.name.trim().length < 2) {
       errors.name = 'Please enter a valid full name.';
     }
-    if (!/^\\S+@\\S+\\.\\S+$/.test(joinForm.email.trim())) {
+    if (!/^\S+@\S+\.\S+$/.test(joinForm.email.trim())) {
       errors.email = 'Please enter a valid email address.';
     }
-    const phoneDigits = joinForm.phone.replace(/\\D/g, '');
+    const phoneDigits = joinForm.phone.replace(/\D/g, '');
     if (phoneDigits.length < 10) {
       errors.phone = 'Please enter a valid phone number (at least 10 digits).';
     }
