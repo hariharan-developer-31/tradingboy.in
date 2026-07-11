@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, CreditCard, Crown, Edit3, RefreshCcw, Ticket, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, RefreshCcw, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
 const UPI_ID = 'harishsankar023@okaxis';
@@ -995,7 +995,14 @@ export default function App() {
                                 ) : (
                                   adminCoupons.map((coupon) => (
                                     <tr key={coupon.id} className="transition-colors hover:bg-white/5">
-                                      <td className="px-4 py-4 font-bold">{coupon.code}</td>
+                                      <td className="px-4 py-4 font-bold">
+                                        <div className="flex items-center gap-2">
+                                          {coupon.code}
+                                          <button onClick={() => { navigator.clipboard.writeText(coupon.code); setAdminStatus('Coupon copied!'); setTimeout(() => setAdminStatus(''), 3000); }} className="text-white/30 hover:text-white transition-colors" title="Copy to clipboard">
+                                            <Copy className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      </td>
                                       <td className="px-4 py-4">{coupon.discount_type === 'percent' ? `${coupon.discount_value}% Off` : money(coupon.discount_value)}</td>
                                       <td className="px-4 py-4">
                                         <button onClick={() => toggleCouponStatus(coupon.id, coupon.active)} className={`rounded-full px-3 py-1 text-xs font-bold transition hover:opacity-80 ${coupon.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
