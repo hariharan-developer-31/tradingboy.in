@@ -1044,6 +1044,11 @@ export default function App() {
               <div>
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
                 <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
+                {adminStatus && (
+                  <div className={`mt-4 inline-block px-4 py-2 text-sm font-bold ${adminStatus.includes('failed') || adminStatus.includes('Could not') ? 'bg-red-950/50 text-red-400 border border-red-500/30' : 'bg-green-950/50 text-green-400 border border-green-500/30'}`}>
+                    {adminStatus}
+                  </div>
+                )}
               </div>
             </div>
             {!adminUnlocked ? (
