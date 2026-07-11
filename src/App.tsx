@@ -312,7 +312,7 @@ export default function App() {
   };
 
   const closeHashPage = () => {
-    window.location.hash = '';
+    history.pushState(null, '', window.location.pathname + window.location.search);
     setAdminOpen(false);
     setCheckoutOpen(false);
   };
