@@ -144,7 +144,7 @@ export default function App() {
   const [createdOrderId, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
-  const [adminSection, setAdminSection] = useState<'courses' | 'payments'>('courses');
+  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments'>('home');
   const [adminStatus, setAdminStatus] = useState('');
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
   const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
@@ -765,18 +765,54 @@ export default function App() {
               </form>
             ) : (
               <div>
-                <div className="mb-6 grid gap-3 sm:grid-cols-2">
-                  <button onClick={() => setAdminSection('courses')} className={`flex items-center justify-center gap-3 px-5 py-5 font-inter text-xs font-bold uppercase tracking-widest transition ${adminSection === 'courses' ? 'bg-electric text-black' : 'border border-white/15 text-white'}`}>
-                    <BookOpen className="h-5 w-5" />
-                    Course Management
-                  </button>
-                  <button onClick={() => setAdminSection('payments')} className={`flex items-center justify-center gap-3 px-5 py-5 font-inter text-xs font-bold uppercase tracking-widest transition ${adminSection === 'payments' ? 'bg-electric text-black' : 'border border-white/15 text-white'}`}>
-                    <CreditCard className="h-5 w-5" />
-                    Payment Management
-                  </button>
-                </div>
-                {adminStatus && <div className="mb-5 border border-white/10 bg-black p-4 font-inter text-sm text-white/70">{adminStatus}</div>}
-                {adminSection === 'courses' ? (
+                {adminSection === 'home' ? (
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    <button onClick={() => setAdminSection('courses')} className="group flex flex-col text-left border border-white/10 bg-black p-6 rounded-2xl transition-all hover:border-electric">
+                      <div className="flex justify-between w-full mb-8">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/30 transition-colors">
+                          <BookOpen className="h-5 w-5" />
+                        </div>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-xs font-bold text-white transition-colors">
+                          {adminCourses.length}
+                        </div>
+                      </div>
+                      <div className="font-inter text-xs font-bold uppercase tracking-[0.2em] text-white/50 mb-2">Catalog</div>
+                      <h3 className="font-podium text-3xl text-white mb-4 tracking-wide">Manage <span className="italic font-light">Courses</span></h3>
+                      <p className="font-inter text-sm text-white/60 leading-relaxed">
+                        Add new courses, edit course details, update pricing, and manage your academy offerings.
+                      </p>
+                    </button>
+
+                    <button onClick={() => setAdminSection('payments')} className="group flex flex-col text-left border border-white/10 bg-black p-6 rounded-2xl transition-all hover:border-electric">
+                      <div className="flex justify-between w-full mb-8">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/30 transition-colors">
+                          <CreditCard className="h-5 w-5" />
+                        </div>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-xs font-bold text-white transition-colors">
+                          {filteredOrders.length}
+                        </div>
+                      </div>
+                      <div className="font-inter text-xs font-bold uppercase tracking-[0.2em] text-white/50 mb-2">Sales</div>
+                      <h3 className="font-podium text-3xl text-white mb-4 tracking-wide">Manage <span className="italic font-light">Payments</span></h3>
+                      <p className="font-inter text-sm text-white/60 leading-relaxed">
+                        Review customer orders, update payment statuses, verify screenshots, and track revenue.
+                      </p>
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-6 flex items-center gap-6 border-b border-white/10 pb-6">
+                      <button onClick={() => setAdminSection('home')} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-electric" aria-label="Back to dashboard">
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Dashboard
+                      </button>
+                      <div className="h-6 w-px bg-white/20"></div>
+                      <div className="font-podium text-xl tracking-wider uppercase text-white">
+                        {adminSection === 'courses' ? 'Course Management' : 'Payment Management'}
+                      </div>
+                    </div>
+                    {adminStatus && <div className="mb-5 border border-white/10 bg-black p-4 font-inter text-sm text-white/70">{adminStatus}</div>}
+                    {adminSection === 'courses' ? (
                   <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
                     <form onSubmit={saveCourse} className="space-y-4 border border-white/10 bg-black p-5">
                       <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">{courseForm.id ? 'Edit Course' : 'Add Course'}</div>
@@ -908,6 +944,8 @@ export default function App() {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                )}
                   </div>
                 )}
               </div>
