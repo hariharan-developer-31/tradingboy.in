@@ -158,7 +158,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    paymentScreenshotPath = `payment-proofs/${orderId}.jpg`;
+    paymentScreenshotPath = `${orderId}.jpg`;
     const { error: uploadError } = await admin.storage
       .from('payment-proofs')
       .upload(paymentScreenshotPath, buffer, {

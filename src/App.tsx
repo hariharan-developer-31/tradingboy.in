@@ -1373,7 +1373,7 @@ export default function App() {
                                 <td className="px-4 py-4">
                                   {order.payment_screenshot_path ? (
                                     <a 
-                                      href={supabase?.storage.from('payment-proofs').getPublicUrl(order.payment_screenshot_path).data.publicUrl} 
+                                      href={supabase?.storage.from('payment-proofs').getPublicUrl(order.payment_screenshot_path.replace('payment-proofs/', '')).data.publicUrl} 
                                       target="_blank" 
                                       rel="noopener noreferrer" 
                                       className="text-electric hover:underline text-xs font-bold uppercase tracking-widest inline-block mb-1"
