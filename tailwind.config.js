@@ -4,16 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#0f1113',
-        electric: '#25aef4',
+        ink: '#141414',
+        electric: '#38b6ff',
         skyline: '#48c4ff',
       },
       fontFamily: {
-        podium: ['Righteous', 'sans-serif'],
-        inter: ['Righteous', 'sans-serif'],
+        podium: ['Montserrat', 'sans-serif'],
+        inter: ['Montserrat', 'sans-serif'],
       },
       boxShadow: {
-        glow: '0 0 40px rgba(37, 174, 244, 0.28)',
+        glow: '0 0 40px rgba(56, 182, 255, 0.28)',
       },
     },
   },
