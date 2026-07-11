@@ -626,9 +626,9 @@ export default function App() {
                   </span>
                   <span className="block bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Structure.</span>
                 </span>
-                <span className="hidden leading-[0.88] md:block md:text-[clamp(2.5rem,5.5vw,6rem)] lg:text-[clamp(3rem,6vw,6.7rem)]">
-                  <span className="block">Trade Price Action.</span>
-                  <span className="block bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Master Structure.</span>
+                <span className="hidden leading-[0.88] md:block md:text-[clamp(2.5rem,5vw,5.5rem)] lg:text-[clamp(3rem,5.5vw,6.5rem)]">
+                  <span className="block whitespace-nowrap">Trade Price Action.</span>
+                  <span className="block whitespace-nowrap bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Master Structure.</span>
                 </span>
               </h1>
               <p className="mx-auto mt-8 max-w-2xl font-inter text-sm leading-relaxed text-white/58 sm:text-base animate-hero-copy">
