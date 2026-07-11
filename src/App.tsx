@@ -385,10 +385,13 @@ export default function App() {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
+        let quality = 0.8;
+        let scale = 1;
+        let dataUrl = '';
+        const MAX = 800;
+        
         let width = img.width;
         let height = img.height;
-        const MAX = 800;
         if (width > height && width > MAX) {
           height *= MAX / width;
           width = MAX;
@@ -396,11 +399,23 @@ export default function App() {
           width *= MAX / height;
           height = MAX;
         }
-        canvas.width = width;
-        canvas.height = height;
+
+        const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        
+        do {
+          canvas.width = width * scale;
+          canvas.height = height * scale;
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          
+          if (quality > 0.3) {
+            quality -= 0.15;
+          } else {
+            scale -= 0.2;
+          }
+        } while (dataUrl.length * 0.75 > 90000 && scale > 0.1);
+
         setPaymentScreenshot({ dataUrl, name: file.name });
       };
       img.src = event.target?.result as string;
