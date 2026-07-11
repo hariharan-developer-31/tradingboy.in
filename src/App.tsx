@@ -33,7 +33,7 @@ const fallbackCourses = [
   },
 ];
 
-const navLinks = ['Course', 'About', 'Results', 'FAQ'];
+const navLinks = ['Home', 'About', 'Course', 'Results', 'FAQ'];
 
 const testimonials = [
   {
