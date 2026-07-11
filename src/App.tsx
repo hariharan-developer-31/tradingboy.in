@@ -983,7 +983,7 @@ export default function App() {
                         <div className="block">
                           {showCouponForm && (
                             <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4">
-                              <form onSubmit={saveCoupon} className="animate-scale-in max-w-xl w-full space-y-4 border border-white/10 bg-ink p-6 shadow-glow max-h-[90vh] overflow-y-auto">
+                              <form onSubmit={saveCoupon} className="animate-scale-in max-w-xl w-full space-y-4 border border-white/10 bg-ink p-6 shadow-glow max-h-[90vh] overflow-y-auto scrollbar-hide">
                                 <div className="flex items-start justify-between gap-4">
                                   <div>
                                     <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Add Coupon</div>
@@ -1084,7 +1084,7 @@ export default function App() {
                     <div className="block">
                       {(showCourseForm || courseForm.id) && (
                         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4">
-                          <form onSubmit={saveCourse} className="animate-scale-in max-w-xl w-full space-y-4 border border-white/10 bg-ink p-6 shadow-glow max-h-[90vh] overflow-y-auto">
+                          <form onSubmit={saveCourse} className="animate-scale-in max-w-xl w-full space-y-4 border border-white/10 bg-ink p-6 shadow-glow max-h-[90vh] overflow-y-auto scrollbar-hide">
                             <div className="flex items-start justify-between gap-4">
                               <div>
                                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">{courseForm.id ? 'Edit Course' : 'Add Course'}</div>
