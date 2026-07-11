@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
+import logoUrl from './assets/logo.png';
 
 const UPI_ID = 'harishsankar023@okaxis';
 const DEFAULT_COURSE = 'Complete Forex Mastery';
@@ -638,10 +639,7 @@ export default function App() {
         <header className={`fixed inset-x-0 top-0 z-40 px-5 py-3 transition-all duration-500 sm:px-8 lg:px-12 lg:py-4 ${hasScrolled ? 'border-b border-white/10 bg-ink/90 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl' : 'border-b border-transparent bg-transparent'}`}>
         <nav className="flex items-center justify-between">
           <a href="#home" className="flex items-center gap-2.5" aria-label="Trading Boy home">
-            <span className="relative block h-7 w-7 border-b-[5px] border-l-[5px] border-electric">
-              <span className="absolute -right-0.5 top-0 h-5 w-[5px] rotate-[-28deg] bg-electric" />
-            </span>
-            <span className="font-podium text-xl font-bold uppercase tracking-wider text-white sm:text-2xl">Trading Boy</span>
+            <img src={logoUrl} alt="Trading Boy Academy Logo" className="h-10 w-auto object-contain sm:h-12" />
           </a>
           <div className="hidden items-center gap-7 md:flex lg:gap-10">
             {navLinks.map((link) => (
