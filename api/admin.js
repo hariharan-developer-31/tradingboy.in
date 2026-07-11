@@ -52,43 +52,67 @@ const sendEmail = async ({ to, subject, html }) => {
 };
 
 const paidAccessHtml = (order) => `
-  <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">
-    <div style="max-width:620px;margin:0 auto;border:1px solid #1f2933;padding:28px">
-      <h1 style="margin:0 0 12px;color:#25aef4">Trading Boy Academy</h1>
-      <h2 style="margin:0 0 20px">Course Access Approved</h2>
-      <p>Hi ${order.full_name},</p>
-      <p>Your payment is verified. Your course access is now approved.</p>
-      <p><strong>Important:</strong> open the course using this same email address: <strong>${order.email}</strong>.</p>
-      ${
-        order.course_drive_url || driveCourseUrl
-          ? `<p style="margin:28px 0"><a href="${order.course_drive_url || driveCourseUrl}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:bold;padding:14px 20px;display:inline-block">Open Course Drive Folder</a></p>`
-          : '<p>The team will share your course access by email within 12 hours.</p>'
-      }
-      <table style="width:100%;border-collapse:collapse;margin-top:20px">
-        <tr><td style="padding:8px 0;color:#9ca3af">Order ID</td><td style="padding:8px 0;text-align:right">${order.id}</td></tr>
-        <tr><td style="padding:8px 0;color:#9ca3af">Amount</td><td style="padding:8px 0;text-align:right">${formatAmount(order.final_amount)}</td></tr>
-        <tr><td style="padding:8px 0;color:#9ca3af">Status</td><td style="padding:8px 0;text-align:right">${order.payment_status}</td></tr>
+  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
+    <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+      <div style="text-align:center;margin-bottom:32px;">
+        <h1 style="margin:0;color:#25aef4;font-size:28px;letter-spacing:1px;text-transform:uppercase;font-weight:900;">Trading Boy</h1>
+        <p style="margin:8px 0 0;color:#9ca3af;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Premium Academy</p>
+      </div>
+      
+      <div style="background:rgba(37, 174, 244, 0.1);border:1px solid rgba(37, 174, 244, 0.2);border-radius:12px;padding:24px;text-align:center;margin-bottom:32px;">
+        <h2 style="margin:0 0 12px;color:#ffffff;font-size:22px;font-weight:600;">Course Access Approved! 🎉</h2>
+        <p style="margin:0;color:#cbd5e1;font-size:15px;line-height:1.6;">Hi <strong>${order.full_name}</strong>, your payment has been successfully verified.</p>
+      </div>
+
+      <p style="color:#cbd5e1;font-size:15px;line-height:1.6;margin-bottom:24px;">You now have full lifetime access to <strong>${order.course_name || 'your course'}</strong>. Please use this exact email address (<strong>${order.email}</strong>) to access the materials.</p>
+      
+      <div style="text-align:center;margin:40px 0;">
+        ${
+          order.course_drive_url || driveCourseUrl
+            ? `<a href="${order.course_drive_url || driveCourseUrl}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:700;font-size:14px;padding:16px 32px;border-radius:8px;display:inline-block;text-transform:uppercase;letter-spacing:1px;">Access Your Course Now</a>`
+            : '<p style="color:#25aef4;font-weight:600;font-size:15px;padding:16px;border:1px dashed #25aef4;border-radius:8px;">The admin team will share your course access via email within 12 hours.</p>'
+        }
+      </div>
+      
+      <h3 style="color:#ffffff;font-size:14px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1f2933;padding-bottom:12px;margin-bottom:20px;">Order Details</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:12px 0;color:#9ca3af;border-bottom:1px solid #1f2933;">Order ID</td><td style="padding:12px 0;text-align:right;color:#ffffff;border-bottom:1px solid #1f2933;font-family:monospace;">${order.id}</td></tr>
+        <tr><td style="padding:12px 0;color:#9ca3af;border-bottom:1px solid #1f2933;">Course</td><td style="padding:12px 0;text-align:right;color:#ffffff;border-bottom:1px solid #1f2933;font-weight:600;">${order.course_name || 'Trading Boy Course'}</td></tr>
+        <tr><td style="padding:12px 0;color:#9ca3af;border-bottom:1px solid #1f2933;">Amount Paid</td><td style="padding:12px 0;text-align:right;color:#25aef4;border-bottom:1px solid #1f2933;font-weight:700;">${formatAmount(order.final_amount)}</td></tr>
+        <tr><td style="padding:12px 0;color:#9ca3af;">Status</td><td style="padding:12px 0;text-align:right;color:#10b981;font-weight:700;text-transform:uppercase;">PAID</td></tr>
       </table>
-      <p style="margin-top:24px;color:#9ca3af">If Google Drive says access denied, contact admin after confirming your email was shared.</p>
-      <p style="margin-top:8px;color:#9ca3af">From: admin@tradingboy.in</p>
+      
+      <div style="margin-top:40px;padding-top:24px;border-top:1px solid #1f2933;text-align:center;">
+        <p style="margin:0;color:#64748b;font-size:13px;line-height:1.5;">If Google Drive says access denied, please contact the admin. Make sure you are logged into Google with <strong>${order.email}</strong>.</p>
+        <p style="margin:12px 0 0;color:#475569;font-size:12px;">© ${new Date().getFullYear()} Trading Boy Academy</p>
+      </div>
     </div>
   </div>
 `;
 
 const statusHtml = (order) => `
-  <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">
-    <div style="max-width:620px;margin:0 auto;border:1px solid #1f2933;padding:28px">
-      <h1 style="margin:0 0 12px;color:#25aef4">Trading Boy Academy</h1>
-      <h2 style="margin:0 0 20px">Payment Status Updated</h2>
-      <p>Hi ${order.full_name},</p>
-      <p>Your payment status for ${order.course_name || 'Complete Forex Mastery'} is now <strong>${order.payment_status}</strong>.</p>
-      <p>If your payment is under review, the admin will verify it and send course access after approval.</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:20px">
-        <tr><td style="padding:8px 0;color:#9ca3af">Order ID</td><td style="padding:8px 0;text-align:right">${order.id}</td></tr>
-        <tr><td style="padding:8px 0;color:#9ca3af">Amount</td><td style="padding:8px 0;text-align:right">${formatAmount(order.final_amount)}</td></tr>
-        <tr><td style="padding:8px 0;color:#9ca3af">Status</td><td style="padding:8px 0;text-align:right">${order.payment_status}</td></tr>
+  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
+    <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+      <div style="text-align:center;margin-bottom:32px;">
+        <h1 style="margin:0;color:#25aef4;font-size:28px;letter-spacing:1px;text-transform:uppercase;font-weight:900;">Trading Boy</h1>
+      </div>
+      
+      <h2 style="margin:0 0 20px;color:#ffffff;font-size:20px;text-align:center;">Payment Status Update</h2>
+      <p style="color:#cbd5e1;font-size:15px;line-height:1.6;">Hi <strong>${order.full_name}</strong>,</p>
+      <p style="color:#cbd5e1;font-size:15px;line-height:1.6;margin-bottom:32px;">Your payment status for <strong>${order.course_name || 'Complete Forex Mastery'}</strong> has been updated to: <strong style="color:#25aef4;text-transform:uppercase;letter-spacing:1px;background:rgba(37,174,244,0.1);padding:4px 12px;border-radius:4px;margin-left:8px;">${order.payment_status.replace('_', ' ')}</strong></p>
+      
+      ${order.payment_status === 'under_review' ? '<div style="background:#1e293b;border-left:4px solid #25aef4;padding:16px;margin-bottom:32px;"><p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.5;">Our admin team is currently reviewing your payment proof. We will send you another email with your course access link as soon as it is approved.</p></div>' : ''}
+      
+      <h3 style="color:#ffffff;font-size:14px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1f2933;padding-bottom:12px;margin-bottom:20px;">Order Details</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:12px 0;color:#9ca3af;border-bottom:1px solid #1f2933;">Order ID</td><td style="padding:12px 0;text-align:right;color:#ffffff;border-bottom:1px solid #1f2933;font-family:monospace;">${order.id}</td></tr>
+        <tr><td style="padding:12px 0;color:#9ca3af;border-bottom:1px solid #1f2933;">Amount</td><td style="padding:12px 0;text-align:right;color:#ffffff;border-bottom:1px solid #1f2933;font-weight:600;">${formatAmount(order.final_amount)}</td></tr>
+        <tr><td style="padding:12px 0;color:#9ca3af;">Status</td><td style="padding:12px 0;text-align:right;color:#25aef4;font-weight:700;text-transform:uppercase;">${order.payment_status.replace('_', ' ')}</td></tr>
       </table>
-      <p style="margin-top:24px;color:#9ca3af">From: admin@tradingboy.in</p>
+      
+      <div style="margin-top:40px;padding-top:24px;border-top:1px solid #1f2933;text-align:center;">
+        <p style="margin:0;color:#475569;font-size:12px;">© ${new Date().getFullYear()} Trading Boy Academy</p>
+      </div>
     </div>
   </div>
 `;
