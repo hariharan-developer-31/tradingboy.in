@@ -250,6 +250,8 @@ export default async function handler(req, res) {
         code: String(body.code || '').trim().toUpperCase(),
         discount_type: body.discountType,
         discount_value: Number(body.discountValue),
+        expires_at: body.expiresAt ? new Date(body.expiresAt).toISOString() : null,
+        max_uses: body.maxUses ? Number(body.maxUses) : null,
         active: true,
       },
       { onConflict: 'code' },

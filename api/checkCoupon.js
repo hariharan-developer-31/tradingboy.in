@@ -39,7 +39,7 @@ export default async function handler(req, res) {
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data, error } = await admin
     .from('coupons')
-    .select('code, discount_type, discount_value, active')
+    .select('code, discount_type, discount_value, active, expires_at, max_uses, current_uses')
     .eq('code', couponCode)
     .maybeSingle();
 
@@ -50,6 +50,16 @@ export default async function handler(req, res) {
 
   if (!data.active) {
     json(res, 400, { error: 'This coupon is no longer active.' });
+    return;
+  }
+
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    json(res, 400, { error: 'This coupon has expired.' });
+    return;
+  }
+
+  if (data.max_uses !== null && data.current_uses >= data.max_uses) {
+    json(res, 400, { error: 'This coupon has reached its usage limit.' });
     return;
   }
 

@@ -121,13 +121,22 @@ export default async function handler(req, res) {
   if (couponCode) {
     const { data } = await admin
       .from('coupons')
-      .select('code, discount_type, discount_value, active')
+      .select('id, code, discount_type, discount_value, active, expires_at, max_uses, current_uses')
       .eq('code', couponCode)
       .eq('active', true)
       .maybeSingle();
 
     if (data) {
-      appliedCoupon = data.code;
+      if (data.expires_at && new Date(data.expires_at) < new Date()) {
+        json(res, 400, { error: 'Coupon has expired.' });
+        return;
+      }
+      if (data.max_uses !== null && data.current_uses >= data.max_uses) {
+        json(res, 400, { error: 'Coupon usage limit reached.' });
+        return;
+      }
+
+      appliedCoupon = data;
       discountAmount =
         data.discount_type === 'percent'
           ? Math.min(Math.round((selectedCourse.price * data.discount_value) / 100), selectedCourse.price)
@@ -171,7 +180,7 @@ export default async function handler(req, res) {
     terms_accepted: true,
     terms_accepted_at: new Date().toISOString(),
     plan: selectedCourse.name,
-    coupon_code: appliedCoupon,
+    coupon_code: appliedCoupon ? appliedCoupon.code : null,
     original_amount: selectedCourse.price,
     discount_amount: discountAmount,
     final_amount: finalAmount,
@@ -185,6 +194,10 @@ export default async function handler(req, res) {
   if (error) {
     json(res, 500, { error: error.message });
     return;
+  }
+
+  if (appliedCoupon) {
+    await admin.from('coupons').update({ current_uses: appliedCoupon.current_uses + 1 }).eq('id', appliedCoupon.id);
   }
 
   const emailSent = await sendEmail({

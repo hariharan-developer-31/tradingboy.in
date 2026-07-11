@@ -110,6 +110,9 @@ type Coupon = {
   discount_type: 'fixed' | 'percent';
   discount_value: number;
   active: boolean;
+  expires_at: string | null;
+  max_uses: number | null;
+  current_uses: number;
   created_at: string;
 };
 
@@ -118,6 +121,8 @@ type AdminCouponForm = {
   code: string;
   discountType: 'fixed' | 'percent';
   discountValue: string;
+  expiresAt: string;
+  maxUses: string;
 };
 
 type AdminCourseForm = {
@@ -170,6 +175,8 @@ export default function App() {
     code: '',
     discountType: 'percent',
     discountValue: '',
+    expiresAt: '',
+    maxUses: '',
   });
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
@@ -476,7 +483,7 @@ export default function App() {
     try {
       setSubmitStatus('sending');
       await adminRequest('saveCoupon', { ...couponForm });
-      setCouponForm({ id: null, code: '', discountType: 'percent', discountValue: '' });
+      setCouponForm({ id: null, code: '', discountType: 'percent', discountValue: '', expiresAt: '', maxUses: '' });
       setAdminStatus('Coupon saved.');
       await loadAdminCoupons();
     } catch (error) {
@@ -970,6 +977,16 @@ export default function App() {
                             </select>
                             <input required type="number" min="1" value={couponForm.discountValue} onChange={(event) => setCouponForm({ ...couponForm, discountValue: event.target.value })} placeholder={couponForm.discountType === 'percent' ? 'Discount %' : 'Amount off'} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                           </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="flex flex-col">
+                              <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Expiration Date (Optional)</label>
+                              <input type="date" value={couponForm.expiresAt} onChange={(event) => setCouponForm({ ...couponForm, expiresAt: event.target.value })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            </div>
+                            <div className="flex flex-col">
+                              <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Max Uses (Optional)</label>
+                              <input type="number" min="1" value={couponForm.maxUses} onChange={(event) => setCouponForm({ ...couponForm, maxUses: event.target.value })} placeholder="e.g. 50" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            </div>
+                          </div>
                           <button type="submit" disabled={submitStatus === 'sending'} className="w-full bg-electric px-4 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">
                             Save Coupon
                           </button>
@@ -981,6 +998,7 @@ export default function App() {
                                 <tr>
                                   <th className="px-4 py-3">Code</th>
                                   <th className="px-4 py-3">Discount</th>
+                                  <th className="px-4 py-3">Usage & Limits</th>
                                   <th className="px-4 py-3">Status</th>
                                   <th className="px-4 py-3 text-right">Actions</th>
                                 </tr>
@@ -1004,6 +1022,10 @@ export default function App() {
                                         </div>
                                       </td>
                                       <td className="px-4 py-4">{coupon.discount_type === 'percent' ? `${coupon.discount_value}% Off` : money(coupon.discount_value)}</td>
+                                      <td className="px-4 py-4 text-xs text-white/70">
+                                        <div>Uses: {coupon.current_uses || 0} {coupon.max_uses ? `/ ${coupon.max_uses}` : ''}</div>
+                                        {coupon.expires_at && <div className="mt-1">Exp: {new Date(coupon.expires_at).toLocaleDateString('en-IN')}</div>}
+                                      </td>
                                       <td className="px-4 py-4">
                                         <button onClick={() => toggleCouponStatus(coupon.id, coupon.active)} className={`rounded-full px-3 py-1 text-xs font-bold transition hover:opacity-80 ${coupon.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                                           {coupon.active ? 'Active' : 'Inactive'}
