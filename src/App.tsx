@@ -293,7 +293,7 @@ export default function App() {
   useEffect(() => {
     if (joinStep !== 'payment') return;
     const elapsed = 180 - paymentSeconds;
-    const promptTimes = [60, 120, 150, 180];
+    const promptTimes = [30, 60, 90, 120, 150, 180];
     if (promptTimes.includes(elapsed) && !promptedAt.includes(elapsed)) {
       setPromptedAt((current) => [...current, elapsed]);
       setPaymentPromptOpen(true);
