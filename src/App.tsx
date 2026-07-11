@@ -745,8 +745,8 @@ export default function App() {
       )}
 
       {adminOpen && (
-        <main className="page-enter min-h-screen bg-black px-4 py-8 sm:px-8 lg:px-12">
-          <div className="mx-auto max-w-7xl border border-white/10 bg-ink p-6 shadow-glow sm:p-8">
+        <main className="page-enter min-h-screen bg-ink p-4 sm:p-8 lg:p-12">
+          <div className="mx-auto w-full max-w-[1400px]">
             <div className="mb-8 flex items-start justify-between gap-4">
               <div>
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
