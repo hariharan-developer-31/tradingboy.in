@@ -884,12 +884,12 @@ export default function App() {
       {adminOpen && (
         <main className="page-enter min-h-screen bg-ink p-4 sm:p-8 lg:p-12">
           <div className="mx-auto w-full max-w-[1400px]">
-            <div className="mb-8 flex items-start justify-between gap-4">
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
                 <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
               </div>
-              <button onClick={closeHashPage} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-white" aria-label="Back to website">
+              <button onClick={closeHashPage} className="flex self-start sm:self-auto items-center gap-2 font-inter text-sm text-white/70 transition hover:text-white" aria-label="Back to website">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Website
               </button>
@@ -954,13 +954,13 @@ export default function App() {
                   </div>
                 ) : (
                   <div>
-                    <div className="mb-6 flex items-center gap-6 border-b border-white/10 pb-6">
-                      <button onClick={() => setAdminSection('home')} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-electric" aria-label="Back to dashboard">
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 border-b border-white/10 pb-6">
+                      <button onClick={() => setAdminSection('home')} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-electric shrink-0" aria-label="Back to dashboard">
                         <ArrowLeft className="h-4 w-4" />
                         Back to Dashboard
                       </button>
-                      <div className="h-6 w-px bg-white/20"></div>
-                      <div className="font-podium text-xl tracking-wider uppercase text-white">
+                      <div className="hidden sm:block h-6 w-px bg-white/20 shrink-0"></div>
+                      <div className="font-podium text-xl tracking-wider uppercase text-white break-words">
                         {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : 'Coupon Management'}
                       </div>
                     </div>
