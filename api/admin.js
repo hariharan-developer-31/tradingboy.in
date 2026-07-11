@@ -31,24 +31,34 @@ const formatAmount = (amount) => `Rs. ${Number(amount).toLocaleString('en-IN')}`
 
 const sendEmail = async ({ to, subject, html }) => {
   if (!process.env.RESEND_API_KEY) {
-    return false;
+    return { ok: false, error: 'RESEND_API_KEY is missing in environment variables' };
   }
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: process.env.MAIL_FROM || 'Trading Boy <admin@tradingboy.in>',
-      to,
-      subject,
-      html,
-    }),
-  });
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.MAIL_FROM || 'Trading Boy <admin@tradingboy.in>',
+        to,
+        subject,
+        html,
+      }),
+    });
 
-  return response.ok;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Resend API Error:', errorData);
+      return { ok: false, error: errorData.message || `Resend API returned ${response.status}` };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 };
 
 const paidAccessHtml = (order) => `
@@ -174,7 +184,7 @@ export default async function handler(req, res) {
       courseDriveUrl = course?.drive_url || null;
     }
     const emailOrder = { ...data, course_drive_url: courseDriveUrl };
-    const emailSent = await sendEmail({
+    const emailResult = await sendEmail({
       to: data.email,
       subject:
         data.payment_status === 'paid'
@@ -183,7 +193,7 @@ export default async function handler(req, res) {
       html: data.payment_status === 'paid' ? paidAccessHtml(emailOrder) : statusHtml(data),
     });
 
-    json(res, 200, { ok: true, emailSent });
+    json(res, 200, { ok: true, emailSent: emailResult.ok, emailError: emailResult.error });
     return;
   }
 
