@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, BookOpen, CheckCircle, CreditCard, Crown, Edit3, RefreshCcw, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, CreditCard, Crown, Edit3, RefreshCcw, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
 const UPI_ID = 'harishsankar023@okaxis';
@@ -438,7 +438,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-ink text-white">
-      <header className={`fixed inset-x-0 top-0 z-40 px-5 py-3 transition-all duration-500 sm:px-8 lg:px-12 lg:py-4 ${hasScrolled ? 'border-b border-white/10 bg-ink/90 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl' : 'border-b border-transparent bg-transparent'}`}>
+      {!adminOpen && (
+        <header className={`fixed inset-x-0 top-0 z-40 px-5 py-3 transition-all duration-500 sm:px-8 lg:px-12 lg:py-4 ${hasScrolled ? 'border-b border-white/10 bg-ink/90 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl' : 'border-b border-transparent bg-transparent'}`}>
         <nav className="flex items-center justify-between">
           <a href="#home" className="flex items-center gap-2.5" aria-label="Trading Boy home">
             <span className="relative block h-7 w-7 border-b-[5px] border-l-[5px] border-electric">
@@ -464,8 +465,10 @@ export default function App() {
           </button>
         </nav>
       </header>
+      )}
 
-      <div className={`fixed inset-0 z-50 bg-ink transition duration-500 md:hidden ${menuOpen ? 'visible opacity-100' : 'invisible opacity-0'}`}>
+      {!adminOpen && (
+        <div className={`fixed inset-0 z-50 bg-ink transition duration-500 md:hidden ${menuOpen ? 'visible opacity-100' : 'invisible opacity-0'}`}>
         <div className="flex justify-end px-5 py-5">
           <button onClick={() => setMenuOpen(false)} aria-label="Close menu">
             <X className="h-8 w-8" />
@@ -482,6 +485,7 @@ export default function App() {
           </button>
         </div>
       </div>
+      )}
 
       {!checkoutOpen && !adminOpen && (
         <main>
@@ -741,15 +745,16 @@ export default function App() {
       )}
 
       {adminOpen && (
-        <main className="page-enter min-h-screen bg-black px-4 pb-16 pt-28 sm:px-8 lg:px-12">
-          <div className="mx-auto max-w-7xl bg-ink p-6 shadow-glow sm:p-8">
-            <div className="mb-6 flex items-start justify-between gap-4">
+        <main className="page-enter min-h-screen bg-black px-4 py-8 sm:px-8 lg:px-12">
+          <div className="mx-auto max-w-7xl border border-white/10 bg-ink p-6 shadow-glow sm:p-8">
+            <div className="mb-8 flex items-start justify-between gap-4">
               <div>
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
                 <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
               </div>
-              <button onClick={closeHashPage} aria-label="Close admin panel">
-                <X className="h-7 w-7 text-white" />
+              <button onClick={closeHashPage} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-white" aria-label="Back to website">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Website
               </button>
             </div>
             {!adminUnlocked ? (
@@ -950,9 +955,11 @@ export default function App() {
         </div>
       )}
 
-      <a href="#admin" className="fixed bottom-4 right-4 z-30 flex h-10 w-10 items-center justify-center border border-white/10 bg-black/70 text-electric backdrop-blur transition hover:border-electric" aria-label="Open admin">
-        <Crown className="h-4 w-4" />
-      </a>
+      {!adminOpen && (
+        <a href="#admin" className="fixed bottom-4 right-4 z-30 flex h-10 w-10 items-center justify-center border border-white/10 bg-black/70 text-electric backdrop-blur transition hover:border-electric" aria-label="Open admin">
+          <Crown className="h-4 w-4" />
+        </a>
+      )}
     </div>
   );
 }
