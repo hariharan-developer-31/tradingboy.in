@@ -42,7 +42,7 @@
 
 @layer utilities {
   .font-podium {
-    font-family: 'Righteous', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
   @keyframes fade-up {
