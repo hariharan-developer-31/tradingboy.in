@@ -884,12 +884,12 @@ export default function App() {
       {adminOpen && (
         <main className="page-enter min-h-screen bg-ink p-4 sm:p-8 lg:p-12">
           <div className="mx-auto w-full max-w-[1400px]">
-            <div className="mb-8 flex items-start justify-between gap-4">
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
                 <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
               </div>
-              <button onClick={closeHashPage} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-white" aria-label="Back to website">
+              <button onClick={closeHashPage} className="flex self-start sm:self-auto items-center gap-2 font-inter text-sm text-white/70 transition hover:text-white shrink-0" aria-label="Back to website">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Website
               </button>
@@ -954,20 +954,20 @@ export default function App() {
                   </div>
                 ) : (
                   <div>
-                    <div className="mb-6 flex items-center gap-6 border-b border-white/10 pb-6">
-                      <button onClick={() => setAdminSection('home')} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-electric" aria-label="Back to dashboard">
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 border-b border-white/10 pb-6">
+                      <button onClick={() => setAdminSection('home')} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-electric shrink-0" aria-label="Back to dashboard">
                         <ArrowLeft className="h-4 w-4" />
                         Back to Dashboard
                       </button>
-                      <div className="h-6 w-px bg-white/20"></div>
-                      <div className="font-podium text-xl tracking-wider uppercase text-white">
+                      <div className="hidden sm:block h-6 w-px bg-white/20 shrink-0"></div>
+                      <div className="font-podium text-xl tracking-wider uppercase text-white break-words">
                         {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : 'Coupon Management'}
                       </div>
                     </div>
                     {adminStatus && <div className="mb-5 border border-white/10 bg-black p-4 font-inter text-sm text-white/70">{adminStatus}</div>}
                     {adminSection === 'coupons' ? (
                       <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-                        <form onSubmit={saveCoupon} className="space-y-4 border border-white/10 bg-black p-5">
+                        <form onSubmit={saveCoupon} className="space-y-4 border border-white/10 bg-black p-5 min-w-0">
                           <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Add Coupon</div>
                           <input required value={couponForm.code} onChange={(event) => setCouponForm({ ...couponForm, code: event.target.value.toUpperCase() })} placeholder="Coupon Code (e.g. SUMMER20)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
                           <div className="grid gap-3 sm:grid-cols-2">
@@ -991,7 +991,7 @@ export default function App() {
                             Save Coupon
                           </button>
                         </form>
-                        <div className="border border-white/10 bg-black">
+                        <div className="border border-white/10 bg-black min-w-0">
                           <div className="overflow-x-auto">
                             <table className="w-full text-left font-inter text-sm text-white">
                               <thead className="bg-white/5 uppercase tracking-wider text-white/50 text-xs">
@@ -1046,7 +1046,7 @@ export default function App() {
                       </div>
                     ) : adminSection === 'courses' ? (
                   <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-                    <form onSubmit={saveCourse} className="space-y-4 border border-white/10 bg-black p-5">
+                    <form onSubmit={saveCourse} className="space-y-4 border border-white/10 bg-black p-5 min-w-0">
                       <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">{courseForm.id ? 'Edit Course' : 'Add Course'}</div>
                       <input value={courseForm.thumbnailUrl} onChange={(event) => setCourseForm({ ...courseForm, thumbnailUrl: event.target.value })} placeholder="Thumbnail image URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                       <input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Name of the course" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
@@ -1064,7 +1064,7 @@ export default function App() {
                         )}
                       </div>
                     </form>
-                    <div className="grid gap-4">
+                    <div className="grid gap-4 min-w-0">
                       {adminCourses.length === 0 ? (
                         <div className="border border-white/10 p-5 font-inter text-sm text-white/55">No courses yet.</div>
                       ) : (
