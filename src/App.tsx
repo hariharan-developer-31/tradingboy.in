@@ -102,6 +102,8 @@ type CourseOrder = {
   discount_amount: number;
   final_amount: number;
   payment_status: string;
+  payment_screenshot_path?: string | null;
+  remarks?: string | null;
   created_at: string;
 };
 
@@ -1343,6 +1345,7 @@ export default function App() {
                             <th className="px-4 py-4">Experience</th>
                             <th className="px-4 py-4">Course</th>
                             <th className="px-4 py-4">Amount</th>
+                            <th className="px-4 py-4">Proof</th>
                             <th className="px-4 py-4">Status</th>
                           </tr>
                         </thead>
@@ -1367,6 +1370,19 @@ export default function App() {
                                 <td className="px-4 py-4 text-white/70">{order.trading_experience || '-'}</td>
                                 <td className="px-4 py-4 text-white/70">{order.course_name || '-'}</td>
                                 <td className="px-4 py-4 font-bold text-white">{money(order.final_amount)}</td>
+                                <td className="px-4 py-4">
+                                  {order.payment_screenshot_path ? (
+                                    <a 
+                                      href={supabase.storage.from('payment-proofs').getPublicUrl(order.payment_screenshot_path).data.publicUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-electric hover:underline text-xs font-bold uppercase tracking-widest inline-block mb-1"
+                                    >
+                                      View Image
+                                    </a>
+                                  ) : <div className="text-xs text-white/30 uppercase tracking-widest mb-1">No Image</div>}
+                                  {order.remarks && <div className="text-xs text-white/70 max-w-[150px] truncate" title={order.remarks}>Note: {order.remarks}</div>}
+                                </td>
                                 <td className="px-4 py-4">
                                   <select value={order.payment_status} onChange={(event) => updateOrderStatus(order.id, event.target.value)} className="border border-white/10 bg-ink px-3 py-2 font-inter text-xs uppercase tracking-widest text-white outline-none focus:border-electric">
                                     <option value="pending">Pending</option>

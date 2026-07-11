@@ -118,7 +118,7 @@ export default async function handler(req, res) {
     const { data, error } = await admin
       .from('course_orders')
       .select(
-        'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, created_at',
+        'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, payment_screenshot_path, remarks, created_at',
       )
       .order('created_at', { ascending: false });
 
