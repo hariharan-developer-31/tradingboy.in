@@ -646,7 +646,24 @@ export default function App() {
             </div>
           </section>
 
-          <section id="course" className="section-rise bg-ink px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
+          <section id="about" className="section-rise bg-ink px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
+            <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
+              <img src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1600&q=85" alt="Trading charts on a workstation" className="h-[420px] w-full object-cover" />
+              <div>
+                <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">About Us</div>
+                <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl">Practical trading education for serious learners.</h2>
+                <p className="mt-6 font-inter leading-relaxed text-white/65">
+                  Trading Boy Academy is built around clean market logic, disciplined risk, and practical execution. We teach students how to read markets with patience and trade with a written plan.
+                </p>
+                <button onClick={() => openCheckout()} className="group mt-8 border border-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-electric hover:text-black">
+                  Join The Course
+                  <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section id="course" className="section-rise bg-black px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
             <div className="mx-auto max-w-7xl">
               <div className="mb-10 max-w-3xl">
                 <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">Courses</div>
@@ -659,7 +676,7 @@ export default function App() {
                   const offerPrice = course.offer_price || course.price;
                   const percent = offerPercent(normalPrice, offerPrice);
                   return (
-                    <article key={course.id || course.title} className="smooth-card border border-white/10 bg-black shadow-glow hover:border-electric/35 hover:shadow-neon-blue">
+                    <article key={course.id || course.title} className="smooth-card border border-white/10 bg-ink shadow-glow hover:border-electric/35 hover:shadow-neon-blue">
                       <img src={course.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={course.title} className="h-56 w-full object-cover" />
                       <div className="p-6">
                         <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Course</div>
@@ -682,23 +699,6 @@ export default function App() {
                     </article>
                   );
                 })}
-              </div>
-            </div>
-          </section>
-
-          <section id="about" className="section-rise bg-black px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
-            <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
-              <img src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1600&q=85" alt="Trading charts on a workstation" className="h-[420px] w-full object-cover" />
-              <div>
-                <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">About Us</div>
-                <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl">Practical trading education for serious learners.</h2>
-                <p className="mt-6 font-inter leading-relaxed text-white/65">
-                  Trading Boy Academy is built around clean market logic, disciplined risk, and practical execution. We teach students how to read markets with patience and trade with a written plan.
-                </p>
-                <button onClick={() => openCheckout()} className="group mt-8 border border-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-electric hover:text-black">
-                  Join The Course
-                  <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </button>
               </div>
             </div>
           </section>
