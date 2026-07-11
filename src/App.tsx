@@ -620,11 +620,11 @@ export default function App() {
               </div>
               <h1 className="mt-8 w-full font-podium font-bold uppercase tracking-normal text-white animate-hero-title">
                 <span className="block text-[clamp(2.05rem,10.8vw,3.55rem)] leading-[0.9] md:hidden">
-                  <span className="block whitespace-nowrap">Trade Price</span>
-                  <span className="block whitespace-nowrap">
+                  <span className="block">Trade Price</span>
+                  <span className="block">
                     Action. <span className="bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Master</span>
                   </span>
-                  <span className="block whitespace-nowrap bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Structure.</span>
+                  <span className="block bg-gradient-to-r from-electric via-skyline to-white bg-clip-text text-transparent">Structure.</span>
                 </span>
                 <span className="hidden leading-[0.88] md:block md:text-[clamp(2.85rem,6.8vw,6.7rem)]">
                   <span className="block whitespace-nowrap">Trade Price Action.</span>
