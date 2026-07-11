@@ -639,7 +639,7 @@ export default function App() {
         <header className={`fixed inset-x-0 top-0 z-40 px-5 py-3 transition-all duration-500 sm:px-8 lg:px-12 lg:py-4 ${hasScrolled ? 'border-b border-white/10 bg-ink/90 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl' : 'border-b border-transparent bg-transparent'}`}>
         <nav className="flex items-center justify-between">
           <a href="#home" className="flex items-center gap-2.5" aria-label="Trading Boy home">
-            <img src={logoUrl} alt="Trading Boy Academy Logo" className="h-10 w-auto object-contain sm:h-12" />
+            <img src={logoUrl} alt="Trading Boy Academy Logo" className="h-12 w-auto object-contain sm:h-14" />
           </a>
           <div className="hidden items-center gap-7 md:flex lg:gap-10">
             {navLinks.map((link) => (
