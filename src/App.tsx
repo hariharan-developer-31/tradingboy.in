@@ -595,7 +595,7 @@ export default function App() {
 
   const updateOrderStatus = async (orderId: string, paymentStatus: string) => {
     try {
-      const result = await adminRequest('updateOrder', { orderId, paymentStatus });
+      const result = await adminRequest('updateOrder', { orderId, paymentStatus }) as any;
       
       if (result.emailSent === false) {
         setAdminStatus(`Status updated, but email failed: ${result.emailError || 'Unknown error'}`);
