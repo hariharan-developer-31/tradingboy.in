@@ -1076,67 +1076,78 @@ export default function App() {
       )}
 
       {courseDetailsOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-12 sm:p-8 overflow-y-auto page-enter">
-          <div className="w-full max-w-3xl border border-white/10 bg-black p-6 shadow-glow sm:p-8 smooth-card my-auto">
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Course Details</div>
-                <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">
-                  {courseDetailsOpen.title}
-                </h2>
-              </div>
-              <button onClick={() => setCourseDetailsOpen(null)} aria-label="Close course details">
-                <X className="h-7 w-7 text-white" />
-              </button>
-            </div>
-            
-            <img src={courseDetailsOpen.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={courseDetailsOpen.title} className="w-full h-48 sm:h-64 object-cover mb-8 border border-white/10 rounded-sm" />
+        <div className="fixed inset-0 z-50 bg-ink overflow-y-auto page-enter flex flex-col">
+          <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/90 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
+            <button onClick={() => setCourseDetailsOpen(null)} className="flex items-center gap-2 font-inter text-xs font-bold uppercase tracking-widest text-white/70 transition hover:text-white">
+              <ArrowLeft className="h-4 w-4" /> Back to Home
+            </button>
+            <div className="font-podium text-lg uppercase text-white truncate max-w-[200px] sm:max-w-md">{courseDetailsOpen.title}</div>
+            <div className="w-20" /> {/* Spacer for centering */}
+          </header>
+          
+          <div className="flex-1 w-full max-w-6xl mx-auto px-6 py-10 lg:px-8">
+             <img src={courseDetailsOpen.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={courseDetailsOpen.title} className="w-full h-[300px] md:h-[450px] object-cover mb-10 md:mb-16 border border-white/10" />
 
-            <div className="space-y-8 font-inter text-white/80">
-              <p className="text-base sm:text-lg leading-relaxed">{courseDetailsOpen.description}</p>
-              
-              <div className="border border-white/10 bg-ink p-6 sm:p-8 rounded-sm">
-                 <h3 className="text-white font-podium uppercase text-2xl mb-6">What you'll learn</h3>
-                 <ul className="space-y-4">
-                   <li className="flex items-start gap-4">
-                     <CheckCircle className="w-5 h-5 text-electric shrink-0 mt-0.5" /> 
-                     <span className="leading-relaxed">Comprehensive understanding of market structure and liquidity to read price action like a professional.</span>
-                   </li>
-                   <li className="flex items-start gap-4">
-                     <CheckCircle className="w-5 h-5 text-electric shrink-0 mt-0.5" /> 
-                     <span className="leading-relaxed">Advanced risk management and position sizing strategies to protect your capital.</span>
-                   </li>
-                   <li className="flex items-start gap-4">
-                     <CheckCircle className="w-5 h-5 text-electric shrink-0 mt-0.5" /> 
-                     <span className="leading-relaxed">Live execution strategies, entry models, and precise trade management.</span>
-                   </li>
-                   <li className="flex items-start gap-4">
-                     <CheckCircle className="w-5 h-5 text-electric shrink-0 mt-0.5" /> 
-                     <span className="leading-relaxed">Developing a disciplined, risk-first trading psychology to overcome emotional trading.</span>
-                   </li>
-                 </ul>
-              </div>
+            <div className="grid lg:grid-cols-[1fr_400px] gap-12 font-inter text-white/80 items-start">
+               {/* Left Column */}
+               <div className="space-y-12">
+                 <div>
+                   <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric mb-3">Course Details</div>
+                   <h2 className="font-podium text-4xl uppercase leading-none text-white sm:text-5xl md:text-6xl mb-6">
+                     {courseDetailsOpen.title}
+                   </h2>
+                   <p className="text-lg md:text-xl leading-relaxed text-white/90">{courseDetailsOpen.description}</p>
+                 </div>
+                 
+                 <div className="border-t border-white/10 pt-10">
+                   <h3 className="text-white font-podium uppercase text-3xl mb-8">What you'll learn</h3>
+                   <ul className="space-y-6">
+                     <li className="flex items-start gap-4">
+                       <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
+                       <span className="leading-relaxed text-lg">Comprehensive understanding of market structure and liquidity to read price action like a professional.</span>
+                     </li>
+                     <li className="flex items-start gap-4">
+                       <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
+                       <span className="leading-relaxed text-lg">Advanced risk management and position sizing strategies to protect your capital.</span>
+                     </li>
+                     <li className="flex items-start gap-4">
+                       <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
+                       <span className="leading-relaxed text-lg">Live execution strategies, entry models, and precise trade management.</span>
+                     </li>
+                     <li className="flex items-start gap-4">
+                       <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
+                       <span className="leading-relaxed text-lg">Developing a disciplined, risk-first trading psychology to overcome emotional trading.</span>
+                     </li>
+                   </ul>
+                 </div>
+               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-4 border-t border-white/10">
-                <div className="flex flex-wrap items-end gap-3">
-                   <div className="text-4xl font-bold text-white">{money(courseDetailsOpen.offer_price || courseDetailsOpen.price)}</div>
-                   {(courseDetailsOpen.normal_price || courseDetailsOpen.price) > (courseDetailsOpen.offer_price || courseDetailsOpen.price) && (
-                     <div className="pb-1 text-sm text-white/40 line-through">{money(courseDetailsOpen.normal_price || courseDetailsOpen.price)}</div>
-                   )}
-                </div>
-                
-                <button 
-                  onClick={() => {
-                    const title = courseDetailsOpen.title;
-                    setCourseDetailsOpen(null);
-                    openCheckout(title);
-                  }} 
-                  className="group bg-electric px-8 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline text-center w-full sm:w-auto"
-                >
-                  Join Course Now
-                  <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </button>
-              </div>
+               {/* Right Column / Sticky Sidebar */}
+               <div className="border border-white/10 bg-black p-8 sticky top-24 smooth-card">
+                  <div className="text-sm font-bold uppercase tracking-widest text-white/50 mb-4">Enrollment</div>
+                  <div className="flex flex-wrap items-end gap-3 mb-8">
+                     <div className="text-5xl font-bold text-white">{money(courseDetailsOpen.offer_price || courseDetailsOpen.price)}</div>
+                     {(courseDetailsOpen.normal_price || courseDetailsOpen.price) > (courseDetailsOpen.offer_price || courseDetailsOpen.price) && (
+                       <div className="pb-1.5 text-lg text-white/40 line-through">{money(courseDetailsOpen.normal_price || courseDetailsOpen.price)}</div>
+                     )}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const title = courseDetailsOpen.title;
+                      setCourseDetailsOpen(null);
+                      openCheckout(title);
+                    }} 
+                    className="group bg-electric px-8 py-5 font-inter text-sm font-bold uppercase tracking-widest text-black transition hover:bg-skyline text-center w-full block"
+                  >
+                    Join Course Now
+                    <ArrowUpRight className="ml-2 inline h-5 w-5 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </button>
+                  <ul className="mt-6 space-y-3 text-sm text-white/60">
+                    <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-white/40" /> Full lifetime access</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-white/40" /> Access on mobile and PC</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-white/40" /> Direct admin support</li>
+                  </ul>
+               </div>
             </div>
           </div>
         </div>
