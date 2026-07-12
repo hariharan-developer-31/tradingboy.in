@@ -232,6 +232,7 @@ export default function App() {
     photoUrl: '',
     active: true,
   });
+  const [savingTestimonial, setSavingTestimonial] = useState(false);
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentCourseFilter, setPaymentCourseFilter] = useState('all');
@@ -660,12 +661,15 @@ export default function App() {
       return;
     }
     try {
+      setSavingTestimonial(true);
       await adminRequest('saveTestimonial', testimonialForm);
       resetTestimonialForm();
       setAdminStatus('Testimonial saved.');
       await loadAdminTestimonials();
     } catch (error) {
       setAdminStatus(error instanceof Error ? error.message : 'Could not save testimonial.');
+    } finally {
+      setSavingTestimonial(false);
     }
   };
 
@@ -1520,7 +1524,9 @@ export default function App() {
                               <span className="font-inter text-sm text-white">Active</span>
                             </label>
                             <div className="flex flex-wrap gap-3 pt-2">
-                              <button type="submit" className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">{testimonialForm.id ? 'Update Testimonial' : 'Save Testimonial'}</button>
+                              <button type="submit" disabled={savingTestimonial} className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50 disabled:cursor-not-allowed">
+                                {savingTestimonial ? 'Saving...' : (testimonialForm.id ? 'Update Testimonial' : 'Save Testimonial')}
+                              </button>
                               <button type="button" onClick={resetTestimonialForm} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>
                             </div>
                           </form>
