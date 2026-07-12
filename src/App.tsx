@@ -957,7 +957,6 @@ export default function App() {
                 </div>
                 <p className="max-w-md font-inter text-sm text-white/60">Results vary by student. The courses focus on process, discipline, and risk-first decision making.</p>
               </div>
-              </div>
             </div>
             
             <div className="flex flex-col gap-6 relative w-full overflow-hidden">
