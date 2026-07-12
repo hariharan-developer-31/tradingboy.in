@@ -359,6 +359,12 @@ export default function App() {
       setTermsOpen(true);
       return;
     }
+    
+    if (selectedOfferPrice === 0) {
+      submitPaymentConfirmation();
+      return;
+    }
+
     setPaymentSeconds(180);
     setPromptedAt([]);
     setPaymentPromptOpen(false);

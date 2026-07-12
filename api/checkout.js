@@ -78,6 +78,41 @@ const receiptHtml = (order) => `
   </div>
 `;
 
+const paidAccessHtml = (order) => `
+  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
+    <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+      <div style="text-align:center;margin-bottom:32px;">
+        <h1 style="margin:0;color:#25aef4;font-size:28px;letter-spacing:1px;text-transform:uppercase;font-weight:900;">Trading Boy</h1>
+      </div>
+      
+      <h2 style="margin:0 0 20px;color:#ffffff;font-size:20px;text-align:center;">Course Access Granted</h2>
+      <p style="color:#cbd5e1;font-size:15px;line-height:1.6;">Hi <strong>${order.full_name}</strong>,</p>
+      <p style="color:#cbd5e1;font-size:15px;line-height:1.6;margin-bottom:32px;">Your payment for <strong>${order.course_name || 'Complete Forex Mastery'}</strong> is complete. You can now access your course materials!</p>
+      
+      <div style="text-align:center;margin-bottom:40px;">
+        ${
+          order.course_drive_url || order.drive_url
+            ? `<a href="${order.course_drive_url || order.drive_url}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:700;font-size:14px;padding:16px 32px;border-radius:8px;display:inline-block;text-transform:uppercase;letter-spacing:1px;">Access Your Course Now</a>`
+            : '<p style="color:#25aef4;font-weight:600;font-size:15px;padding:16px;border:1px dashed #25aef4;border-radius:8px;">The admin team will share your course access via email within 12 hours.</p>'
+        }
+      </div>
+      
+      <h3 style="color:#ffffff;font-size:14px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1f2933;padding-bottom:12px;margin-bottom:20px;">Order Details</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:12px 0;color:#9ca3af;border-bottom:1px solid #1f2933;">Order ID</td><td style="padding:12px 0;text-align:right;color:#ffffff;border-bottom:1px solid #1f2933;font-family:monospace;">${order.id}</td></tr>
+        <tr><td style="padding:12px 0;color:#9ca3af;border-bottom:1px solid #1f2933;">Course</td><td style="padding:12px 0;text-align:right;color:#ffffff;border-bottom:1px solid #1f2933;font-weight:600;">${order.course_name || 'Trading Boy Course'}</td></tr>
+        <tr><td style="padding:12px 0;color:#9ca3af;border-bottom:1px solid #1f2933;">Amount Paid</td><td style="padding:12px 0;text-align:right;color:#25aef4;border-bottom:1px solid #1f2933;font-weight:700;">${formatAmount(order.final_amount)}</td></tr>
+        <tr><td style="padding:12px 0;color:#9ca3af;">Status</td><td style="padding:12px 0;text-align:right;color:#10b981;font-weight:700;text-transform:uppercase;">PAID</td></tr>
+      </table>
+      
+      <div style="margin-top:40px;padding-top:24px;border-top:1px solid #1f2933;text-align:center;">
+        <p style="margin:0;color:#64748b;font-size:13px;line-height:1.5;">If Google Drive says access denied, please contact the admin. Make sure you are logged into Google with <strong>${order.email}</strong>.</p>
+        <p style="margin:12px 0 0;color:#475569;font-size:12px;">© ${new Date().getFullYear()} Trading Boy Academy</p>
+      </div>
+    </div>
+  </div>
+`;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     json(res, 405, { error: 'Method not allowed' });
@@ -109,13 +144,13 @@ export default async function handler(req, res) {
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data: courseData } = await admin
     .from('courses')
-    .select('title, price, offer_price, active')
+    .select('title, price, offer_price, drive_url, active')
     .eq('title', requestedCourseName)
     .eq('active', true)
     .maybeSingle();
   const fallbackCourse = COURSES.find((course) => course.name === requestedCourseName) || COURSES[0];
   const selectedCourse = courseData
-    ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price) }
+    ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price), drive_url: courseData.drive_url }
     : fallbackCourse;
   let discountAmount = 0;
   let appliedCoupon = null;
@@ -190,7 +225,7 @@ export default async function handler(req, res) {
     original_amount: selectedCourse.price,
     discount_amount: discountAmount,
     final_amount: finalAmount,
-    payment_status: 'pending',
+    payment_status: finalAmount === 0 ? 'paid' : 'pending',
     payment_screenshot_path: paymentScreenshotPath,
     remarks,
     source: 'website',
@@ -209,8 +244,8 @@ export default async function handler(req, res) {
 
   const emailSent = await sendEmail({
     to: email,
-    subject: `Trading Boy receipt - ${selectedCourse.name}`,
-    html: receiptHtml(order),
+    subject: finalAmount === 0 ? 'Trading Boy course access approved' : `Trading Boy receipt - ${selectedCourse.name}`,
+    html: finalAmount === 0 ? paidAccessHtml({ ...order, drive_url: selectedCourse.drive_url }) : receiptHtml(order),
   });
 
   json(res, 200, { orderId: order.id, payableAmount: finalAmount, emailSent });
