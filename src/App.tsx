@@ -215,6 +215,7 @@ function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [courseDetailsOpen, setCourseDetailsOpen] = useState<PublicCourse | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [publicCourses, setPublicCourses] = useState<PublicCourse[]>(fallbackCourses);
@@ -978,10 +979,15 @@ export default function App() {
                             </>
                           )}
                         </div>
-                        <button onClick={() => openCheckout(course.title)} className="group mt-7 bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
-                          Join Course
-                          <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                        </button>
+                        <div className="mt-7 flex flex-wrap gap-4 font-inter">
+                          <button onClick={() => setCourseDetailsOpen(course)} className="group border border-electric bg-transparent px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-electric hover:text-black">
+                            View Course
+                          </button>
+                          <button onClick={() => openCheckout(course.title)} className="group bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                            Join Course
+                            <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                          </button>
+                        </div>
                       </div>
                     </article>
                   );
@@ -1067,6 +1073,73 @@ export default function App() {
             <span>Forex, gold, and funded account education.</span>
           </div>
         </footer>
+      )}
+
+      {courseDetailsOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-12 sm:p-8 overflow-y-auto page-enter">
+          <div className="w-full max-w-3xl border border-white/10 bg-black p-6 shadow-glow sm:p-8 smooth-card my-auto">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Course Details</div>
+                <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">
+                  {courseDetailsOpen.title}
+                </h2>
+              </div>
+              <button onClick={() => setCourseDetailsOpen(null)} aria-label="Close course details">
+                <X className="h-7 w-7 text-white" />
+              </button>
+            </div>
+            
+            <img src={courseDetailsOpen.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={courseDetailsOpen.title} className="w-full h-48 sm:h-64 object-cover mb-8 border border-white/10 rounded-sm" />
+
+            <div className="space-y-8 font-inter text-white/80">
+              <p className="text-base sm:text-lg leading-relaxed">{courseDetailsOpen.description}</p>
+              
+              <div className="border border-white/10 bg-ink p-6 sm:p-8 rounded-sm">
+                 <h3 className="text-white font-podium uppercase text-2xl mb-6">What you'll learn</h3>
+                 <ul className="space-y-4">
+                   <li className="flex items-start gap-4">
+                     <CheckCircle className="w-5 h-5 text-electric shrink-0 mt-0.5" /> 
+                     <span className="leading-relaxed">Comprehensive understanding of market structure and liquidity to read price action like a professional.</span>
+                   </li>
+                   <li className="flex items-start gap-4">
+                     <CheckCircle className="w-5 h-5 text-electric shrink-0 mt-0.5" /> 
+                     <span className="leading-relaxed">Advanced risk management and position sizing strategies to protect your capital.</span>
+                   </li>
+                   <li className="flex items-start gap-4">
+                     <CheckCircle className="w-5 h-5 text-electric shrink-0 mt-0.5" /> 
+                     <span className="leading-relaxed">Live execution strategies, entry models, and precise trade management.</span>
+                   </li>
+                   <li className="flex items-start gap-4">
+                     <CheckCircle className="w-5 h-5 text-electric shrink-0 mt-0.5" /> 
+                     <span className="leading-relaxed">Developing a disciplined, risk-first trading psychology to overcome emotional trading.</span>
+                   </li>
+                 </ul>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-4 border-t border-white/10">
+                <div className="flex flex-wrap items-end gap-3">
+                   <div className="text-4xl font-bold text-white">{money(courseDetailsOpen.offer_price || courseDetailsOpen.price)}</div>
+                   {(courseDetailsOpen.normal_price || courseDetailsOpen.price) > (courseDetailsOpen.offer_price || courseDetailsOpen.price) && (
+                     <div className="pb-1 text-sm text-white/40 line-through">{money(courseDetailsOpen.normal_price || courseDetailsOpen.price)}</div>
+                   )}
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    const title = courseDetailsOpen.title;
+                    setCourseDetailsOpen(null);
+                    openCheckout(title);
+                  }} 
+                  className="group bg-electric px-8 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline text-center w-full sm:w-auto"
+                >
+                  Join Course Now
+                  <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {checkoutOpen && (
