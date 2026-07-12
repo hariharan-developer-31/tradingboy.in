@@ -962,9 +962,9 @@ export default function App() {
             
             <div className="flex flex-col gap-6 relative w-full overflow-hidden">
               {/* Top Row: Right to Left */}
-              <div className="flex w-max animate-marquee-left gap-6 hover:[animation-play-state:paused] px-6">
+              <div className="flex w-full md:w-max md:animate-marquee-left gap-6 md:hover:[animation-play-state:paused] px-6 max-md:overflow-x-auto max-md:snap-x max-md:snap-mandatory scrollbar-hide">
                 {[...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2))].map((item, i) => (
-                  <article key={`top-${item.name}-${i}`} onClick={() => setSelectedTestimonial(item)} className="smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer">
+                  <article key={`top-${item.name}-${i}`} onClick={() => setSelectedTestimonial(item)} className="max-md:snap-center smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer">
                     <div className="mb-4 flex items-center gap-3">
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
                         <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-lg text-electric uppercase">{item.name.charAt(0)}</div>
@@ -985,9 +985,9 @@ export default function App() {
               </div>
 
               {/* Bottom Row: Left to Right */}
-              <div className="flex w-max animate-marquee-right gap-6 hover:[animation-play-state:paused] px-6">
+              <div className="flex w-full md:w-max md:animate-marquee-right gap-6 md:hover:[animation-play-state:paused] px-6 max-md:overflow-x-auto max-md:snap-x max-md:snap-mandatory scrollbar-hide">
                 {[...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2))].map((item, i) => (
-                  <article key={`bottom-${item.name}-${i}`} onClick={() => setSelectedTestimonial(item)} className="smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer">
+                  <article key={`bottom-${item.name}-${i}`} onClick={() => setSelectedTestimonial(item)} className="max-md:snap-center smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer">
                     <div className="mb-4 flex items-center gap-3">
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
                         <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-lg text-electric uppercase">{item.name.charAt(0)}</div>
