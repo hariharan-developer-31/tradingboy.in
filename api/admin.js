@@ -65,7 +65,7 @@ const paidAccessHtml = (order) => `
   <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
     <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
       <div style="text-align:center;margin-bottom:32px;">
-        <h1 style="margin:0;color:#25aef4;font-size:28px;letter-spacing:1px;text-transform:uppercase;font-weight:900;">Trading Boy</h1>
+        <img src="https://tradingboy.in/logo.png" alt="Trading Boy" style="height:60px;width:auto;margin:0 auto;display:block;" />
         <p style="margin:8px 0 0;color:#9ca3af;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Premium Academy</p>
       </div>
       
@@ -104,7 +104,7 @@ const statusHtml = (order) => `
   <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
     <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
       <div style="text-align:center;margin-bottom:32px;">
-        <h1 style="margin:0;color:#25aef4;font-size:28px;letter-spacing:1px;text-transform:uppercase;font-weight:900;">Trading Boy</h1>
+        <img src="https://tradingboy.in/logo.png" alt="Trading Boy" style="height:60px;width:auto;margin:0 auto;display:block;" />
       </div>
       
       <h2 style="margin:0 0 20px;color:#ffffff;font-size:20px;text-align:center;">Payment Status Update</h2>

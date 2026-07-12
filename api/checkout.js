@@ -60,7 +60,7 @@ const sendEmail = async ({ to, subject, html }) => {
 const receiptHtml = (order) => `
   <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">
     <div style="max-width:620px;margin:0 auto;border:1px solid #1f2933;padding:28px">
-      <h1 style="margin:0 0 12px;color:#25aef4">Trading Boy Academy</h1>
+      <img src="https://tradingboy.in/logo.png" alt="Trading Boy Academy" style="height:48px;width:auto;margin:0 0 16px;display:block;" />
       <h2 style="margin:0 0 20px">Payment Receipt</h2>
       <p>Hi ${order.full_name},</p>
       <p>Your course purchase request has been created. Complete the UPI payment if you have not already done it.</p>
@@ -82,7 +82,7 @@ const paidAccessHtml = (order) => `
   <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
     <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
       <div style="text-align:center;margin-bottom:32px;">
-        <h1 style="margin:0;color:#25aef4;font-size:28px;letter-spacing:1px;text-transform:uppercase;font-weight:900;">Trading Boy</h1>
+        <img src="https://tradingboy.in/logo.png" alt="Trading Boy" style="height:60px;width:auto;margin:0 auto;display:block;" />
       </div>
       
       <h2 style="margin:0 0 20px;color:#ffffff;font-size:20px;text-align:center;">Course Access Granted</h2>
