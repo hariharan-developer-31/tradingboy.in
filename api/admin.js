@@ -374,5 +374,48 @@ export default async function handler(req, res) {
     return;
   }
 
+  if (action === 'testimonials') {
+    const { data, error } = await admin.from('testimonials').select('*').order('created_at', { ascending: true });
+    if (error) {
+      json(res, 500, { error: error.message });
+      return;
+    }
+    json(res, 200, { data });
+    return;
+  }
+
+  if (action === 'saveTestimonial') {
+    const quote = String(body.quote || '').trim();
+    const name = String(body.name || '').trim();
+    const role = String(body.role || '').trim();
+    if (!quote || !name || !role) {
+      json(res, 400, { error: 'Quote, name, and role are required.' });
+      return;
+    }
+
+    const payload = { quote, name, role, active: body.active !== false };
+    const query = body.id
+      ? admin.from('testimonials').update(payload).eq('id', body.id)
+      : admin.from('testimonials').insert(payload);
+    
+    const { error } = await query;
+    if (error) {
+      json(res, 500, { error: error.message });
+      return;
+    }
+    json(res, 200, { ok: true });
+    return;
+  }
+
+  if (action === 'deleteTestimonial') {
+    const { error } = await admin.from('testimonials').delete().eq('id', body.id);
+    if (error) {
+      json(res, 500, { error: error.message });
+      return;
+    }
+    json(res, 200, { ok: true });
+    return;
+  }
+
   json(res, 400, { error: 'Unknown action.' });
 }

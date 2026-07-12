@@ -171,3 +171,21 @@ for all
 to service_role
 using (bucket_id = 'course-thumbnails')
 with check (bucket_id = 'course-thumbnails');
+
+create table if not exists public.testimonials (
+  id uuid primary key default gen_random_uuid(),
+  quote text not null,
+  name text not null,
+  role text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.testimonials enable row level security;
+
+drop policy if exists "Allow public active testimonial reads" on public.testimonials;
+create policy "Allow public active testimonial reads"
+on public.testimonials
+for select
+to anon
+using (active = true);

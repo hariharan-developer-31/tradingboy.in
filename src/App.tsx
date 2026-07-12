@@ -36,21 +36,30 @@ const fallbackCourses = [
 
 const navLinks = ['Home', 'About', 'Course', 'Results', 'FAQ'];
 
-const testimonials = [
+const fallbackTestimonials = [
   {
+    id: 't1',
     quote: 'The course finally made price action feel structured. My biggest win was learning when not to trade.',
     name: 'Arjun M.',
     role: 'Funded account trader',
+    active: true,
+    created_at: '',
   },
   {
+    id: 't2',
     quote: 'The live breakdowns helped me stop chasing signals and start building a repeatable execution plan.',
     name: 'Priya S.',
     role: 'Forex swing trader',
+    active: true,
+    created_at: '',
   },
   {
+    id: 't3',
     quote: 'Clear lessons, practical homework, and honest feedback. It feels built for serious beginners.',
     name: 'Daniel R.',
     role: 'Part-time trader',
+    active: true,
+    created_at: '',
   },
 ];
 
@@ -108,6 +117,23 @@ type CourseOrder = {
   created_at: string;
 };
 
+type Testimonial = {
+  id: string;
+  quote: string;
+  name: string;
+  role: string;
+  active: boolean;
+  created_at: string;
+};
+
+type AdminTestimonialForm = {
+  id: string | null;
+  quote: string;
+  name: string;
+  role: string;
+  active: boolean;
+};
+
 type Coupon = {
   id: string;
   code: string;
@@ -155,6 +181,7 @@ export default function App() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [publicCourses, setPublicCourses] = useState<PublicCourse[]>(fallbackCourses);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(fallbackTestimonials);
   const [joinStep, setJoinStep] = useState<'details' | 'payment' | 'proof' | 'thanks' | 'failed'>('details');
   const [formErrors, setFormErrors] = useState<{name?: string; email?: string; phone?: string; tradingExperience?: string}>({});
   const [joinForm, setJoinForm] = useState<JoinForm>({
@@ -181,6 +208,7 @@ export default function App() {
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
   const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
   const [adminCoupons, setAdminCoupons] = useState<Coupon[]>([]);
+  const [adminTestimonials, setAdminTestimonials] = useState<Testimonial[]>([]);
   const [couponForm, setCouponForm] = useState<AdminCouponForm>({
     id: null,
     code: '',
@@ -192,6 +220,14 @@ export default function App() {
   });
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showCouponForm, setShowCouponForm] = useState(false);
+  const [showTestimonialForm, setShowTestimonialForm] = useState(false);
+  const [testimonialForm, setTestimonialForm] = useState<AdminTestimonialForm>({
+    id: null,
+    quote: '',
+    name: '',
+    role: '',
+    active: true,
+  });
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentCourseFilter, setPaymentCourseFilter] = useState('all');
@@ -288,6 +324,16 @@ export default function App() {
           ...current,
           courseName: data.some((course) => course.title === current.courseName) ? current.courseName : data[0].title,
         }));
+      }
+
+      const { data: testimonialsData, error: tError } = await supabase
+        .from('testimonials')
+        .select('id, quote, name, role, active, created_at')
+        .eq('active', true)
+        .order('created_at', { ascending: true });
+        
+      if (!tError && testimonialsData && testimonialsData.length > 0) {
+        setTestimonials(testimonialsData as Testimonial[]);
       }
     };
     loadPublicCourses();
@@ -502,6 +548,11 @@ export default function App() {
     setAdminCoupons(result.data || []);
   };
 
+  const loadAdminTestimonials = async () => {
+    const result = await adminRequest<{ data: Testimonial[] }>('testimonials');
+    setAdminTestimonials(result.data || []);
+  };
+
   const unlockAdmin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (adminLoading) return;
@@ -511,6 +562,7 @@ export default function App() {
       await loadAdminCourses();
       await loadAdminOrders();
       await loadAdminCoupons();
+      await loadAdminTestimonials();
       setAdminUnlocked(true);
     } catch (error) {
       setAdminStatus(error instanceof Error ? error.message : 'Could not unlock admin.');
@@ -527,6 +579,7 @@ export default function App() {
     setAdminCourses([]);
     setAdminOrders([]);
     setAdminCoupons([]);
+    setAdminTestimonials([]);
     setPaymentSearch('');
     setPaymentStatusFilter('all');
     setPaymentCourseFilter('all');
@@ -588,6 +641,61 @@ export default function App() {
       await loadAdminCourses();
     } catch (error) {
       setAdminStatus(error instanceof Error ? error.message : 'Could not delete course.');
+    }
+  };
+
+  const resetTestimonialForm = () => {
+    setTestimonialForm({ id: null, quote: '', name: '', role: '', active: true });
+    setShowTestimonialForm(false);
+  };
+
+  const saveTestimonial = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!testimonialForm.quote.trim() || !testimonialForm.name.trim() || !testimonialForm.role.trim()) {
+      setAdminStatus('Enter a quote, name, and role.');
+      return;
+    }
+    try {
+      await adminRequest('saveTestimonial', testimonialForm);
+      resetTestimonialForm();
+      setAdminStatus('Testimonial saved.');
+      await loadAdminTestimonials();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not save testimonial.');
+    }
+  };
+
+  const editTestimonial = (testimonial: Testimonial) => {
+    setTestimonialForm({
+      id: testimonial.id,
+      quote: testimonial.quote,
+      name: testimonial.name,
+      role: testimonial.role,
+      active: testimonial.active,
+    });
+    setShowTestimonialForm(true);
+    setAdminSection('testimonials');
+    setAdminStatus('');
+  };
+
+  const deleteTestimonial = async (testimonial: Testimonial) => {
+    if (!window.confirm(`Delete testimonial from "${testimonial.name}"?`)) return;
+    try {
+      await adminRequest('deleteTestimonial', { id: testimonial.id });
+      if (testimonialForm.id === testimonial.id) resetTestimonialForm();
+      setAdminStatus('Testimonial deleted.');
+      await loadAdminTestimonials();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not delete testimonial.');
+    }
+  };
+
+  const toggleTestimonialActive = async (testimonial: Testimonial) => {
+    try {
+      await adminRequest('saveTestimonial', { ...testimonial, active: !testimonial.active });
+      await loadAdminTestimonials();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not toggle testimonial.');
     }
   };
 
@@ -1128,7 +1236,7 @@ export default function App() {
                     <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {(['home', 'courses', 'payments', 'coupons'] as const).map((section) => (
+                    {(['home', 'courses', 'payments', 'coupons', 'testimonials'] as const).map((section) => (
                       <button
                         key={section}
                         onClick={() => setAdminSection(section)}
@@ -1344,6 +1452,64 @@ export default function App() {
                         </div>
                         </div>
                       </div>
+                    ) : adminSection === 'testimonials' ? (
+                  <div className="space-y-6">
+                    {!showTestimonialForm && !testimonialForm.id && (
+                      <div className="flex justify-end">
+                        <button onClick={() => setShowTestimonialForm(true)} className="flex items-center gap-2 bg-electric px-6 py-3 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                          <Plus className="h-4 w-4" />
+                          Add Testimonial
+                        </button>
+                      </div>
+                    )}
+                    <div className="block">
+                      {(showTestimonialForm || testimonialForm.id) && (
+                        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4">
+                          <form onSubmit={saveTestimonial} className="animate-scale-in max-w-xl w-full space-y-4 border border-white/10 bg-ink p-6 shadow-glow max-h-[90vh] overflow-y-auto scrollbar-hide">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">{testimonialForm.id ? 'Edit Testimonial' : 'Add Testimonial'}</div>
+                              </div>
+                              <button type="button" onClick={resetTestimonialForm} aria-label="Close form"><X className="h-6 w-6 text-white/50 hover:text-white transition" /></button>
+                            </div>
+                            <input value={testimonialForm.name} onChange={(event) => setTestimonialForm({ ...testimonialForm, name: event.target.value })} placeholder="Student Name" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            <input value={testimonialForm.role} onChange={(event) => setTestimonialForm({ ...testimonialForm, role: event.target.value })} placeholder="Role (e.g. Funded account trader)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            <textarea value={testimonialForm.quote} onChange={(event) => setTestimonialForm({ ...testimonialForm, quote: event.target.value })} placeholder="Testimonial Quote" rows={4} className="w-full resize-none border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            <label className="flex items-center gap-2">
+                              <input type="checkbox" checked={testimonialForm.active} onChange={(event) => setTestimonialForm({ ...testimonialForm, active: event.target.checked })} className="accent-electric h-4 w-4" />
+                              <span className="font-inter text-sm text-white">Active</span>
+                            </label>
+                            <div className="flex flex-wrap gap-3 pt-2">
+                              <button type="submit" className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">{testimonialForm.id ? 'Update Testimonial' : 'Save Testimonial'}</button>
+                              <button type="button" onClick={resetTestimonialForm} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>
+                            </div>
+                          </form>
+                        </div>
+                      )}
+                      <div className="grid gap-4 min-w-0">
+                        {adminTestimonials.length === 0 ? (
+                          <div className="border border-white/10 p-5 font-inter text-sm text-white/55">No testimonials yet.</div>
+                        ) : (
+                          adminTestimonials.map((testimonial) => (
+                            <article key={testimonial.id} className={`smooth-card flex flex-col gap-4 border border-white/10 bg-black p-5 sm:flex-row sm:items-center justify-between ${!testimonial.active ? 'opacity-50 grayscale' : 'hover:border-electric/35'}`}>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-inter text-sm text-white/80 italic mb-2">"{testimonial.quote}"</p>
+                                <div className="font-inter font-bold text-white text-sm">{testimonial.name}</div>
+                                <div className="font-inter text-xs text-electric uppercase tracking-widest mt-1">{testimonial.role}</div>
+                              </div>
+                              <div className="flex gap-2 flex-shrink-0">
+                                <button onClick={() => toggleTestimonialActive(testimonial)} className={`border px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition ${testimonial.active ? 'border-red-500/30 text-red-400 hover:bg-red-500/10' : 'border-green-500/30 text-green-400 hover:bg-green-500/10'}`}>
+                                  {testimonial.active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onClick={() => editTestimonial(testimonial)} className="border border-white/15 p-2 text-white transition hover:border-electric" aria-label="Edit testimonial"><Edit3 className="h-4 w-4" /></button>
+                                <button onClick={() => deleteTestimonial(testimonial)} className="border border-red-400/40 p-2 text-red-300 transition hover:bg-red-950/30" aria-label="Delete testimonial"><Trash2 className="h-4 w-4" /></button>
+                              </div>
+                            </article>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
                     ) : adminSection === 'courses' ? (
                   <div className="space-y-6">
                     {!showCourseForm && !courseForm.id && (
