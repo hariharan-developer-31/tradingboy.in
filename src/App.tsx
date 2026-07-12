@@ -971,8 +971,8 @@ export default function App() {
                     </div>
                     <p className="font-inter leading-relaxed text-white/75">"{item.quote}"</p>
                     {item.photo_url && (
-                      <div className="mt-6 overflow-hidden rounded-lg border border-white/10">
-                        <img src={item.photo_url} alt="Trading result" className="w-full h-auto object-cover hover:scale-105 transition duration-500" />
+                      <div className="mt-6 overflow-hidden rounded-lg border border-white/10 aspect-video">
+                        <img src={item.photo_url} alt="Trading result" className="w-full h-full object-cover hover:scale-105 transition duration-500" />
                       </div>
                     )}
                   </article>
@@ -1497,7 +1497,9 @@ export default function App() {
                               <label className="font-inter text-xs text-white/50 uppercase tracking-widest">Result / Chart Photo (Optional)</label>
                               <div className="flex items-center gap-4">
                                 {(testimonialForm.photoDataUrl || testimonialForm.photoUrl) && (
-                                  <img src={testimonialForm.photoDataUrl || testimonialForm.photoUrl} alt="Photo preview" className="h-16 w-24 object-cover border border-white/10 rounded" />
+                                  <div className="w-24 aspect-video overflow-hidden rounded border border-white/10 shrink-0">
+                                    <img src={testimonialForm.photoDataUrl || testimonialForm.photoUrl} alt="Photo preview" className="w-full h-full object-cover" />
+                                  </div>
                                 )}
                                 <input 
                                   type="file" 
@@ -1547,7 +1549,9 @@ export default function App() {
                                   <div className="font-inter font-bold text-white text-sm">{testimonial.name}</div>
                                   <div className="font-inter text-xs text-electric uppercase tracking-widest mt-1 mb-3">{testimonial.role}</div>
                                   {testimonial.photo_url && (
-                                    <img src={testimonial.photo_url} alt="Result" className="h-20 w-32 object-cover border border-white/10 rounded" />
+                                    <div className="w-32 aspect-video overflow-hidden rounded border border-white/10">
+                                      <img src={testimonial.photo_url} alt="Result" className="w-full h-full object-cover" />
+                                    </div>
                                   )}
                                 </div>
                               </div>
