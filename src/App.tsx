@@ -648,7 +648,7 @@ export default function App() {
               </a>
             ))}
           </div>
-          <button onClick={() => openCheckout()} className="group hidden items-center gap-2 border border-white/30 px-4 py-2.5 font-inter text-[11px] uppercase tracking-widest text-white transition hover:border-electric hover:bg-white/10 md:flex">
+          <button onClick={() => openCheckout()} className="group hidden items-center gap-2 bg-electric px-4 py-2.5 font-inter text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline md:flex">
             Join Now
             <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </button>
