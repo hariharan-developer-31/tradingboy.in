@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, LogOut, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Loader2, LogOut, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
 
@@ -972,9 +972,18 @@ export default function App() {
                   </div>
                 )}
                 {couponError && <p className="font-inter text-xs text-red-400">{couponError}</p>}
-                <button className="group w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
-                  Join Course
-                  <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                <button disabled={submitStatus === 'sending'} className="group flex justify-center items-center w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-75 disabled:cursor-not-allowed">
+                  {submitStatus === 'sending' ? (
+                    <>
+                      <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Join Course
+                      <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                    </>
+                  )}
                 </button>
               </form>
             )}
