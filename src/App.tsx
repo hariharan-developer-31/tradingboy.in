@@ -1185,18 +1185,45 @@ export default function App() {
                   <div className="mt-4 text-sm leading-relaxed text-white/60">
                     Timer: {Math.floor(paymentSeconds / 60)}:{String(paymentSeconds % 60).padStart(2, '0')}. Keep this page open after paying.
                   </div>
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-white transition hover:opacity-80">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-4 object-contain" />
+                  <div className="mt-6 flex flex-col gap-3">
+                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:bg-white/5 hover:border-electric/30 group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-5 object-contain" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-inter font-bold text-white group-hover:text-electric transition-colors">Google Pay</div>
+                        <div className="font-inter text-[11px] text-white/50 mt-0.5">Direct payment via GPay app</div>
+                      </div>
                     </a>
-                    <a href={upiUrl} className="flex h-12 w-32 items-center justify-center rounded bg-[#5f259f] text-white transition hover:opacity-80">
-                      <span className="flex items-center gap-1.5 font-bold tracking-tight text-[15px]"><Smartphone className="h-4 w-4" /> PhonePe</span>
+
+                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:bg-white/5 hover:border-electric/30 group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#5f259f] shadow-sm">
+                        <Smartphone className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-inter font-bold text-white group-hover:text-electric transition-colors">PhonePe</div>
+                        <div className="font-inter text-[11px] text-white/50 mt-0.5">Direct payment via PhonePe</div>
+                      </div>
                     </a>
-                    <a href={upiUrl} className="flex h-12 w-24 items-center justify-center rounded bg-[#002970] transition hover:opacity-80">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-4 filter brightness-0 invert object-contain" />
+
+                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:bg-white/5 hover:border-electric/30 group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-3.5 object-contain" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-inter font-bold text-white group-hover:text-electric transition-colors">Paytm</div>
+                        <div className="font-inter text-[11px] text-white/50 mt-0.5">Direct payment via Paytm</div>
+                      </div>
                     </a>
-                    <a href={upiUrl} className="flex h-12 px-4 items-center justify-center rounded border border-white/20 bg-transparent font-inter text-sm font-bold text-white transition hover:bg-white/5">
-                      Other UPI
+
+                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:bg-white/5 hover:border-electric/30 group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/10 border border-white/10 shadow-sm">
+                        <CreditCard className="h-5 w-5 text-white/80" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-inter font-bold text-white group-hover:text-electric transition-colors">Other UPI Apps</div>
+                        <div className="font-inter text-[11px] text-white/50 mt-0.5">Choose from installed apps</div>
+                      </div>
                     </a>
                   </div>
                 </div>
