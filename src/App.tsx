@@ -233,6 +233,7 @@ export default function App() {
     active: true,
   });
   const [savingTestimonial, setSavingTestimonial] = useState(false);
+  const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentCourseFilter, setPaymentCourseFilter] = useState('all');
@@ -963,19 +964,19 @@ export default function App() {
               {/* Top Row: Right to Left */}
               <div className="flex w-max animate-marquee-left gap-6 hover:[animation-play-state:paused] px-6">
                 {[...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2))].map((item, i) => (
-                  <article key={`top-${item.name}-${i}`} className="smooth-card w-[320px] sm:w-[400px] shrink-0 border border-white/10 bg-white/[0.03] p-6 hover:border-electric/35">
-                    <div className="mb-6 flex items-center gap-4">
-                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
-                        <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{item.name.charAt(0)}</div>
+                  <article key={`top-${item.name}-${i}`} onClick={() => setSelectedTestimonial(item)} className="smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer">
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
+                        <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-lg text-electric uppercase">{item.name.charAt(0)}</div>
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-inter text-sm font-semibold text-white truncate">{item.name}</div>
-                        <div className="font-inter text-xs uppercase tracking-widest text-electric truncate">{item.role}</div>
+                        <div className="font-inter text-[10px] uppercase tracking-widest text-electric truncate">{item.role}</div>
                       </div>
                     </div>
-                    <p className="font-inter leading-relaxed text-white/75">"{item.quote}"</p>
+                    <p className="font-inter text-sm leading-relaxed text-white/75 line-clamp-3">"{item.quote}"</p>
                     {item.photo_url && (
-                      <div className="mt-6 overflow-hidden rounded-lg border border-white/10 aspect-video">
+                      <div className="mt-4 overflow-hidden rounded-lg border border-white/10 aspect-video">
                         <img src={item.photo_url} alt="Trading result" className="w-full h-full object-cover hover:scale-105 transition duration-500" />
                       </div>
                     )}
@@ -986,27 +987,49 @@ export default function App() {
               {/* Bottom Row: Left to Right */}
               <div className="flex w-max animate-marquee-right gap-6 hover:[animation-play-state:paused] px-6">
                 {[...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2))].map((item, i) => (
-                  <article key={`bottom-${item.name}-${i}`} className="smooth-card w-[320px] sm:w-[400px] shrink-0 border border-white/10 bg-white/[0.03] p-6 hover:border-electric/35">
-                    <div className="mb-6 flex items-center gap-4">
-                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
-                        <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{item.name.charAt(0)}</div>
+                  <article key={`bottom-${item.name}-${i}`} onClick={() => setSelectedTestimonial(item)} className="smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer">
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
+                        <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-lg text-electric uppercase">{item.name.charAt(0)}</div>
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-inter text-sm font-semibold text-white truncate">{item.name}</div>
-                        <div className="font-inter text-xs uppercase tracking-widest text-electric truncate">{item.role}</div>
+                        <div className="font-inter text-[10px] uppercase tracking-widest text-electric truncate">{item.role}</div>
                       </div>
                     </div>
-                    <p className="font-inter leading-relaxed text-white/75">"{item.quote}"</p>
+                    <p className="font-inter text-sm leading-relaxed text-white/75 line-clamp-3">"{item.quote}"</p>
                     {item.photo_url && (
-                      <div className="mt-6 overflow-hidden rounded-lg border border-white/10 aspect-video">
+                      <div className="mt-4 overflow-hidden rounded-lg border border-white/10 aspect-video">
                         <img src={item.photo_url} alt="Trading result" className="w-full h-full object-cover hover:scale-105 transition duration-500" />
                       </div>
                     )}
                   </article>
                 ))}
               </div>
-
             </div>
+
+            {selectedTestimonial && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6 backdrop-blur-sm" onClick={() => setSelectedTestimonial(null)}>
+                <div className="relative w-full max-w-2xl bg-ink p-8 border border-white/10" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => setSelectedTestimonial(null)} className="absolute right-4 top-4 text-white/50 hover:text-white transition">
+                    <X className="h-6 w-6" />
+                  </button>
+                  <div className="mb-6 flex items-center gap-4">
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
+                      <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{selectedTestimonial.name.charAt(0)}</div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-inter text-base font-semibold text-white">{selectedTestimonial.name}</div>
+                      <div className="font-inter text-xs uppercase tracking-widest text-electric">{selectedTestimonial.role}</div>
+                    </div>
+                  </div>
+                  <p className="font-inter leading-relaxed text-white/90 text-lg mb-6">"{selectedTestimonial.quote}"</p>
+                  {selectedTestimonial.photo_url && (
+                    <img src={selectedTestimonial.photo_url} alt="Trading result" className="w-full h-auto object-cover border border-white/10" />
+                  )}
+                </div>
+              </div>
+            )}
           </section>
 
           <section id="faq" className="section-rise bg-black px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
