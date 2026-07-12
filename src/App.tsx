@@ -300,7 +300,7 @@ export default function App() {
     }
   }
 
-  const upiUrl = useMemo(() => {
+  const getUpiUrl = useCallback((app: 'gpay' | 'phonepe' | 'paytm' | 'generic') => {
     const params = new URLSearchParams({
       pa: UPI_ID,
       pn: 'Trading Boy Academy',
@@ -308,9 +308,16 @@ export default function App() {
       cu: 'INR',
       tn: selectedCourse.title,
     });
-    return `upi://pay?${params.toString()}`;
+    const query = params.toString();
+    switch (app) {
+      case 'gpay': return `tez://upi/pay?${query}`;
+      case 'phonepe': return `phonepe://pay?${query}`;
+      case 'paytm': return `paytmmp://pay?${query}`;
+      case 'generic':
+      default: return `upi://pay?${query}`;
+    }
   }, [selectedCourse.title, selectedOfferPrice]);
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiUrl)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(getUpiUrl('generic'))}`;
 
   const filteredOrders = useMemo(() => {
     const query = paymentSearch.trim().toLowerCase();
@@ -1186,21 +1193,21 @@ export default function App() {
                     Timer: {Math.floor(paymentSeconds / 60)}:{String(paymentSeconds % 60).padStart(2, '0')}. Keep this page open after paying.
                   </div>
                   <div className="mt-6 flex flex-col gap-3">
-                    <a href={upiUrl} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+                    <a href={getUpiUrl('gpay')} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
                       <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-6 object-contain" />
                     </a>
 
-                    <a href={upiUrl} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-[#5f259f] shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+                    <a href={getUpiUrl('phonepe')} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-[#5f259f] shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
                       <span className="flex items-center gap-2 font-bold tracking-tight text-white text-lg">
                         <Smartphone className="h-6 w-6" /> PhonePe
                       </span>
                     </a>
 
-                    <a href={upiUrl} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+                    <a href={getUpiUrl('paytm')} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
                       <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-5 object-contain" />
                     </a>
 
-                    <a href={upiUrl} className="flex h-[60px] w-full items-center justify-center rounded-xl border border-white/20 bg-transparent transition-all hover:bg-white/5 hover:scale-[1.02]">
+                    <a href={getUpiUrl('generic')} className="flex h-[60px] w-full items-center justify-center rounded-xl border border-white/20 bg-transparent transition-all hover:bg-white/5 hover:scale-[1.02]">
                       <span className="font-inter font-bold text-white">Other UPI Apps</span>
                     </a>
                   </div>
