@@ -1191,7 +1191,7 @@ export default function App() {
                               <tbody className="divide-y divide-white/10">
                                 {adminCoupons.length === 0 ? (
                                   <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center text-white/50">
+                                    <td colSpan={5} className="px-4 py-8 text-center text-white/50">
                                       No coupons found.
                                     </td>
                                   </tr>
@@ -1369,7 +1369,7 @@ export default function App() {
                         </thead>
                         <tbody>
                           {filteredOrders.length === 0 ? (
-                            <tr><td className="px-4 py-5 text-white/55" colSpan={7}>No payments found.</td></tr>
+                            <tr><td className="px-4 py-5 text-white/55" colSpan={8}>No payments found.</td></tr>
                           ) : (
                             filteredOrders.map((order) => (
                               <tr key={order.id} className="border-t border-white/10 align-top">
@@ -1389,7 +1389,7 @@ export default function App() {
                                 <td className="px-4 py-4 text-white/70">{order.course_name || '-'}</td>
                                 <td className="px-4 py-4 font-bold text-white">{money(order.final_amount)}</td>
                                 <td className="px-4 py-4">
-                                  {order.payment_screenshot_path ? (
+                                  {order.payment_screenshot_path && supabase ? (
                                     <a 
                                       href={supabase?.storage.from('payment-proofs').getPublicUrl(order.payment_screenshot_path).data.publicUrl} 
                                       target="_blank" 
@@ -1398,7 +1398,7 @@ export default function App() {
                                     >
                                       View Image
                                     </a>
-                                  ) : <div className="text-xs text-white/30 uppercase tracking-widest mb-1">No Image</div>}
+                                  ) : <div className="text-xs text-white/30 uppercase tracking-widest mb-1">{order.payment_screenshot_path ? 'Proof Unavailable' : 'No Image'}</div>}
                                   {order.remarks && <div className="text-xs text-white/70 max-w-[150px] truncate" title={order.remarks}>Note: {order.remarks}</div>}
                                 </td>
                                 <td className="px-4 py-4">

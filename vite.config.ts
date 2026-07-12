@@ -32,6 +32,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         const couponCode = String(body.couponCode || '').trim().toUpperCase();
         const paymentScreenshot = body.paymentScreenshot;
         const termsAccepted = body.termsAccepted === true;
+        const remarks = String(body.remarks || '').trim();
 
         if (!fullName || !email || !phone || !tradingExperience || !termsAccepted) {
           sendJson(res, 400, { error: 'Name, email, phone, trading experience, and terms acceptance are required.' });
@@ -59,13 +60,22 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (couponCode) {
           const { data } = await admin
             .from('coupons')
-            .select('code, discount_type, discount_value, active')
+            .select('id, code, discount_type, discount_value, active, expires_at, max_uses, current_uses')
             .eq('code', couponCode)
             .eq('active', true)
             .maybeSingle();
 
           if (data) {
-            appliedCoupon = data.code;
+            if (data.expires_at && new Date(data.expires_at) < new Date()) {
+              sendJson(res, 400, { error: 'Coupon has expired.' });
+              return;
+            }
+            if (data.max_uses !== null && data.current_uses >= data.max_uses) {
+              sendJson(res, 400, { error: 'Coupon usage limit reached.' });
+              return;
+            }
+
+            appliedCoupon = data;
             discountAmount =
               data.discount_type === 'percent'
                 ? Math.min(Math.round((selectedCourse.price * data.discount_value) / 100), selectedCourse.price)
@@ -73,6 +83,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           }
         }
 
+        const finalAmount = selectedCourse.price - discountAmount;
         const orderId = randomUUID();
         let paymentScreenshotPath = null;
 
@@ -84,7 +95,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             return;
           }
 
-          paymentScreenshotPath = `payment-proofs/${orderId}.jpg`;
+          paymentScreenshotPath = `${orderId}.jpg`;
           const { error: uploadError } = await admin.storage
             .from('payment-proofs')
             .upload(paymentScreenshotPath, buffer, {
@@ -108,12 +119,13 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           terms_accepted: true,
           terms_accepted_at: new Date().toISOString(),
           plan: selectedCourse.name,
-          coupon_code: appliedCoupon,
+          coupon_code: appliedCoupon ? appliedCoupon.code : null,
           original_amount: selectedCourse.price,
           discount_amount: discountAmount,
-          final_amount: selectedCourse.price - discountAmount,
+          final_amount: finalAmount,
           payment_status: 'pending',
           payment_screenshot_path: paymentScreenshotPath,
+          remarks,
           source: 'website',
         };
         const { error } = await admin.from('course_orders').insert(order);
@@ -123,15 +135,72 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           return;
         }
 
+        if (appliedCoupon) {
+          await admin.from('coupons').update({ current_uses: appliedCoupon.current_uses + 1 }).eq('id', appliedCoupon.id);
+        }
+
         const emailSent = await sendMail(env, {
           to: email,
           subject: `Trading Boy receipt - ${selectedCourse.name}`,
           html: receiptHtml(order),
         });
 
-        sendJson(res, 200, { orderId: order.id, payableAmount: order.final_amount, emailSent });
+        sendJson(res, 200, { orderId: order.id, payableAmount: finalAmount, emailSent });
       } catch (error) {
         sendJson(res, 500, { error: error instanceof Error ? error.message : 'Checkout API failed.' });
+      }
+    });
+
+    server.middlewares.use('/api/checkCoupon', async (req, res) => {
+      if ((req as any).method !== 'POST') {
+        sendJson(res, 405, { error: 'Method not allowed' });
+        return;
+      }
+
+      const supabaseUrl = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
+      const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!supabaseUrl || !serviceRoleKey) {
+        sendJson(res, 500, { error: 'Environment variables are missing.' });
+        return;
+      }
+
+      try {
+        const body = await readJsonBody(req);
+        const couponCode = String(body.couponCode || '').trim().toUpperCase();
+
+        if (!couponCode) {
+          sendJson(res, 400, { error: 'Coupon code is required.' });
+          return;
+        }
+
+        const admin = createClient(supabaseUrl, serviceRoleKey);
+        const { data, error } = await admin
+          .from('coupons')
+          .select('code, discount_type, discount_value, active, expires_at, max_uses, current_uses')
+          .eq('code', couponCode)
+          .maybeSingle();
+
+        if (error || !data) {
+          sendJson(res, 404, { error: 'Invalid coupon code.' });
+          return;
+        }
+        if (!data.active) {
+          sendJson(res, 400, { error: 'This coupon is no longer active.' });
+          return;
+        }
+        if (data.expires_at && new Date(data.expires_at) < new Date()) {
+          sendJson(res, 400, { error: 'This coupon has expired.' });
+          return;
+        }
+        if (data.max_uses !== null && data.current_uses >= data.max_uses) {
+          sendJson(res, 400, { error: 'This coupon has reached its usage limit.' });
+          return;
+        }
+
+        sendJson(res, 200, { coupon: data });
+      } catch (error) {
+        sendJson(res, 500, { error: error instanceof Error ? error.message : 'Coupon API failed.' });
       }
     });
 
@@ -166,7 +235,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           const { data, error } = await admin
             .from('course_orders')
             .select(
-              'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, created_at',
+              'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, payment_screenshot_path, remarks, created_at',
             )
             .order('created_at', { ascending: false });
 
@@ -209,7 +278,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (body.action === 'coupons') {
           const { data, error } = await admin
             .from('coupons')
-            .select('id, code, discount_type, discount_value, active')
+            .select('id, code, discount_type, discount_value, active, expires_at, max_uses, current_uses, created_at')
             .order('created_at', { ascending: false });
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
@@ -239,12 +308,37 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           const payload = {
             title,
             description: String(body.description || '').trim() || null,
-            thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
             normal_price: normalPrice,
             offer_price: offerPrice,
             price: offerPrice,
             drive_url: String(body.driveUrl || '').trim() || null,
+            thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
           };
+
+          if (body.thumbnailDataUrl) {
+            const buffer = decodeDataUrl(body.thumbnailDataUrl);
+            if (buffer.byteLength > 5 * 1024 * 1024) {
+              sendJson(res, 400, { error: 'Image must be below 5MB.' });
+              return;
+            }
+
+            const imagePath = `${randomUUID()}.jpg`;
+            const { error: uploadError } = await admin.storage
+              .from('course-thumbnails')
+              .upload(imagePath, buffer, {
+                contentType: 'image/jpeg',
+                upsert: true,
+              });
+
+            if (uploadError) {
+              sendJson(res, 500, { error: uploadError.message });
+              return;
+            }
+
+            const { data: publicUrlData } = admin.storage.from('course-thumbnails').getPublicUrl(imagePath);
+            payload.thumbnail_url = publicUrlData.publicUrl;
+          }
+
           const query = body.id
             ? admin.from('courses').update(payload).eq('id', body.id)
             : admin.from('courses').insert(payload);
@@ -274,6 +368,8 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
               code: String(body.code || '').trim().toUpperCase(),
               discount_type: body.discountType,
               discount_value: Number(body.discountValue),
+              expires_at: body.expiresAt ? new Date(body.expiresAt).toISOString() : null,
+              max_uses: body.maxUses ? Number(body.maxUses) : null,
               active: true,
             },
             { onConflict: 'code' },
@@ -288,6 +384,13 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             .from('coupons')
             .update({ active: body.active })
             .eq('id', body.couponId);
+
+          sendJson(res, error ? 500 : 200, error ? { error: error.message } : { ok: true });
+          return;
+        }
+
+        if (body.action === 'deleteCoupon') {
+          const { error } = await admin.from('coupons').delete().eq('id', body.couponId);
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { ok: true });
           return;
