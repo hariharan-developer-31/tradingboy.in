@@ -24,6 +24,8 @@ test('local dev API exposes the same coupon route and limits as production', () 
   const viteConfig = read('vite.config.ts');
 
   assert.match(viteConfig, /server\.middlewares\.use\('\/api\/checkCoupon'/);
+  assert.match(viteConfig, /course_name/);
+  assert.match(viteConfig, /This coupon is only valid for/);
   assert.match(viteConfig, /expires_at, max_uses, current_uses/);
   assert.match(viteConfig, /This coupon has reached its usage limit\./);
   assert.match(viteConfig, /current_uses: appliedCoupon\.current_uses \+ 1/);
@@ -33,14 +35,24 @@ test('local dev admin API returns payment proof and coupon metadata', () => {
   const viteConfig = read('vite.config.ts');
 
   assert.match(viteConfig, /payment_screenshot_path, remarks, created_at/);
-  assert.match(viteConfig, /active, expires_at, max_uses, current_uses, created_at/);
+  assert.match(viteConfig, /course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses, created_at/);
   assert.match(viteConfig, /body\.action === 'deleteCoupon'/);
 });
 
 test('admin tables keep empty-state cells aligned with visible columns', () => {
   const app = read('src/App.tsx');
 
-  assert.match(app, /<td colSpan=\{5\}[^>]*>\s*No coupons found\./);
+  assert.match(app, /<td colSpan=\{6\}[^>]*>\s*No coupons found\./);
   assert.match(app, /colSpan=\{8\}>No payments found\./);
   assert.match(app, /order\.payment_screenshot_path && supabase/);
+});
+
+test('coupon management supports editing and course scoping', () => {
+  const app = read('src/App.tsx');
+  const schema = read('supabase.sql');
+
+  assert.match(app, /const editCoupon = \(coupon: Coupon\)/);
+  assert.match(app, /Course Scope/);
+  assert.match(app, /courseName: coupon\.course_name \|\| ''/);
+  assert.match(schema, /alter table public\.coupons add column if not exists course_name text;/);
 });

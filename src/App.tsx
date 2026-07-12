@@ -111,6 +111,7 @@ type CourseOrder = {
 type Coupon = {
   id: string;
   code: string;
+  course_name: string | null;
   discount_type: 'fixed' | 'percent';
   discount_value: number;
   active: boolean;
@@ -123,6 +124,7 @@ type Coupon = {
 type AdminCouponForm = {
   id: string | null;
   code: string;
+  courseName: string;
   discountType: 'fixed' | 'percent';
   discountValue: string;
   expiresAt: string;
@@ -182,6 +184,7 @@ export default function App() {
   const [couponForm, setCouponForm] = useState<AdminCouponForm>({
     id: null,
     code: '',
+    courseName: '',
     discountType: 'percent',
     discountValue: '',
     expiresAt: '',
@@ -370,7 +373,7 @@ export default function App() {
       const response = await fetch('/api/checkCoupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ couponCode: couponInput }),
+        body: JSON.stringify({ couponCode: couponInput, courseName: selectedCourse.title }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -582,13 +585,17 @@ export default function App() {
     }
   };
 
+  const resetCouponForm = () => {
+    setCouponForm({ id: null, code: '', courseName: '', discountType: 'percent', discountValue: '', expiresAt: '', maxUses: '' });
+    setShowCouponForm(false);
+  };
+
   const saveCoupon = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       setSubmitStatus('sending');
       await adminRequest('saveCoupon', { ...couponForm });
-      setCouponForm({ id: null, code: '', discountType: 'percent', discountValue: '', expiresAt: '', maxUses: '' });
-      setShowCouponForm(false);
+      resetCouponForm();
       setAdminStatus('Coupon saved.');
       await loadAdminCoupons();
     } catch (error) {
@@ -596,6 +603,20 @@ export default function App() {
     } finally {
       setSubmitStatus('idle');
     }
+  };
+
+  const editCoupon = (coupon: Coupon) => {
+    setCouponForm({
+      id: coupon.id,
+      code: coupon.code,
+      courseName: coupon.course_name || '',
+      discountType: coupon.discount_type,
+      discountValue: String(coupon.discount_value),
+      expiresAt: coupon.expires_at ? coupon.expires_at.slice(0, 10) : '',
+      maxUses: coupon.max_uses ? String(coupon.max_uses) : '',
+    });
+    setShowCouponForm(true);
+    setAdminStatus('');
   };
 
   const toggleCouponStatus = async (couponId: string, currentStatus: boolean) => {
@@ -1194,7 +1215,7 @@ export default function App() {
                       <div className="space-y-6">
                         {!showCouponForm && (
                           <div className="flex justify-end">
-                            <button onClick={() => setShowCouponForm(true)} className="flex items-center gap-2 bg-electric px-6 py-3 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                            <button onClick={() => { resetCouponForm(); setShowCouponForm(true); }} className="flex items-center gap-2 bg-electric px-6 py-3 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
                               <Plus className="h-4 w-4" />
                               Add Coupon
                             </button>
@@ -1206,11 +1227,18 @@ export default function App() {
                               <form onSubmit={saveCoupon} className="animate-scale-in max-w-xl w-full space-y-4 border border-white/10 bg-ink p-6 shadow-glow max-h-[90vh] overflow-y-auto scrollbar-hide">
                                 <div className="flex items-start justify-between gap-4">
                                   <div>
-                                    <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Add Coupon</div>
+                                    <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">{couponForm.id ? 'Edit Coupon' : 'Add Coupon'}</div>
                                   </div>
-                                  <button type="button" onClick={() => { setCouponForm({ id: null, code: '', discountType: 'percent', discountValue: '', expiresAt: '', maxUses: '' }); setShowCouponForm(false); }} aria-label="Close coupon form"><X className="h-6 w-6 text-white/50 hover:text-white transition" /></button>
+                                  <button type="button" onClick={resetCouponForm} aria-label="Close coupon form"><X className="h-6 w-6 text-white/50 hover:text-white transition" /></button>
                                 </div>
                                 <input required value={couponForm.code} onChange={(event) => setCouponForm({ ...couponForm, code: event.target.value.toUpperCase() })} placeholder="Coupon Code (e.g. SUMMER20)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
+                                <div className="flex flex-col">
+                                  <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Course Scope</label>
+                                  <select value={couponForm.courseName} onChange={(event) => setCouponForm({ ...couponForm, courseName: event.target.value })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric">
+                                    <option value="">All courses</option>
+                                    {adminCourses.map((course) => <option key={course.id} value={course.title}>{course.title}</option>)}
+                                  </select>
+                                </div>
                                 <div className="grid gap-3 sm:grid-cols-2">
                                   <select value={couponForm.discountType} onChange={(event) => setCouponForm({ ...couponForm, discountType: event.target.value as 'fixed' | 'percent' })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition focus:border-electric">
                                     <option value="percent">Percentage (%)</option>
@@ -1224,15 +1252,18 @@ export default function App() {
                                     <input type="date" value={couponForm.expiresAt} onChange={(event) => setCouponForm({ ...couponForm, expiresAt: event.target.value })} className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                                   </div>
                                   <div className="flex flex-col">
-                                    <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Max Uses (Optional)</label>
+                                    <label className="mb-1 text-[10px] uppercase text-white/50 tracking-wider">Maximum Uses (Optional)</label>
                                     <input type="number" min="1" value={couponForm.maxUses} onChange={(event) => setCouponForm({ ...couponForm, maxUses: event.target.value })} placeholder="e.g. 50" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                                   </div>
                                 </div>
+                                <div className="border border-white/10 bg-black p-3 font-inter text-xs leading-relaxed text-white/50">
+                                  Course scope controls where the coupon works. Leave it as All courses for a global coupon.
+                                </div>
                                 <div className="flex flex-wrap gap-3 pt-2">
                                   <button type="submit" disabled={submitStatus === 'sending'} className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">
-                                    Save Coupon
+                                    {couponForm.id ? 'Update Coupon' : 'Save Coupon'}
                                   </button>
-                                  <button type="button" onClick={() => { setCouponForm({ id: null, code: '', discountType: 'percent', discountValue: '', expiresAt: '', maxUses: '' }); setShowCouponForm(false); }} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>
+                                  <button type="button" onClick={resetCouponForm} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>
                                 </div>
                               </form>
                             </div>
@@ -1243,6 +1274,7 @@ export default function App() {
                               <thead className="bg-white/5 uppercase tracking-wider text-white/50 text-xs">
                                 <tr>
                                   <th className="px-4 py-3">Code</th>
+                                  <th className="px-4 py-3">Course</th>
                                   <th className="px-4 py-3">Discount</th>
                                   <th className="px-4 py-3">Usage & Limits</th>
                                   <th className="px-4 py-3">Status</th>
@@ -1252,7 +1284,7 @@ export default function App() {
                               <tbody className="divide-y divide-white/10">
                                 {adminCoupons.length === 0 ? (
                                   <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-white/50">
+                                    <td colSpan={6} className="px-4 py-8 text-center text-white/50">
                                       No coupons found.
                                     </td>
                                   </tr>
@@ -1267,6 +1299,9 @@ export default function App() {
                                           </button>
                                         </div>
                                       </td>
+                                      <td className="px-4 py-4 text-white/70">
+                                        <span className="block max-w-[260px] truncate" title={coupon.course_name || 'All courses'}>{coupon.course_name || 'All courses'}</span>
+                                      </td>
                                       <td className="px-4 py-4">{coupon.discount_type === 'percent' ? `${coupon.discount_value}% Off` : money(coupon.discount_value)}</td>
                                       <td className="px-4 py-4 text-xs text-white/70">
                                         <div>Uses: {coupon.current_uses || 0} {coupon.max_uses ? `/ ${coupon.max_uses}` : ''}</div>
@@ -1278,6 +1313,9 @@ export default function App() {
                                         </button>
                                       </td>
                                       <td className="px-4 py-4 text-right">
+                                        <button onClick={() => editCoupon(coupon)} className="p-2 text-white/50 transition-colors hover:text-electric" aria-label="Edit">
+                                          <Edit3 className="h-4 w-4 inline-block" />
+                                        </button>
                                         <button onClick={() => deleteCoupon(coupon)} className="p-2 text-white/50 transition-colors hover:text-red-400" aria-label="Delete">
                                           <Trash2 className="h-4 w-4 inline-block" />
                                         </button>

@@ -45,6 +45,7 @@ with check (true);
 create table if not exists public.coupons (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,
+  course_name text,
   discount_type text not null check (discount_type in ('fixed', 'percent')),
   discount_value integer not null check (discount_value > 0),
   active boolean not null default true,
@@ -58,6 +59,7 @@ create table if not exists public.coupons (
 alter table public.coupons add column if not exists expires_at timestamptz;
 alter table public.coupons add column if not exists max_uses integer;
 alter table public.coupons add column if not exists current_uses integer not null default 0;
+alter table public.coupons add column if not exists course_name text;
 
 alter table public.coupons enable row level security;
 

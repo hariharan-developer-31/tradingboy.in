@@ -60,7 +60,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (couponCode) {
           const { data } = await admin
             .from('coupons')
-            .select('id, code, discount_type, discount_value, active, expires_at, max_uses, current_uses')
+            .select('id, code, course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses')
             .eq('code', couponCode)
             .eq('active', true)
             .maybeSingle();
@@ -72,6 +72,10 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             }
             if (data.max_uses !== null && data.current_uses >= data.max_uses) {
               sendJson(res, 400, { error: 'Coupon usage limit reached.' });
+              return;
+            }
+            if (data.course_name && data.course_name !== selectedCourse.name) {
+              sendJson(res, 400, { error: `Coupon is only valid for ${data.course_name}.` });
               return;
             }
 
@@ -168,6 +172,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
       try {
         const body = await readJsonBody(req);
         const couponCode = String(body.couponCode || '').trim().toUpperCase();
+        const courseName = String(body.courseName || '').trim();
 
         if (!couponCode) {
           sendJson(res, 400, { error: 'Coupon code is required.' });
@@ -177,7 +182,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         const admin = createClient(supabaseUrl, serviceRoleKey);
         const { data, error } = await admin
           .from('coupons')
-          .select('code, discount_type, discount_value, active, expires_at, max_uses, current_uses')
+          .select('code, course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses')
           .eq('code', couponCode)
           .maybeSingle();
 
@@ -195,6 +200,10 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         }
         if (data.max_uses !== null && data.current_uses >= data.max_uses) {
           sendJson(res, 400, { error: 'This coupon has reached its usage limit.' });
+          return;
+        }
+        if (data.course_name && data.course_name !== courseName) {
+          sendJson(res, 400, { error: `This coupon is only valid for ${data.course_name}.` });
           return;
         }
 
@@ -278,7 +287,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (body.action === 'coupons') {
           const { data, error } = await admin
             .from('coupons')
-            .select('id, code, discount_type, discount_value, active, expires_at, max_uses, current_uses, created_at')
+            .select('id, code, course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses, created_at')
             .order('created_at', { ascending: false });
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
@@ -363,17 +372,37 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         }
 
         if (body.action === 'saveCoupon') {
-          const { error } = await admin.from('coupons').upsert(
-            {
-              code: String(body.code || '').trim().toUpperCase(),
-              discount_type: body.discountType,
-              discount_value: Number(body.discountValue),
-              expires_at: body.expiresAt ? new Date(body.expiresAt).toISOString() : null,
-              max_uses: body.maxUses ? Number(body.maxUses) : null,
-              active: true,
-            },
-            { onConflict: 'code' },
-          );
+          const code = String(body.code || '').trim().toUpperCase();
+          const discountType = body.discountType;
+          const discountValue = Number(body.discountValue);
+          const maxUses = body.maxUses ? Number(body.maxUses) : null;
+
+          if (!code || !['fixed', 'percent'].includes(discountType) || Number.isNaN(discountValue) || discountValue <= 0) {
+            sendJson(res, 400, { error: 'Valid coupon code, discount type, and discount value are required.' });
+            return;
+          }
+          if (discountType === 'percent' && discountValue > 100) {
+            sendJson(res, 400, { error: 'Percentage discount cannot be above 100.' });
+            return;
+          }
+          if (maxUses !== null && (Number.isNaN(maxUses) || maxUses <= 0)) {
+            sendJson(res, 400, { error: 'Maximum uses must be a positive number.' });
+            return;
+          }
+
+          const payload = {
+            code,
+            course_name: String(body.courseName || '').trim() || null,
+            discount_type: discountType,
+            discount_value: discountValue,
+            expires_at: body.expiresAt ? new Date(body.expiresAt).toISOString() : null,
+            max_uses: maxUses,
+            active: true,
+          };
+          const query = body.id
+            ? admin.from('coupons').update(payload).eq('id', body.id)
+            : admin.from('coupons').upsert(payload, { onConflict: 'code' });
+          const { error } = await query;
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { ok: true });
           return;

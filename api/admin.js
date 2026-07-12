@@ -200,7 +200,7 @@ export default async function handler(req, res) {
   if (action === 'coupons') {
     const { data, error } = await admin
       .from('coupons')
-      .select('id, code, discount_type, discount_value, active')
+      .select('id, code, course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -309,17 +309,37 @@ export default async function handler(req, res) {
   }
 
   if (action === 'saveCoupon') {
-    const { error } = await admin.from('coupons').upsert(
-      {
-        code: String(body.code || '').trim().toUpperCase(),
-        discount_type: body.discountType,
-        discount_value: Number(body.discountValue),
-        expires_at: body.expiresAt ? new Date(body.expiresAt).toISOString() : null,
-        max_uses: body.maxUses ? Number(body.maxUses) : null,
-        active: true,
-      },
-      { onConflict: 'code' },
-    );
+    const code = String(body.code || '').trim().toUpperCase();
+    const discountType = body.discountType;
+    const discountValue = Number(body.discountValue);
+    const maxUses = body.maxUses ? Number(body.maxUses) : null;
+
+    if (!code || !['fixed', 'percent'].includes(discountType) || Number.isNaN(discountValue) || discountValue <= 0) {
+      json(res, 400, { error: 'Valid coupon code, discount type, and discount value are required.' });
+      return;
+    }
+    if (discountType === 'percent' && discountValue > 100) {
+      json(res, 400, { error: 'Percentage discount cannot be above 100.' });
+      return;
+    }
+    if (maxUses !== null && (Number.isNaN(maxUses) || maxUses <= 0)) {
+      json(res, 400, { error: 'Maximum uses must be a positive number.' });
+      return;
+    }
+
+    const payload = {
+      code,
+      course_name: String(body.courseName || '').trim() || null,
+      discount_type: discountType,
+      discount_value: discountValue,
+      expires_at: body.expiresAt ? new Date(body.expiresAt).toISOString() : null,
+      max_uses: maxUses,
+      active: true,
+    };
+    const query = body.id
+      ? admin.from('coupons').update(payload).eq('id', body.id)
+      : admin.from('coupons').upsert(payload, { onConflict: 'code' });
+    const { error } = await query;
 
     if (error) {
       json(res, 500, { error: error.message });

@@ -30,6 +30,7 @@ export default async function handler(req, res) {
 
   const body = await readBody(req);
   const couponCode = String(body.couponCode || '').trim().toUpperCase();
+  const courseName = String(body.courseName || '').trim();
 
   if (!couponCode) {
     json(res, 400, { error: 'Coupon code is required.' });
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data, error } = await admin
     .from('coupons')
-    .select('code, discount_type, discount_value, active, expires_at, max_uses, current_uses')
+    .select('code, course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses')
     .eq('code', couponCode)
     .maybeSingle();
 
@@ -60,6 +61,11 @@ export default async function handler(req, res) {
 
   if (data.max_uses !== null && data.current_uses >= data.max_uses) {
     json(res, 400, { error: 'This coupon has reached its usage limit.' });
+    return;
+  }
+
+  if (data.course_name && data.course_name !== courseName) {
+    json(res, 400, { error: `This coupon is only valid for ${data.course_name}.` });
     return;
   }
 

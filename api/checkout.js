@@ -123,7 +123,7 @@ export default async function handler(req, res) {
   if (couponCode) {
     const { data } = await admin
       .from('coupons')
-      .select('id, code, discount_type, discount_value, active, expires_at, max_uses, current_uses')
+      .select('id, code, course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses')
       .eq('code', couponCode)
       .eq('active', true)
       .maybeSingle();
@@ -135,6 +135,10 @@ export default async function handler(req, res) {
       }
       if (data.max_uses !== null && data.current_uses >= data.max_uses) {
         json(res, 400, { error: 'Coupon usage limit reached.' });
+        return;
+      }
+      if (data.course_name && data.course_name !== selectedCourse.name) {
+        json(res, 400, { error: `Coupon is only valid for ${data.course_name}.` });
         return;
       }
 
