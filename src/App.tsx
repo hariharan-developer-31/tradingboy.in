@@ -948,8 +948,8 @@ export default function App() {
             </div>
           </section>
 
-          <section id="results" className="section-rise bg-ink px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
-            <div className="mx-auto max-w-7xl">
+          <section id="results" className="section-rise bg-ink py-20 lg:py-28 overflow-hidden">
+            <div className="mx-auto max-w-7xl px-6 sm:px-10 lg:px-16">
               <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
                 <div>
                   <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">Testimonials</div>
@@ -957,16 +957,21 @@ export default function App() {
                 </div>
                 <p className="max-w-md font-inter text-sm text-white/60">Results vary by student. The courses focus on process, discipline, and risk-first decision making.</p>
               </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                {testimonials.map((item) => (
-                  <article key={item.name} className="smooth-card border border-white/10 bg-white/[0.03] p-6 hover:border-electric/35">
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-6 relative w-full overflow-hidden">
+              {/* Top Row: Right to Left */}
+              <div className="flex w-max animate-marquee-left gap-6 hover:[animation-play-state:paused] px-6">
+                {[...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2))].map((item, i) => (
+                  <article key={`top-${item.name}-${i}`} className="smooth-card w-[320px] sm:w-[400px] shrink-0 border border-white/10 bg-white/[0.03] p-6 hover:border-electric/35">
                     <div className="mb-6 flex items-center gap-4">
                       <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
                         <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{item.name.charAt(0)}</div>
                       </div>
-                      <div>
-                        <div className="font-inter text-sm font-semibold text-white">{item.name}</div>
-                        <div className="font-inter text-xs uppercase tracking-widest text-electric">{item.role}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-inter text-sm font-semibold text-white truncate">{item.name}</div>
+                        <div className="font-inter text-xs uppercase tracking-widest text-electric truncate">{item.role}</div>
                       </div>
                     </div>
                     <p className="font-inter leading-relaxed text-white/75">"{item.quote}"</p>
@@ -978,6 +983,30 @@ export default function App() {
                   </article>
                 ))}
               </div>
+
+              {/* Bottom Row: Left to Right */}
+              <div className="flex w-max animate-marquee-right gap-6 hover:[animation-play-state:paused] px-6">
+                {[...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2))].map((item, i) => (
+                  <article key={`bottom-${item.name}-${i}`} className="smooth-card w-[320px] sm:w-[400px] shrink-0 border border-white/10 bg-white/[0.03] p-6 hover:border-electric/35">
+                    <div className="mb-6 flex items-center gap-4">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
+                        <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{item.name.charAt(0)}</div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-inter text-sm font-semibold text-white truncate">{item.name}</div>
+                        <div className="font-inter text-xs uppercase tracking-widest text-electric truncate">{item.role}</div>
+                      </div>
+                    </div>
+                    <p className="font-inter leading-relaxed text-white/75">"{item.quote}"</p>
+                    {item.photo_url && (
+                      <div className="mt-6 overflow-hidden rounded-lg border border-white/10 aspect-video">
+                        <img src={item.photo_url} alt="Trading result" className="w-full h-full object-cover hover:scale-105 transition duration-500" />
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+
             </div>
           </section>
 
