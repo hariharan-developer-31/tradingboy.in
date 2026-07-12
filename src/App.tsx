@@ -1,7 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
 import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Loader2, LogOut, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
+import useEmblaCarousel from 'embla-carousel-react';
+import AutoScroll from 'embla-carousel-auto-scroll';
 
 const UPI_ID = 'harishsankar023@okaxis';
 const DEFAULT_COURSE = 'Complete Forex Mastery';
@@ -177,6 +179,38 @@ const offerPercent = (normalPrice?: number | null, offerPrice?: number | null) =
   if (!normalPrice || !offerPrice || normalPrice <= offerPrice) return 0;
   return Math.round(((normalPrice - offerPrice) / normalPrice) * 100);
 };
+
+function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: { testimonials: Testimonial[], direction?: 'forward' | 'backward', onSelect: (t: Testimonial) => void }) {
+  const [emblaRef] = useEmblaCarousel({ loop: true, dragFree: true }, [
+    AutoScroll({ playOnInit: true, direction, speed: 1, stopOnInteraction: false, stopOnMouseEnter: true })
+  ]);
+
+  return (
+    <div className="overflow-hidden w-full cursor-grab active:cursor-grabbing" ref={emblaRef}>
+      <div className="flex gap-6 px-6 py-2">
+        {testimonials.map((item, i) => (
+          <article key={`${direction}-${item.name}-${i}`} onClick={() => onSelect(item)} className="max-md:snap-center smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer ml-6 first:ml-0">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
+                <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-lg text-electric uppercase">{item.name.charAt(0)}</div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-inter text-sm font-semibold text-white truncate">{item.name}</div>
+                <div className="font-inter text-[10px] uppercase tracking-widest text-electric truncate">{item.role}</div>
+              </div>
+            </div>
+            <p className="font-inter text-sm leading-relaxed text-white/75 line-clamp-3">"{item.quote}"</p>
+            {item.photo_url && (
+              <div className="mt-4 overflow-hidden rounded-lg border border-white/10 aspect-video pointer-events-none">
+                <img src={item.photo_url} alt="Trading result" className="w-full h-full object-cover hover:scale-105 transition duration-500 pointer-events-none" />
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -960,52 +994,20 @@ export default function App() {
               </div>
             </div>
             
-            <div className="flex flex-col gap-6 relative w-full overflow-hidden">
+            <div className="flex flex-col gap-6 relative w-full overflow-hidden py-4">
               {/* Top Row: Right to Left */}
-              <div className="flex w-full md:w-max md:animate-marquee-left gap-6 md:hover:[animation-play-state:paused] px-6 max-md:overflow-x-auto max-md:snap-x max-md:snap-mandatory scrollbar-hide">
-                {[...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2))].map((item, i) => (
-                  <article key={`top-${item.name}-${i}`} onClick={() => setSelectedTestimonial(item)} className="max-md:snap-center smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
-                        <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-lg text-electric uppercase">{item.name.charAt(0)}</div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-inter text-sm font-semibold text-white truncate">{item.name}</div>
-                        <div className="font-inter text-[10px] uppercase tracking-widest text-electric truncate">{item.role}</div>
-                      </div>
-                    </div>
-                    <p className="font-inter text-sm leading-relaxed text-white/75 line-clamp-3">"{item.quote}"</p>
-                    {item.photo_url && (
-                      <div className="mt-4 overflow-hidden rounded-lg border border-white/10 aspect-video">
-                        <img src={item.photo_url} alt="Trading result" className="w-full h-full object-cover hover:scale-105 transition duration-500" />
-                      </div>
-                    )}
-                  </article>
-                ))}
-              </div>
+              <TestimonialCarousel 
+                direction="forward" 
+                onSelect={setSelectedTestimonial} 
+                testimonials={[...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2))]} 
+              />
 
               {/* Bottom Row: Left to Right */}
-              <div className="flex w-full md:w-max md:animate-marquee-right gap-6 md:hover:[animation-play-state:paused] px-6 max-md:overflow-x-auto max-md:snap-x max-md:snap-mandatory scrollbar-hide">
-                {[...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2))].map((item, i) => (
-                  <article key={`bottom-${item.name}-${i}`} onClick={() => setSelectedTestimonial(item)} className="max-md:snap-center smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
-                        <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-lg text-electric uppercase">{item.name.charAt(0)}</div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-inter text-sm font-semibold text-white truncate">{item.name}</div>
-                        <div className="font-inter text-[10px] uppercase tracking-widest text-electric truncate">{item.role}</div>
-                      </div>
-                    </div>
-                    <p className="font-inter text-sm leading-relaxed text-white/75 line-clamp-3">"{item.quote}"</p>
-                    {item.photo_url && (
-                      <div className="mt-4 overflow-hidden rounded-lg border border-white/10 aspect-video">
-                        <img src={item.photo_url} alt="Trading result" className="w-full h-full object-cover hover:scale-105 transition duration-500" />
-                      </div>
-                    )}
-                  </article>
-                ))}
-              </div>
+              <TestimonialCarousel 
+                direction="backward" 
+                onSelect={setSelectedTestimonial} 
+                testimonials={[...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2))]} 
+              />
             </div>
 
             {selectedTestimonial && (
