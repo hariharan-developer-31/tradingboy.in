@@ -890,7 +890,7 @@ export default function App() {
                   {joinStep === 'payment' ? 'Complete UPI Payment' : joinStep === 'thanks' ? 'Payment Submitted' : joinStep === 'failed' ? 'Payment Failed' : 'Enter Your Details'}
                 </h2>
               </div>
-              <button onClick={closeHashPage} aria-label="Close checkout page">
+              <button onClick={() => joinStep === 'payment' ? setJoinStep('details') : closeHashPage()} aria-label="Close checkout page">
                 <X className="h-7 w-7 text-white" />
               </button>
             </div>
