@@ -203,7 +203,7 @@ export default function App() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
-  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons'>('home');
+  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials'>('home');
   const [adminStatus, setAdminStatus] = useState('');
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
   const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
