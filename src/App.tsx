@@ -1023,28 +1023,7 @@ export default function App() {
               />
             </div>
 
-            {selectedTestimonial && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6 backdrop-blur-sm" onClick={() => setSelectedTestimonial(null)}>
-                <div className="relative w-full max-w-2xl bg-ink p-8 border border-white/10" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => setSelectedTestimonial(null)} className="absolute right-4 top-4 text-white/50 hover:text-white transition">
-                    <X className="h-6 w-6" />
-                  </button>
-                  <div className="mb-6 flex items-center gap-4">
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
-                      <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{selectedTestimonial.name.charAt(0)}</div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-inter text-base font-semibold text-white">{selectedTestimonial.name}</div>
-                      <div className="font-inter text-xs uppercase tracking-widest text-electric">{selectedTestimonial.role}</div>
-                    </div>
-                  </div>
-                  <p className="font-inter leading-relaxed text-white/90 text-lg mb-6">"{selectedTestimonial.quote}"</p>
-                  {selectedTestimonial.photo_url && (
-                    <img src={selectedTestimonial.photo_url} alt="Trading result" className="w-full h-auto object-cover border border-white/10" />
-                  )}
-                </div>
-              </div>
-            )}
+
           </section>
 
           <section id="faq" className="section-rise bg-black px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
@@ -1368,6 +1347,29 @@ export default function App() {
                   Go To Website
                 </button>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedTestimonial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6 backdrop-blur-sm page-enter" onClick={() => setSelectedTestimonial(null)}>
+          <div className="relative w-full max-w-2xl bg-ink p-8 border border-white/10 shadow-glow" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setSelectedTestimonial(null)} className="absolute right-4 top-4 text-white/50 hover:text-white transition">
+              <X className="h-6 w-6" />
+            </button>
+            <div className="mb-6 flex items-center gap-4">
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
+                <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{selectedTestimonial.name.charAt(0)}</div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-inter text-base font-semibold text-white">{selectedTestimonial.name}</div>
+                <div className="font-inter text-xs uppercase tracking-widest text-electric">{selectedTestimonial.role}</div>
+              </div>
+            </div>
+            <p className="font-inter leading-relaxed text-white/90 text-lg mb-6">"{selectedTestimonial.quote}"</p>
+            {selectedTestimonial.photo_url && (
+              <img src={selectedTestimonial.photo_url} alt="Trading result" className="w-full h-auto max-h-[50vh] object-contain border border-white/10 bg-black" />
             )}
           </div>
         </div>
