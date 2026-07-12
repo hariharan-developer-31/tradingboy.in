@@ -909,7 +909,7 @@ export default function App() {
                   {formErrors.email && <p className="mt-1 font-inter text-[11px] font-medium text-red-500">{formErrors.email}</p>}
                 </div>
                 <div>
-                  <input required type="tel" value={joinForm.phone} onChange={(event) => { const val = event.target.value.replace(/[^\d+]/g, ''); setJoinForm({ ...joinForm, phone: val }); setFormErrors({...formErrors, phone: ''}); }} placeholder="Phone or WhatsApp" className={`w-full border ${formErrors.phone ? 'border-red-500' : 'border-white/10'} bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric`} />
+                  <input required type="tel" maxLength={15} value={joinForm.phone} onChange={(event) => { const val = event.target.value.replace(/[^\d+]/g, ''); setJoinForm({ ...joinForm, phone: val }); setFormErrors({...formErrors, phone: ''}); }} placeholder="Phone or WhatsApp" className={`w-full border ${formErrors.phone ? 'border-red-500' : 'border-white/10'} bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric`} />
                   {formErrors.phone && <p className="mt-1 font-inter text-[11px] font-medium text-red-500">{formErrors.phone}</p>}
                 </div>
                 <div>
