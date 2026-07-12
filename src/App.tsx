@@ -1186,43 +1186,47 @@ export default function App() {
                     Timer: {Math.floor(paymentSeconds / 60)}:{String(paymentSeconds % 60).padStart(2, '0')}. Keep this page open after paying.
                   </div>
                   <div className="mt-6 flex flex-col gap-3">
-                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:bg-white/5 hover:border-electric/30 group">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md hover:scale-[1.02] group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-5 object-contain" />
                       </div>
                       <div className="flex-1">
-                        <div className="font-inter font-bold text-white group-hover:text-electric transition-colors">Google Pay</div>
-                        <div className="font-inter text-[11px] text-white/50 mt-0.5">Direct payment via GPay app</div>
+                        <div className="font-inter font-bold text-ink">Google Pay</div>
+                        <div className="font-inter text-[11px] text-ink/60 mt-0.5">Direct payment via GPay app</div>
                       </div>
                     </a>
 
-                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:bg-white/5 hover:border-electric/30 group">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#5f259f] shadow-sm">
-                        <Smartphone className="h-6 w-6 text-white" />
+                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md hover:scale-[1.02] group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#5f259f]">
+                          <Smartphone className="h-5 w-5 text-white" />
+                        </div>
                       </div>
                       <div className="flex-1">
-                        <div className="font-inter font-bold text-white group-hover:text-electric transition-colors">PhonePe</div>
-                        <div className="font-inter text-[11px] text-white/50 mt-0.5">Direct payment via PhonePe</div>
+                        <div className="font-inter font-bold text-ink">PhonePe</div>
+                        <div className="font-inter text-[11px] text-ink/60 mt-0.5">Direct payment via PhonePe</div>
                       </div>
                     </a>
 
-                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:bg-white/5 hover:border-electric/30 group">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md hover:scale-[1.02] group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-3.5 object-contain" />
                       </div>
                       <div className="flex-1">
-                        <div className="font-inter font-bold text-white group-hover:text-electric transition-colors">Paytm</div>
-                        <div className="font-inter text-[11px] text-white/50 mt-0.5">Direct payment via Paytm</div>
+                        <div className="font-inter font-bold text-ink">Paytm</div>
+                        <div className="font-inter text-[11px] text-ink/60 mt-0.5">Direct payment via Paytm</div>
                       </div>
                     </a>
 
-                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:bg-white/5 hover:border-electric/30 group">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/10 border border-white/10 shadow-sm">
-                        <CreditCard className="h-5 w-5 text-white/80" />
+                    <a href={upiUrl} className="flex items-center gap-4 rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md hover:scale-[1.02] group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink/5">
+                          <CreditCard className="h-5 w-5 text-ink/70" />
+                        </div>
                       </div>
                       <div className="flex-1">
-                        <div className="font-inter font-bold text-white group-hover:text-electric transition-colors">Other UPI Apps</div>
-                        <div className="font-inter text-[11px] text-white/50 mt-0.5">Choose from installed apps</div>
+                        <div className="font-inter font-bold text-ink">Other UPI Apps</div>
+                        <div className="font-inter text-[11px] text-ink/60 mt-0.5">Choose from installed apps</div>
                       </div>
                     </a>
                   </div>
