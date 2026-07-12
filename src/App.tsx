@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, LogOut, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
 
@@ -172,6 +172,7 @@ export default function App() {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'error'>('idle');
   const [createdOrderId, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
   const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons'>('home');
   const [adminStatus, setAdminStatus] = useState('');
@@ -248,8 +249,8 @@ export default function App() {
   }, [adminOrders, paymentCourseFilter, paymentSearch, paymentStatusFilter]);
 
   const adminCourseNames = useMemo(
-    () => Array.from(new Set(adminOrders.map((order) => order.course_name).filter(Boolean))) as string[],
-    [adminOrders],
+    () => Array.from(new Set(adminCourses.map((course) => course.title).filter(Boolean))),
+    [adminCourses],
   );
 
   useEffect(() => {
@@ -296,6 +297,12 @@ export default function App() {
     }, 1000);
     return () => window.clearInterval(interval);
   }, [checkoutOpen, joinStep]);
+
+  useEffect(() => {
+    if (paymentCourseFilter !== 'all' && !adminCourseNames.includes(paymentCourseFilter)) {
+      setPaymentCourseFilter('all');
+    }
+  }, [adminCourseNames, paymentCourseFilter]);
 
   useEffect(() => {
     if (joinStep !== 'payment') return;
@@ -488,7 +495,9 @@ export default function App() {
 
   const unlockAdmin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (adminLoading) return;
     try {
+      setAdminLoading(true);
       setAdminStatus('');
       await loadAdminCourses();
       await loadAdminOrders();
@@ -496,7 +505,22 @@ export default function App() {
       setAdminUnlocked(true);
     } catch (error) {
       setAdminStatus(error instanceof Error ? error.message : 'Could not unlock admin.');
+    } finally {
+      setAdminLoading(false);
     }
+  };
+
+  const logoutAdmin = () => {
+    setAdminUnlocked(false);
+    setAdminPasscode('');
+    setAdminSection('home');
+    setAdminStatus('');
+    setAdminCourses([]);
+    setAdminOrders([]);
+    setAdminCoupons([]);
+    setPaymentSearch('');
+    setPaymentStatusFilter('all');
+    setPaymentCourseFilter('all');
   };
 
   const resetCourseForm = () => {
@@ -1036,26 +1060,63 @@ export default function App() {
       )}
 
       {adminOpen && (
-        <main className="page-enter min-h-screen bg-ink p-4 sm:p-8 lg:p-12">
-          <div className="mx-auto w-full max-w-[1400px]">
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div>
+        <main className={`page-enter min-h-screen bg-ink ${adminUnlocked ? 'p-4 sm:p-6 lg:p-8' : 'flex items-center justify-center p-5'}`}>
+          <div className={adminUnlocked ? 'mx-auto w-full max-w-[1440px]' : 'w-full max-w-md'}>
+            {!adminUnlocked ? (
+              <form onSubmit={unlockAdmin} className="border border-white/10 bg-black p-6 shadow-glow sm:p-8">
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
-                <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
+                <h2 className="mt-3 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
+                <p className="mt-4 font-inter text-sm leading-relaxed text-white/55">Enter the admin passcode to manage courses, payments, and coupons.</p>
+                <div className="mt-8 space-y-4">
+                  <input
+                    type="password"
+                    value={adminPasscode}
+                    onChange={(event) => setAdminPasscode(event.target.value)}
+                    placeholder="Admin passcode"
+                    disabled={adminLoading}
+                    className="h-14 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                  <button disabled={adminLoading || !adminPasscode.trim()} className="inline-flex h-14 w-full items-center justify-center gap-2 bg-electric px-6 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-60">
+                    {adminLoading && <RefreshCcw className="h-4 w-4 animate-spin" />}
+                    {adminLoading ? 'Unlocking...' : 'Unlock Admin'}
+                  </button>
+                </div>
+                {adminStatus && <p className="mt-4 border border-red-400/30 bg-red-950/20 p-3 font-inter text-sm text-red-200">{adminStatus}</p>}
+              </form>
+            ) : (
+              <>
+              <div className="mb-8 border-b border-white/10 pb-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
+                    <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(['home', 'courses', 'payments', 'coupons'] as const).map((section) => (
+                      <button
+                        key={section}
+                        onClick={() => setAdminSection(section)}
+                        className={`border px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest transition ${
+                          adminSection === section
+                            ? 'border-electric bg-electric text-black'
+                            : 'border-white/10 bg-black text-white/65 hover:border-electric hover:text-white'
+                        }`}
+                      >
+                        {section === 'home' ? 'Dashboard' : section}
+                      </button>
+                    ))}
+                    <button onClick={logoutAdmin} className="inline-flex items-center gap-2 border border-red-400/30 bg-red-950/20 px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest text-red-200 transition hover:bg-red-950/40">
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
                 {adminStatus && (
-                  <div className={`mt-4 inline-block px-4 py-2 text-sm font-bold ${adminStatus.includes('failed') || adminStatus.includes('Could not') ? 'bg-red-950/50 text-red-400 border border-red-500/30' : 'bg-green-950/50 text-green-400 border border-green-500/30'}`}>
+                  <div className={`mt-4 inline-block border px-4 py-2 font-inter text-sm ${adminStatus.includes('failed') || adminStatus.includes('Could not') ? 'border-red-500/30 bg-red-950/50 text-red-300' : 'border-green-500/30 bg-green-950/50 text-green-300'}`}>
                     {adminStatus}
                   </div>
                 )}
               </div>
-            </div>
-            {!adminUnlocked ? (
-              <form onSubmit={unlockAdmin} className="max-w-md space-y-4">
-                <input type="password" value={adminPasscode} onChange={(event) => setAdminPasscode(event.target.value)} placeholder="Admin passcode" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                <button className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">Unlock Admin</button>
-                {adminStatus && <p className="font-inter text-sm text-red-300">{adminStatus}</p>}
-              </form>
-            ) : (
               <div>
                 {adminSection === 'home' ? (
                   <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
@@ -1302,7 +1363,7 @@ export default function App() {
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                   <div>
                                     <h3 className="font-inter text-lg font-bold text-white">{course.title}</h3>
-                                    <div className="mt-1 font-inter text-sm text-white/55">{money(offerPrice)} <span className="text-white/35 line-through">{money(normalPrice)}</span> · {offerPercent(normalPrice, offerPrice)}% Off</div>
+                                    <div className="mt-1 font-inter text-sm text-white/55">{money(offerPrice)} <span className="text-white/35 line-through">{money(normalPrice)}</span> - {offerPercent(normalPrice, offerPrice)}% Off</div>
                                   </div>
                                   <div className="flex gap-2">
                                     <button onClick={() => editCourse(course)} className="border border-white/15 p-3 text-white transition hover:border-electric" aria-label="Edit course"><Edit3 className="h-4 w-4" /></button>
@@ -1320,75 +1381,75 @@ export default function App() {
                 </div>
                 ) : (
                   <div className="space-y-5">
-                    <div className="grid gap-3 lg:grid-cols-[1fr_180px_220px_auto_auto]">
-                      <input value={paymentSearch} onChange={(event) => setPaymentSearch(event.target.value)} placeholder="Search name, email, phone, course" className="border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                      <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none focus:border-electric">
+                    <div className="grid gap-3 border border-white/10 bg-black p-3 xl:grid-cols-[minmax(260px,1fr)_180px_260px_auto_auto]">
+                      <input value={paymentSearch} onChange={(event) => setPaymentSearch(event.target.value)} placeholder="Search name, email, phone, course" className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                      <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
                         <option value="all">All status</option>
                         <option value="pending">Pending</option>
                         <option value="under_review">Under Review</option>
                         <option value="paid">Paid</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
-                      <select value={paymentCourseFilter} onChange={(event) => setPaymentCourseFilter(event.target.value)} className="border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none focus:border-electric">
+                      <select value={paymentCourseFilter} onChange={(event) => setPaymentCourseFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
                         <option value="all">All courses</option>
                         {adminCourseNames.map((course) => <option key={course}>{course}</option>)}
                       </select>
-                      <button onClick={loadAdminOrders} className="inline-flex items-center justify-center gap-2 border border-white/15 px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">
+                      <button onClick={loadAdminOrders} className="inline-flex h-12 items-center justify-center gap-2 border border-white/15 px-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">
                         <RefreshCcw className="h-4 w-4" />
                         Refresh
                       </button>
-                      <button onClick={downloadOrdersCsv} disabled={filteredOrders.length === 0} className="bg-electric px-4 py-3 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">CSV</button>
+                      <button onClick={downloadOrdersCsv} disabled={filteredOrders.length === 0} className="h-12 bg-electric px-5 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">CSV</button>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="border border-white/10 bg-black p-4">
+                      <div className="border border-white/10 bg-black p-5">
                         <div className="font-inter text-xs uppercase tracking-widest text-white/45">Payments</div>
                         <div className="mt-2 font-inter text-3xl font-bold text-white">{filteredOrders.length}</div>
                       </div>
-                      <div className="border border-white/10 bg-black p-4">
+                      <div className="border border-white/10 bg-black p-5">
                         <div className="font-inter text-xs uppercase tracking-widest text-white/45">Paid Amount</div>
                         <div className="mt-2 font-inter text-3xl font-bold text-white">{money(filteredOrders.filter((order) => order.payment_status === 'paid').reduce((total, order) => total + order.final_amount, 0))}</div>
                       </div>
-                      <div className="border border-white/10 bg-black p-4">
+                      <div className="border border-white/10 bg-black p-5">
                         <div className="font-inter text-xs uppercase tracking-widest text-white/45">Pending</div>
                         <div className="mt-2 font-inter text-3xl font-bold text-white">{filteredOrders.filter((order) => order.payment_status === 'pending').length}</div>
                       </div>
                     </div>
-                    <div className="overflow-x-auto border border-white/10">
-                      <table className="min-w-[1120px] w-full border-collapse bg-black font-inter text-sm">
+                    <div className="overflow-x-auto border border-white/10 bg-black">
+                      <table className="min-w-[1320px] w-full table-fixed border-collapse font-inter text-sm">
                         <thead className="bg-white/[0.04] text-left text-xs uppercase tracking-widest text-white/45">
                           <tr>
-                            <th className="px-4 py-4">Date</th>
-                            <th className="px-4 py-4">Student</th>
-                            <th className="px-4 py-4">Contact</th>
-                            <th className="px-4 py-4">Experience</th>
-                            <th className="px-4 py-4">Course</th>
-                            <th className="px-4 py-4">Amount</th>
-                            <th className="px-4 py-4">Proof</th>
-                            <th className="px-4 py-4">Status</th>
+                            <th className="w-[120px] px-4 py-4">Date</th>
+                            <th className="w-[210px] px-4 py-4">Student</th>
+                            <th className="w-[300px] px-4 py-4">Contact</th>
+                            <th className="w-[170px] px-4 py-4">Experience</th>
+                            <th className="w-[260px] px-4 py-4">Course</th>
+                            <th className="w-[130px] px-4 py-4">Amount</th>
+                            <th className="w-[150px] px-4 py-4">Proof</th>
+                            <th className="w-[190px] px-4 py-4">Status</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-white/10">
                           {filteredOrders.length === 0 ? (
-                            <tr><td className="px-4 py-5 text-white/55" colSpan={8}>No payments found.</td></tr>
+                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={8}>No payments found.</td></tr>
                           ) : (
                             filteredOrders.map((order) => (
-                              <tr key={order.id} className="border-t border-white/10 align-top">
-                                <td className="px-4 py-4 text-white/70">
+                              <tr key={order.id} className="align-top transition hover:bg-white/[0.03]">
+                                <td className="px-4 py-5 text-white/70">
                                   <div>{new Date(order.created_at).toLocaleDateString('en-IN')}</div>
                                   <div className="mt-1 text-xs text-white/40">{new Date(order.created_at).toLocaleTimeString('en-IN')}</div>
                                 </td>
-                                <td className="px-4 py-4">
-                                  <div className="font-semibold text-white">{order.full_name}</div>
-                                  <div className="mt-1 max-w-[160px] truncate text-xs text-white/40">{order.id}</div>
+                                <td className="px-4 py-5">
+                                  <div className="truncate font-semibold text-white" title={order.full_name}>{order.full_name}</div>
+                                  <div className="mt-1 truncate text-xs text-white/40" title={order.id}>{order.id}</div>
                                 </td>
-                                <td className="px-4 py-4 text-white/70">
-                                  <div>{order.email}</div>
-                                  <div className="mt-1">{order.phone}</div>
+                                <td className="px-4 py-5 text-white/70">
+                                  <div className="truncate" title={order.email}>{order.email}</div>
+                                  <div className="mt-1 truncate" title={order.phone}>{order.phone}</div>
                                 </td>
-                                <td className="px-4 py-4 text-white/70">{order.trading_experience || '-'}</td>
-                                <td className="px-4 py-4 text-white/70">{order.course_name || '-'}</td>
-                                <td className="px-4 py-4 font-bold text-white">{money(order.final_amount)}</td>
-                                <td className="px-4 py-4">
+                                <td className="px-4 py-5 text-white/70"><span className="block truncate" title={order.trading_experience || '-'}>{order.trading_experience || '-'}</span></td>
+                                <td className="px-4 py-5 text-white/70"><span className="block truncate" title={order.course_name || '-'}>{order.course_name || '-'}</span></td>
+                                <td className="px-4 py-5 font-bold text-white">{money(order.final_amount)}</td>
+                                <td className="px-4 py-5">
                                   {order.payment_screenshot_path && supabase ? (
                                     <a 
                                       href={supabase?.storage.from('payment-proofs').getPublicUrl(order.payment_screenshot_path).data.publicUrl} 
@@ -1399,10 +1460,10 @@ export default function App() {
                                       View Image
                                     </a>
                                   ) : <div className="text-xs text-white/30 uppercase tracking-widest mb-1">{order.payment_screenshot_path ? 'Proof Unavailable' : 'No Image'}</div>}
-                                  {order.remarks && <div className="text-xs text-white/70 max-w-[150px] truncate" title={order.remarks}>Note: {order.remarks}</div>}
+                                  {order.remarks && <div className="max-w-[130px] truncate text-xs text-white/70" title={order.remarks}>Note: {order.remarks}</div>}
                                 </td>
-                                <td className="px-4 py-4">
-                                  <select value={order.payment_status} onChange={(event) => updateOrderStatus(order.id, event.target.value)} className="border border-white/10 bg-ink px-3 py-2 font-inter text-xs uppercase tracking-widest text-white outline-none focus:border-electric">
+                                <td className="px-4 py-5">
+                                  <select value={order.payment_status} onChange={(event) => updateOrderStatus(order.id, event.target.value)} className="h-11 w-full border border-white/10 bg-ink px-3 font-inter text-xs uppercase tracking-widest text-white outline-none focus:border-electric">
                                     <option value="pending">Pending</option>
                                     <option value="under_review">Under Review</option>
                                     <option value="paid">Paid</option>
@@ -1420,6 +1481,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              </>
             )}
           </div>
         </main>
