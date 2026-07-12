@@ -958,11 +958,7 @@ export default function App() {
                   <article key={item.name} className="smooth-card border border-white/10 bg-white/[0.03] p-6 hover:border-electric/35">
                     <div className="mb-6 flex items-center gap-4">
                       <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
-                        {item.photo_url ? (
-                          <img src={item.photo_url} alt={item.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{item.name.charAt(0)}</div>
-                        )}
+                        <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{item.name.charAt(0)}</div>
                       </div>
                       <div>
                         <div className="font-inter text-sm font-semibold text-white">{item.name}</div>
@@ -970,6 +966,11 @@ export default function App() {
                       </div>
                     </div>
                     <p className="font-inter leading-relaxed text-white/75">"{item.quote}"</p>
+                    {item.photo_url && (
+                      <div className="mt-6 overflow-hidden rounded-lg border border-white/10">
+                        <img src={item.photo_url} alt="Trading result" className="w-full h-auto object-cover hover:scale-105 transition duration-500" />
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>
@@ -1489,10 +1490,10 @@ export default function App() {
                               <button type="button" onClick={resetTestimonialForm} aria-label="Close form"><X className="h-6 w-6 text-white/50 hover:text-white transition" /></button>
                             </div>
                             <div className="flex flex-col gap-2">
-                              <label className="font-inter text-xs text-white/50 uppercase tracking-widest">Student Photo (Optional)</label>
+                              <label className="font-inter text-xs text-white/50 uppercase tracking-widest">Result / Chart Photo (Optional)</label>
                               <div className="flex items-center gap-4">
                                 {(testimonialForm.photoDataUrl || testimonialForm.photoUrl) && (
-                                  <img src={testimonialForm.photoDataUrl || testimonialForm.photoUrl} alt="Photo preview" className="h-12 w-12 object-cover border border-white/10 rounded-full" />
+                                  <img src={testimonialForm.photoDataUrl || testimonialForm.photoUrl} alt="Photo preview" className="h-16 w-24 object-cover border border-white/10 rounded" />
                                 )}
                                 <input 
                                   type="file" 
@@ -1531,18 +1532,17 @@ export default function App() {
                         ) : (
                           adminTestimonials.map((testimonial) => (
                             <article key={testimonial.id} className={`smooth-card flex flex-col gap-4 border border-white/10 bg-black p-5 sm:flex-row sm:items-center justify-between ${!testimonial.active ? 'opacity-50 grayscale' : 'hover:border-electric/35'}`}>
-                              <div className="min-w-0 flex-1 flex items-center gap-4">
+                              <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-start gap-4">
                                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-ink">
-                                  {testimonial.photo_url ? (
-                                    <img src={testimonial.photo_url} alt={testimonial.name} className="h-full w-full object-cover" />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center font-podium text-white">{testimonial.name.charAt(0)}</div>
-                                  )}
+                                  <div className="flex h-full w-full items-center justify-center font-podium text-white">{testimonial.name.charAt(0)}</div>
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <p className="font-inter text-sm text-white/80 italic mb-2">"{testimonial.quote}"</p>
                                   <div className="font-inter font-bold text-white text-sm">{testimonial.name}</div>
-                                  <div className="font-inter text-xs text-electric uppercase tracking-widest mt-1">{testimonial.role}</div>
+                                  <div className="font-inter text-xs text-electric uppercase tracking-widest mt-1 mb-3">{testimonial.role}</div>
+                                  {testimonial.photo_url && (
+                                    <img src={testimonial.photo_url} alt="Result" className="h-20 w-32 object-cover border border-white/10 rounded" />
+                                  )}
                                 </div>
                               </div>
                               <div className="flex gap-2 flex-shrink-0">
