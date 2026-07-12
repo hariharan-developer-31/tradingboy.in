@@ -177,9 +177,13 @@ create table if not exists public.testimonials (
   quote text not null,
   name text not null,
   role text not null,
+  photo_url text,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+-- Note for user: Run this alter table if you already created the table previously:
+-- alter table public.testimonials add column if not exists photo_url text;
 
 alter table public.testimonials enable row level security;
 
@@ -189,3 +193,26 @@ on public.testimonials
 for select
 to anon
 using (active = true);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('testimonial-photos', 'testimonial-photos', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+on conflict (id) do update
+set
+  public = true,
+  file_size_limit = 5242880,
+  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+drop policy if exists "Allow public testimonial photo reads" on storage.objects;
+create policy "Allow public testimonial photo reads"
+on storage.objects
+for select
+to anon
+using (bucket_id = 'testimonial-photos');
+
+drop policy if exists "Service role can manage testimonial photos" on storage.objects;
+create policy "Service role can manage testimonial photos"
+on storage.objects
+for all
+to service_role
+using (bucket_id = 'testimonial-photos')
+with check (bucket_id = 'testimonial-photos');

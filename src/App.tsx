@@ -122,6 +122,7 @@ type Testimonial = {
   quote: string;
   name: string;
   role: string;
+  photo_url?: string | null;
   active: boolean;
   created_at: string;
 };
@@ -131,6 +132,8 @@ type AdminTestimonialForm = {
   quote: string;
   name: string;
   role: string;
+  photoUrl: string;
+  photoDataUrl?: string;
   active: boolean;
 };
 
@@ -226,6 +229,7 @@ export default function App() {
     quote: '',
     name: '',
     role: '',
+    photoUrl: '',
     active: true,
   });
   const [paymentSearch, setPaymentSearch] = useState('');
@@ -328,7 +332,7 @@ export default function App() {
 
       const { data: testimonialsData, error: tError } = await supabase
         .from('testimonials')
-        .select('id, quote, name, role, active, created_at')
+        .select('id, quote, name, role, photo_url, active, created_at')
         .eq('active', true)
         .order('created_at', { ascending: true });
         
@@ -645,7 +649,7 @@ export default function App() {
   };
 
   const resetTestimonialForm = () => {
-    setTestimonialForm({ id: null, quote: '', name: '', role: '', active: true });
+    setTestimonialForm({ id: null, quote: '', name: '', role: '', photoUrl: '', photoDataUrl: undefined, active: true });
     setShowTestimonialForm(false);
   };
 
@@ -671,6 +675,7 @@ export default function App() {
       quote: testimonial.quote,
       name: testimonial.name,
       role: testimonial.role,
+      photoUrl: testimonial.photo_url || '',
       active: testimonial.active,
     });
     setShowTestimonialForm(true);
@@ -951,9 +956,20 @@ export default function App() {
               <div className="grid gap-4 md:grid-cols-3">
                 {testimonials.map((item) => (
                   <article key={item.name} className="smooth-card border border-white/10 bg-white/[0.03] p-6 hover:border-electric/35">
+                    <div className="mb-6 flex items-center gap-4">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
+                        {item.photo_url ? (
+                          <img src={item.photo_url} alt={item.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-xl text-electric uppercase">{item.name.charAt(0)}</div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-inter text-sm font-semibold text-white">{item.name}</div>
+                        <div className="font-inter text-xs uppercase tracking-widest text-electric">{item.role}</div>
+                      </div>
+                    </div>
                     <p className="font-inter leading-relaxed text-white/75">"{item.quote}"</p>
-                    <div className="mt-8 font-inter text-sm font-semibold text-white">{item.name}</div>
-                    <div className="mt-1 font-inter text-xs uppercase tracking-widest text-electric">{item.role}</div>
                   </article>
                 ))}
               </div>
@@ -1472,6 +1488,29 @@ export default function App() {
                               </div>
                               <button type="button" onClick={resetTestimonialForm} aria-label="Close form"><X className="h-6 w-6 text-white/50 hover:text-white transition" /></button>
                             </div>
+                            <div className="flex flex-col gap-2">
+                              <label className="font-inter text-xs text-white/50 uppercase tracking-widest">Student Photo (Optional)</label>
+                              <div className="flex items-center gap-4">
+                                {(testimonialForm.photoDataUrl || testimonialForm.photoUrl) && (
+                                  <img src={testimonialForm.photoDataUrl || testimonialForm.photoUrl} alt="Photo preview" className="h-12 w-12 object-cover border border-white/10 rounded-full" />
+                                )}
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onload = (event) => {
+                                        setTestimonialForm({ ...testimonialForm, photoDataUrl: event.target?.result as string });
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                  className="w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition cursor-pointer"
+                                />
+                              </div>
+                            </div>
                             <input value={testimonialForm.name} onChange={(event) => setTestimonialForm({ ...testimonialForm, name: event.target.value })} placeholder="Student Name" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <input value={testimonialForm.role} onChange={(event) => setTestimonialForm({ ...testimonialForm, role: event.target.value })} placeholder="Role (e.g. Funded account trader)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <textarea value={testimonialForm.quote} onChange={(event) => setTestimonialForm({ ...testimonialForm, quote: event.target.value })} placeholder="Testimonial Quote" rows={4} className="w-full resize-none border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
@@ -1492,10 +1531,19 @@ export default function App() {
                         ) : (
                           adminTestimonials.map((testimonial) => (
                             <article key={testimonial.id} className={`smooth-card flex flex-col gap-4 border border-white/10 bg-black p-5 sm:flex-row sm:items-center justify-between ${!testimonial.active ? 'opacity-50 grayscale' : 'hover:border-electric/35'}`}>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-inter text-sm text-white/80 italic mb-2">"{testimonial.quote}"</p>
-                                <div className="font-inter font-bold text-white text-sm">{testimonial.name}</div>
-                                <div className="font-inter text-xs text-electric uppercase tracking-widest mt-1">{testimonial.role}</div>
+                              <div className="min-w-0 flex-1 flex items-center gap-4">
+                                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-ink">
+                                  {testimonial.photo_url ? (
+                                    <img src={testimonial.photo_url} alt={testimonial.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center font-podium text-white">{testimonial.name.charAt(0)}</div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-inter text-sm text-white/80 italic mb-2">"{testimonial.quote}"</p>
+                                  <div className="font-inter font-bold text-white text-sm">{testimonial.name}</div>
+                                  <div className="font-inter text-xs text-electric uppercase tracking-widest mt-1">{testimonial.role}</div>
+                                </div>
                               </div>
                               <div className="flex gap-2 flex-shrink-0">
                                 <button onClick={() => toggleTestimonialActive(testimonial)} className={`border px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition ${testimonial.active ? 'border-red-500/30 text-red-400 hover:bg-red-500/10' : 'border-green-500/30 text-green-400 hover:bg-green-500/10'}`}>

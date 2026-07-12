@@ -394,6 +394,32 @@ export default async function handler(req, res) {
     }
 
     const payload = { quote, name, role, active: body.active !== false };
+
+    if (body.photoDataUrl) {
+      const buffer = decodeDataUrl(body.photoDataUrl);
+      if (buffer.byteLength > 5 * 1024 * 1024) {
+        json(res, 400, { error: 'Image must be below 5MB.' });
+        return;
+      }
+      const imageId = randomUUID();
+      const imagePath = `${imageId}.jpg`;
+      const { error: uploadError } = await admin.storage
+        .from('testimonial-photos')
+        .upload(imagePath, buffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        json(res, 500, { error: uploadError.message });
+        return;
+      }
+      const { data: publicUrlData } = admin.storage.from('testimonial-photos').getPublicUrl(imagePath);
+      payload.photo_url = publicUrlData.publicUrl;
+    } else if (body.photoUrl !== undefined) {
+      payload.photo_url = String(body.photoUrl || '').trim() || null;
+    }
+
     const query = body.id
       ? admin.from('testimonials').update(payload).eq('id', body.id)
       : admin.from('testimonials').insert(payload);
