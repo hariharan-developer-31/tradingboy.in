@@ -261,7 +261,7 @@ export default async function handler(req, res) {
   if (action === 'sendCampaign') {
     const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
     const courseName = String(body.courseName || 'all').trim();
-    const manualEmails = String(body.manualEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter(isEmail).slice(0, 500);
+    const manualEmails = String(body.manualEmails || body.additionalEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter(isEmail).slice(0, 500);
     const subject = String(body.subject || '').trim().slice(0, 150);
     const message = String(body.message || '').trim().slice(0, 5000);
     if (!subject || !message) {
@@ -273,7 +273,7 @@ export default async function handler(req, res) {
     if (audience !== 'manual') {
       let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
       if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
-      if (courseName && courseName !== 'all') recipientQuery = recipientQuery.eq('course_name', courseName);
+      if (courseName && courseName !== 'all' && courseName.toLowerCase() !== 'all courses') recipientQuery = recipientQuery.eq('course_name', courseName);
       recipientQuery = recipientQuery.limit(500);
       const { data, error: recipientError } = await recipientQuery;
       if (recipientError) {
