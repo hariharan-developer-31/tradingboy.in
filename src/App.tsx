@@ -969,8 +969,8 @@ export default function App() {
             <div className="mx-auto max-w-7xl">
               <div className="mb-10 max-w-3xl">
                 <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">Courses</div>
-                <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl lg:text-7xl">Choose your trading path.</h2>
-                <p className="mt-6 font-inter text-white/65">Select a course, enter your details, complete UPI payment, and wait for admin approval.</p>
+                <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl lg:text-7xl">Start your trading journey today</h2>
+                <p className="mt-6 font-inter text-white/65">Select the course that matches your goals and begin learning professional trading with a structured, step-by-step approach.</p>
               </div>
               <div className="grid gap-6 lg:grid-cols-2">
                 {publicCourses.map((course) => {
