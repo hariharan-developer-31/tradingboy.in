@@ -1,20 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
-import { createHmac, randomUUID } from 'node:crypto';
+import { randomUUID, scryptSync } from 'node:crypto';
 import { adminSessionCookie, cleanText, clearAdminSessionCookie, createAdminSession, decodeJpegDataUrl, hasValidAdminSession, isCouponCode, isEmail, isHttpsUrl, isUuid, json, logServerError, rateLimit, readJsonBody, requirePost, requireTrustedOrigin, safeEqual } from './_security.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const adminPasscode = process.env.ADMIN_PASSCODE;
 const driveCourseUrl = process.env.DRIVE_COURSE_URL;
-const fallbackAdminPasscodeDigest = 'q2nsLMOxjx7zGKvH_N51ryVmFhU63khkdaLV1tA6m0c';
+const fallbackAdminPasscodeSalt = '2RXfth2eWJYOrCwQcWSjhw';
+const fallbackAdminPasscodeDigest = 'jEcP8ozQj-3XfVtbPd3QNmTxv7as6DomgQEwqM99axc';
 
-const hasAdminPasscode = Boolean(adminPasscode || (serviceRoleKey && fallbackAdminPasscodeDigest));
+const hasAdminPasscode = Boolean(adminPasscode || fallbackAdminPasscodeDigest);
 const isValidAdminPasscode = (submittedPasscode) => {
   if (adminPasscode) return safeEqual(submittedPasscode, adminPasscode);
-  if (!serviceRoleKey) return false;
-  const submittedDigest = createHmac('sha256', serviceRoleKey)
-    .update(String(submittedPasscode || ''))
-    .digest('base64url');
+  const submittedDigest = scryptSync(String(submittedPasscode || ''), fallbackAdminPasscodeSalt, 32).toString('base64url');
   return safeEqual(submittedDigest, fallbackAdminPasscodeDigest);
 };
 

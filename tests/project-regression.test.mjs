@@ -181,7 +181,7 @@ test('production APIs share request hardening and use an HttpOnly admin session'
   assert.match(security, /buffer\[0\] !== 0xff/);
   assert.match(adminApi, /hasValidAdminSession/);
   assert.match(adminApi, /createAdminSession/);
-  assert.match(adminApi, /createHmac\('sha256', serviceRoleKey\)/);
+  assert.match(adminApi, /scryptSync\(String\(submittedPasscode/);
   assert.match(adminApi, /isValidAdminPasscode/);
   assert.match(app, /aria-label=\{showAdminPasscode \? 'Hide admin passcode' : 'Show admin passcode'\}/);
   assert.match(app, /showAdminPasscode \? <EyeOff/);
