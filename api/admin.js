@@ -158,7 +158,7 @@ export default async function handler(req, res) {
     if (!isValidAdminPasscode(body.passcode)) return json(res, 401, { error: 'Invalid admin passcode.' });
     const session = createAdminSession(sessionSecret);
     res.setHeader('Set-Cookie', adminSessionCookie(session.token, session.ttlSeconds));
-    return json(res, 200, { ok: true });
+    return json(res, 200, { ok: true, emailConfigured: Boolean(process.env.RESEND_API_KEY) });
   }
   if (action === 'logout') {
     res.setHeader('Set-Cookie', clearAdminSessionCookie());
