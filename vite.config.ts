@@ -34,6 +34,33 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
       }
     });
 
+    server.middlewares.use('/api/testimonials', async (req, res) => {
+      if ((req as any).method !== 'GET') {
+        sendJson(res, 405, { error: 'Method not allowed' });
+        return;
+      }
+
+      const supabaseUrl = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
+      const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseUrl || !serviceRoleKey) {
+        sendJson(res, 500, { error: 'Environment variables are missing.' });
+        return;
+      }
+
+      try {
+        const admin = createClient(supabaseUrl, serviceRoleKey);
+        const { data, error } = await admin
+          .from('testimonials')
+          .select('id, quote, name, role, photo_url, active, created_at')
+          .eq('active', true)
+          .order('created_at', { ascending: true })
+          .limit(100);
+        sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data: data || [] });
+      } catch (error) {
+        sendJson(res, 500, { error: error instanceof Error ? error.message : 'Testimonials API failed.' });
+      }
+    });
+
     server.middlewares.use('/api/checkout', async (req, res) => {
       if ((req as any).method !== 'POST') {
         sendJson(res, 405, { error: 'Method not allowed' });

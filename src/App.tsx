@@ -45,33 +45,6 @@ const fallbackCourses = [
 
 const navLinks = ['Home', 'About', 'Course', 'Results', 'FAQ'];
 
-const fallbackTestimonials = [
-  {
-    id: 't1',
-    quote: 'The course finally made price action feel structured. My biggest win was learning when not to trade.',
-    name: 'Arjun M.',
-    role: 'Funded account trader',
-    active: true,
-    created_at: '',
-  },
-  {
-    id: 't2',
-    quote: 'The live breakdowns helped me stop chasing signals and start building a repeatable execution plan.',
-    name: 'Priya S.',
-    role: 'Forex swing trader',
-    active: true,
-    created_at: '',
-  },
-  {
-    id: 't3',
-    quote: 'Clear lessons, practical homework, and honest feedback. It feels built for serious beginners.',
-    name: 'Daniel R.',
-    role: 'Part-time trader',
-    active: true,
-    created_at: '',
-  },
-];
-
 const faqs = [
   ['Is this course beginner friendly?', 'Yes. It starts with foundations, then moves into execution, risk, and live market application.'],
   ['Is there a refund policy?', 'No. Course access is digital and educational, so all confirmed payments are non-refundable.'],
@@ -259,7 +232,7 @@ function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: 
     <div className="overflow-hidden w-full cursor-grab active:cursor-grabbing" ref={emblaRef}>
       <div className="flex gap-6 px-6 py-2">
         {testimonials.map((item, i) => (
-          <article key={`${direction}-${item.name}-${i}`} onClick={() => onSelect(item)} className="max-md:snap-center smooth-card w-[260px] sm:w-[320px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer ml-6 first:ml-0">
+          <article key={`${direction}-${item.id}-${i}`} onClick={() => onSelect(item)} className="max-md:snap-center smooth-card w-[280px] sm:w-[360px] shrink-0 border border-white/10 bg-white/[0.03] p-5 hover:border-electric/35 cursor-pointer ml-6 first:ml-0">
             <div className="mb-4 flex items-center gap-3">
               <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black">
                 <div className="flex h-full w-full items-center justify-center bg-electric/10 font-podium text-lg text-electric uppercase">{item.name.charAt(0)}</div>
@@ -271,8 +244,8 @@ function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: 
             </div>
             <p className="font-inter text-sm leading-relaxed text-white/75 line-clamp-3">"{item.quote}"</p>
             {item.photo_url && (
-              <div className="mt-4 overflow-hidden rounded-lg border border-white/10 aspect-video pointer-events-none">
-                <img src={item.photo_url} alt="Trading result" loading="lazy" decoding="async" className="w-full h-full object-cover hover:scale-105 transition duration-500 pointer-events-none" />
+              <div className="mt-4 overflow-hidden rounded-lg border border-white/10 bg-black aspect-[4/3] pointer-events-none">
+                <img src={item.photo_url} alt={`${item.name} trading result`} loading="lazy" decoding="async" className="w-full h-full object-contain hover:scale-105 transition duration-500 pointer-events-none" />
               </div>
             )}
           </article>
@@ -291,7 +264,7 @@ export default function App() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [publicCourses, setPublicCourses] = useState<PublicCourse[]>(fallbackCourses);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(fallbackTestimonials);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [joinStep, setJoinStep] = useState<'details' | 'payment' | 'proof' | 'thanks' | 'failed'>('details');
   const [formErrors, setFormErrors] = useState<{name?: string; email?: string; phone?: string; tradingExperience?: string}>({});
   const [joinForm, setJoinForm] = useState<JoinForm>({
@@ -502,15 +475,12 @@ export default function App() {
         // The built-in courses keep the page usable during a temporary API outage.
       }
 
-      if (!supabase) return;
-      const { data: testimonialsData, error: tError } = await supabase
-        .from('testimonials')
-        .select('id, quote, name, role, photo_url, active, created_at')
-        .eq('active', true)
-        .order('created_at', { ascending: true });
-        
-      if (!tError && testimonialsData && testimonialsData.length > 0) {
-        setTestimonials(testimonialsData as Testimonial[]);
+      try {
+        const response = await fetch('/api/testimonials');
+        const result = await response.json();
+        if (response.ok && Array.isArray(result.data)) setTestimonials(result.data as Testimonial[]);
+      } catch {
+        setTestimonials([]);
       }
     };
     loadPublicCourses();
@@ -1241,21 +1211,24 @@ export default function App() {
               </div>
             </div>
             
-            <div className="flex flex-col gap-6 relative w-full overflow-hidden py-4">
-              {/* Top Row: Right to Left */}
-              <TestimonialCarousel 
-                direction="forward" 
-                onSelect={setSelectedTestimonial} 
-                testimonials={[...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2))]} 
-              />
-
-              {/* Bottom Row: Left to Right */}
-              <TestimonialCarousel 
-                direction="backward" 
-                onSelect={setSelectedTestimonial} 
-                testimonials={[...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2))]} 
-              />
-            </div>
+            {testimonials.length > 0 ? (
+              <div className="flex flex-col gap-6 relative w-full overflow-hidden py-4">
+                <TestimonialCarousel
+                  direction="forward"
+                  onSelect={setSelectedTestimonial}
+                  testimonials={[...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2)), ...testimonials.slice(0, Math.ceil(testimonials.length / 2))]}
+                />
+                {testimonials.length > 1 && (
+                  <TestimonialCarousel
+                    direction="backward"
+                    onSelect={setSelectedTestimonial}
+                    testimonials={[...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2)), ...testimonials.slice(Math.ceil(testimonials.length / 2))]}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="mx-auto max-w-7xl px-6 py-10 font-inter text-sm text-white/45 sm:px-10 lg:px-16">No member results are published yet.</div>
+            )}
 
 
           </section>

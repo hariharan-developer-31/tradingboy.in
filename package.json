@@ -6,7 +6,7 @@
     "preview": "vite preview --configLoader runner",
     "test": "node --test tests/*.test.mjs",
     "lint": "node ./node_modules/typescript/bin/tsc --noEmit --noUnusedLocals --noUnusedParameters -p tsconfig.app.json",
-    "check:api": "node --check api/admin.js && node --check api/checkout.js && node --check api/checkCoupon.js && node --check api/courses.js && node --check api/_security.js",
+    "check:api": "node --check api/admin.js && node --check api/checkout.js && node --check api/checkCoupon.js && node --check api/courses.js && node --check api/testimonials.js && node --check api/_security.js",
     "validate": "npm run lint && npm run check:api && npm test && npm run build"
   },
   "dependencies": {

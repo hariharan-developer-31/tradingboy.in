@@ -143,6 +143,20 @@ test('all image uploads share the compressor and testimonials stay below 100KB',
   assert.match(adminApi, /Testimonial image must be below 100KB after compression\./);
 });
 
+test('public reviews come only from active admin-managed testimonials', () => {
+  const app = read('src/App.tsx');
+  const testimonialsApi = read('api/testimonials.js');
+  const viteConfig = read('vite.config.ts');
+
+  assert.match(app, /fetch\('\/api\/testimonials'\)/);
+  assert.match(app, /useState<Testimonial\[]>\(\[\]\)/);
+  assert.doesNotMatch(app, /Arjun M\.|Priya S\.|Daniel R\./);
+  assert.match(testimonialsApi, /\.from\('testimonials'\)/);
+  assert.match(testimonialsApi, /\.eq\('active', true\)/);
+  assert.match(testimonialsApi, /photo_url/);
+  assert.match(viteConfig, /server\.middlewares\.use\('\/api\/testimonials'/);
+});
+
 test('footer exposes accessible social media links', () => {
   const app = read('src/App.tsx');
 
