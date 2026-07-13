@@ -1284,14 +1284,14 @@ export default function App() {
                 </a>
                 <p className="mt-4 max-w-sm text-xs leading-relaxed text-white/50 sm:text-sm">Practical forex, gold, and funded-account education built around discipline, risk control, and repeatable execution.</p>
                 <div className="mt-5 flex items-center gap-2.5" aria-label="Trading Boy social media">
-                  <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" aria-label="Follow Trading Boy on Instagram" className="group flex h-10 w-10 items-center justify-center border border-white/10 bg-white/[0.03] text-white/60 transition hover:border-electric/60 hover:bg-electric/10 hover:text-electric">
-                    <Instagram className="h-[18px] w-[18px] transition group-hover:scale-110" />
+                  <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" aria-label="Follow Trading Boy on Instagram" className="group flex h-10 w-10 items-center justify-center border border-white/15 bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045] text-white shadow-[0_8px_24px_rgba(225,48,108,0.2)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(225,48,108,0.38)]">
+                    <Instagram className="h-[19px] w-[19px] stroke-[2.2] transition group-hover:scale-110" />
                   </a>
-                  <a href="https://www.threads.com/@trading_boy_tamil" target="_blank" rel="noreferrer" aria-label="Follow Trading Boy on Threads" className="group flex h-10 w-10 items-center justify-center border border-white/10 bg-white/[0.03] text-white/60 transition hover:border-electric/60 hover:bg-electric/10 hover:text-electric">
-                    <AtSign className="h-[18px] w-[18px] transition group-hover:scale-110" />
+                  <a href="https://www.threads.com/@trading_boy_tamil" target="_blank" rel="noreferrer" aria-label="Follow Trading Boy on Threads" className="group flex h-10 w-10 items-center justify-center border border-white/80 bg-white text-black shadow-[0_8px_24px_rgba(255,255,255,0.1)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(255,255,255,0.22)]">
+                    <AtSign className="h-[20px] w-[20px] stroke-[2.4] transition group-hover:scale-110" />
                   </a>
-                  <a href="https://www.youtube.com/@trading_boy" target="_blank" rel="noreferrer" aria-label="Watch Trading Boy on YouTube" className="group flex h-10 w-10 items-center justify-center border border-white/10 bg-white/[0.03] text-white/60 transition hover:border-electric/60 hover:bg-electric/10 hover:text-electric">
-                    <Youtube className="h-5 w-5 transition group-hover:scale-110" />
+                  <a href="https://www.youtube.com/@trading_boy" target="_blank" rel="noreferrer" aria-label="Watch Trading Boy on YouTube" className="group flex h-10 w-10 items-center justify-center border border-[#ff4d4d] bg-[#ff0000] text-white shadow-[0_8px_24px_rgba(255,0,0,0.2)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(255,0,0,0.38)]">
+                    <Youtube className="h-[21px] w-[21px] fill-white stroke-white transition group-hover:scale-110" />
                   </a>
                 </div>
               </div>
