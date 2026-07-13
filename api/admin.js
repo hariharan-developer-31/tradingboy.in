@@ -1,31 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
+import { adminSessionCookie, cleanText, clearAdminSessionCookie, createAdminSession, decodeJpegDataUrl, hasValidAdminSession, isCouponCode, isEmail, isHttpsUrl, isUuid, json, logServerError, rateLimit, readJsonBody, requirePost, requireTrustedOrigin, safeEqual } from './_security.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const adminPasscode = process.env.ADMIN_PASSCODE;
 const driveCourseUrl = process.env.DRIVE_COURSE_URL;
-
-const json = (res, status, body) => {
-  res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-};
-
-const decodeDataUrl = (dataUrl) => {
-  const [, base64 = ''] = String(dataUrl).split(',');
-  return Buffer.from(base64, 'base64');
-};
-
-const readBody = async (req) => {
-  const chunks = [];
-
-  for await (const chunk of req) {
-    chunks.push(chunk);
-  }
-
-  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-};
 
 const formatAmount = (amount) => `Rs. ${Number(amount).toLocaleString('en-IN')}`;
 
@@ -47,17 +27,18 @@ const sendEmail = async ({ to, subject, html }) => {
         subject,
         html,
       }),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Resend API Error:', errorData);
-      return { ok: false, error: errorData.message || `Resend API returned ${response.status}` };
+      logServerError('email.resend', new Error(`Provider returned ${response.status}`));
+      return { ok: false, error: 'Email delivery failed.' };
     }
 
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: err.message };
+    logServerError('email.send', err);
+    return { ok: false, error: 'Email delivery failed.' };
   }
 };
 
@@ -146,25 +127,37 @@ const statusHtml = (order) => darkEmail(`
 `);
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    json(res, 405, { error: 'Method not allowed' });
+  if (!requirePost(req, res) || !requireTrustedOrigin(req, res)) return;
+  if (!rateLimit(req, res, { scope: 'admin', limit: 120, windowMs: 60_000 })) return;
+
+  if (!supabaseUrl || !serviceRoleKey || !adminPasscode || adminPasscode.length < 12) {
+    json(res, 503, { error: 'Admin service is temporarily unavailable.' });
     return;
   }
 
-  if (!supabaseUrl || !serviceRoleKey || !adminPasscode) {
-    json(res, 500, { error: 'Admin API environment variables are missing.' });
-    return;
+  let body;
+  try {
+    body = await readJsonBody(req, 180 * 1024);
+  } catch (error) {
+    return json(res, error.status || 400, { error: error.message || 'Invalid request.' });
   }
 
-  const body = await readBody(req);
-
-  if (body.passcode !== adminPasscode) {
-    json(res, 401, { error: 'Invalid admin passcode.' });
-    return;
-  }
-
-  const admin = createClient(supabaseUrl, serviceRoleKey);
   const action = body.action;
+  const sessionSecret = process.env.ADMIN_SESSION_SECRET || serviceRoleKey;
+  if (action === 'login') {
+    if (!rateLimit(req, res, { scope: 'admin-login', limit: 8, windowMs: 15 * 60_000 })) return;
+    if (!safeEqual(body.passcode, adminPasscode)) return json(res, 401, { error: 'Invalid admin passcode.' });
+    const session = createAdminSession(sessionSecret);
+    res.setHeader('Set-Cookie', adminSessionCookie(session.token, session.ttlSeconds));
+    return json(res, 200, { ok: true });
+  }
+  if (action === 'logout') {
+    res.setHeader('Set-Cookie', clearAdminSessionCookie());
+    return json(res, 200, { ok: true });
+  }
+  if (!hasValidAdminSession(req, sessionSecret)) return json(res, 401, { error: 'Admin session expired. Sign in again.' });
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
   if (action === 'orders') {
     const { data, error } = await admin
@@ -172,7 +165,8 @@ export default async function handler(req, res) {
       .select(
         'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, payment_screenshot_path, remarks, created_at',
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(1000);
 
     if (error) {
       json(res, 500, { error: error.message });
@@ -184,6 +178,9 @@ export default async function handler(req, res) {
   }
 
   if (action === 'updateOrder') {
+    if (!isUuid(body.orderId) || !['pending', 'under_review', 'paid', 'rejected'].includes(body.paymentStatus)) {
+      return json(res, 400, { error: 'A valid order and payment status are required.' });
+    }
     const { data, error } = await admin
       .from('course_orders')
       .update({ payment_status: body.paymentStatus })
@@ -203,14 +200,19 @@ export default async function handler(req, res) {
       courseDriveUrl = course?.drive_url || null;
       courseDiscordUrl = course?.discord_url || null;
     }
-    const emailOrder = { ...data, course_drive_url: courseDriveUrl, course_discord_url: courseDiscordUrl };
+    const safeData = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value]));
+    const emailOrder = {
+      ...safeData,
+      course_drive_url: isHttpsUrl(courseDriveUrl) ? escapeHtml(courseDriveUrl) : null,
+      course_discord_url: isHttpsUrl(courseDiscordUrl) ? escapeHtml(courseDiscordUrl) : null,
+    };
     const emailResult = await sendEmail({
       to: data.email,
       subject:
         data.payment_status === 'paid'
           ? 'Trading Boy course access approved'
           : `Trading Boy payment status: ${data.payment_status}`,
-      html: data.payment_status === 'paid' ? paidAccessHtml(emailOrder) : statusHtml(data),
+      html: data.payment_status === 'paid' ? paidAccessHtml(emailOrder) : statusHtml(safeData),
     });
 
     json(res, 200, { ok: true, emailSent: emailResult.ok, emailError: emailResult.error });
@@ -219,7 +221,7 @@ export default async function handler(req, res) {
 
   if (action === 'deleteOrders') {
     const deleteAll = body.deleteAll === true;
-    const orderIds = Array.isArray(body.orderIds) ? body.orderIds.map(String).filter(Boolean) : [];
+    const orderIds = Array.isArray(body.orderIds) ? body.orderIds.map(String).filter(isUuid).slice(0, 500) : [];
     if (!deleteAll && orderIds.length === 0) {
       json(res, 400, { error: 'Select at least one payment record.' });
       return;
@@ -250,7 +252,7 @@ export default async function handler(req, res) {
   if (action === 'sendCampaign') {
     const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
     const courseName = String(body.courseName || 'all').trim();
-    const manualEmails = String(body.manualEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500);
+    const manualEmails = String(body.manualEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter(isEmail).slice(0, 500);
     const subject = String(body.subject || '').trim().slice(0, 150);
     const message = String(body.message || '').trim().slice(0, 5000);
     if (!subject || !message) {
@@ -263,6 +265,7 @@ export default async function handler(req, res) {
       let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
       if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
       if (courseName && courseName !== 'all') recipientQuery = recipientQuery.eq('course_name', courseName);
+      recipientQuery = recipientQuery.limit(500);
       const { data, error: recipientError } = await recipientQuery;
       if (recipientError) {
         json(res, 500, { error: recipientError.message });
@@ -275,7 +278,7 @@ export default async function handler(req, res) {
     manualEmails.forEach((email) => {
       if (!recipientMap.has(email)) recipientMap.set(email, { email, full_name: 'Trader' });
     });
-    const recipients = Array.from(recipientMap.values());
+    const recipients = Array.from(recipientMap.values()).slice(0, 500);
     if (recipients.length === 0) {
       json(res, 400, { error: 'No recipients match this audience.' });
       return;
@@ -327,7 +330,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'saveCourse') {
-    const title = String(body.title || '').trim();
+    const title = cleanText(body.title, 160);
     const normalPrice = Number(body.normalPrice);
     const offerPrice = Number(body.offerPrice);
 
@@ -338,20 +341,18 @@ export default async function handler(req, res) {
 
     const payload = {
       title,
-      description: String(body.description || '').trim() || null,
+      description: cleanText(body.description, 1000) || null,
       normal_price: normalPrice,
       offer_price: offerPrice,
       price: offerPrice,
-      drive_url: String(body.driveUrl || '').trim() || null,
-      discord_url: String(body.discordUrl || '').trim() || null,
+      drive_url: cleanText(body.driveUrl, 1000) || null,
+      discord_url: cleanText(body.discordUrl, 1000) || null,
     };
+    if (!isHttpsUrl(payload.drive_url) || !isHttpsUrl(payload.discord_url)) return json(res, 400, { error: 'Course and Discord links must use HTTPS.' });
+    if (body.id && !isUuid(body.id)) return json(res, 400, { error: 'Invalid course ID.' });
 
     if (body.thumbnailDataUrl) {
-      const buffer = decodeDataUrl(body.thumbnailDataUrl);
-      if (buffer.byteLength > 5 * 1024 * 1024) {
-        json(res, 400, { error: 'Image must be below 5MB.' });
-        return;
-      }
+      const buffer = decodeJpegDataUrl(body.thumbnailDataUrl);
       const imageId = randomUUID();
       const imagePath = `${imageId}.jpg`;
       const { error: uploadError } = await admin.storage
@@ -368,7 +369,8 @@ export default async function handler(req, res) {
       const { data: publicUrlData } = admin.storage.from('course-thumbnails').getPublicUrl(imagePath);
       payload.thumbnail_url = publicUrlData.publicUrl;
     } else if (body.thumbnailUrl !== undefined) {
-      payload.thumbnail_url = String(body.thumbnailUrl || '').trim() || null;
+      payload.thumbnail_url = cleanText(body.thumbnailUrl, 1000) || null;
+      if (!isHttpsUrl(payload.thumbnail_url)) return json(res, 400, { error: 'Thumbnail link must use HTTPS.' });
     }
     const query = body.id
       ? admin.from('courses').update(payload).eq('id', body.id)
@@ -385,6 +387,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'toggleCourse') {
+    if (!isUuid(body.courseId) || typeof body.active !== 'boolean') return json(res, 400, { error: 'Invalid course update.' });
     const { error } = await admin.from('courses').update({ active: body.active }).eq('id', body.courseId);
 
     if (error) {
@@ -397,6 +400,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'deleteCourse') {
+    if (!isUuid(body.courseId)) return json(res, 400, { error: 'Invalid course ID.' });
     const { error } = await admin.from('courses').delete().eq('id', body.courseId);
 
     if (error) {
@@ -409,12 +413,12 @@ export default async function handler(req, res) {
   }
 
   if (action === 'saveCoupon') {
-    const code = String(body.code || '').trim().toUpperCase();
+    const code = cleanText(body.code, 40).toUpperCase();
     const discountType = body.discountType;
     const discountValue = Number(body.discountValue);
     const maxUses = body.maxUses ? Number(body.maxUses) : null;
 
-    if (!code || !['fixed', 'percent'].includes(discountType) || Number.isNaN(discountValue) || discountValue <= 0) {
+    if (!isCouponCode(code) || !['fixed', 'percent'].includes(discountType) || !Number.isInteger(discountValue) || discountValue <= 0) {
       json(res, 400, { error: 'Valid coupon code, discount type, and discount value are required.' });
       return;
     }
@@ -422,17 +426,20 @@ export default async function handler(req, res) {
       json(res, 400, { error: 'Percentage discount cannot be above 100.' });
       return;
     }
-    if (maxUses !== null && (Number.isNaN(maxUses) || maxUses <= 0)) {
+    if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses <= 0)) {
       json(res, 400, { error: 'Maximum uses must be a positive number.' });
       return;
     }
 
+    if (body.id && !isUuid(body.id)) return json(res, 400, { error: 'Invalid coupon ID.' });
+    const expiry = body.expiresAt ? new Date(body.expiresAt) : null;
+    if (expiry && Number.isNaN(expiry.getTime())) return json(res, 400, { error: 'Invalid coupon expiry date.' });
     const payload = {
       code,
-      course_name: String(body.courseName || '').trim() || null,
+      course_name: cleanText(body.courseName, 160) || null,
       discount_type: discountType,
       discount_value: discountValue,
-      expires_at: body.expiresAt ? new Date(body.expiresAt).toISOString() : null,
+      expires_at: expiry?.toISOString() || null,
       max_uses: maxUses,
       active: true,
     };
@@ -451,6 +458,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'toggleCoupon') {
+    if (!isUuid(body.couponId) || typeof body.active !== 'boolean') return json(res, 400, { error: 'Invalid coupon update.' });
     const { error } = await admin.from('coupons').update({ active: body.active }).eq('id', body.couponId);
 
     if (error) {
@@ -463,6 +471,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'deleteCoupon') {
+    if (!isUuid(body.couponId)) return json(res, 400, { error: 'Invalid coupon ID.' });
     const { error } = await admin.from('coupons').delete().eq('id', body.couponId);
 
     if (error) {
@@ -485,9 +494,9 @@ export default async function handler(req, res) {
   }
 
   if (action === 'saveTestimonial') {
-    const quote = String(body.quote || '').trim();
-    const name = String(body.name || '').trim();
-    const role = String(body.role || '').trim();
+    const quote = cleanText(body.quote, 1200);
+    const name = cleanText(body.name, 100);
+    const role = cleanText(body.role, 120);
     if (!quote || !name || !role) {
       json(res, 400, { error: 'Quote, name, and role are required.' });
       return;
@@ -496,11 +505,8 @@ export default async function handler(req, res) {
     const payload = { quote, name, role, active: body.active !== false };
 
     if (body.photoDataUrl) {
-      const buffer = decodeDataUrl(body.photoDataUrl);
-      if (buffer.byteLength > 100 * 1024) {
-        json(res, 400, { error: 'Testimonial image must be below 100KB after compression.' });
-        return;
-      }
+      const buffer = decodeJpegDataUrl(body.photoDataUrl);
+      if (buffer.byteLength > 100 * 1024) return json(res, 400, { error: 'Testimonial image must be below 100KB after compression.' });
       const imageId = randomUUID();
       const imagePath = `${imageId}.jpg`;
       const { error: uploadError } = await admin.storage
@@ -517,8 +523,10 @@ export default async function handler(req, res) {
       const { data: publicUrlData } = admin.storage.from('testimonial-photos').getPublicUrl(imagePath);
       payload.photo_url = publicUrlData.publicUrl;
     } else if (body.photoUrl !== undefined) {
-      payload.photo_url = String(body.photoUrl || '').trim() || null;
+      payload.photo_url = cleanText(body.photoUrl, 1000) || null;
+      if (!isHttpsUrl(payload.photo_url)) return json(res, 400, { error: 'Testimonial image link must use HTTPS.' });
     }
+    if (body.id && !isUuid(body.id)) return json(res, 400, { error: 'Invalid testimonial ID.' });
 
     const query = body.id
       ? admin.from('testimonials').update(payload).eq('id', body.id)
@@ -534,6 +542,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'deleteTestimonial') {
+    if (!isUuid(body.id)) return json(res, 400, { error: 'Invalid testimonial ID.' });
     const { error } = await admin.from('testimonials').delete().eq('id', body.id);
     if (error) {
       json(res, 500, { error: error.message });

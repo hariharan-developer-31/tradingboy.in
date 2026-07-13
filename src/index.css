@@ -38,6 +38,11 @@
     transition-duration: 260ms;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
+
+  :focus-visible {
+    outline: 2px solid #38b6ff;
+    outline-offset: 3px;
+  }
 }
 
 @layer utilities {
@@ -338,13 +343,6 @@
 
   .hero-cta-glow {
     animation: cta-glow-pulse 3.6s ease-in-out infinite;
-  }
-
-  .site-shell main a,
-  .site-shell main button,
-  .site-shell header a,
-  .site-shell header button {
-    will-change: transform;
   }
 
   .site-shell main a:hover,

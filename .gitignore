@@ -1,6 +1,12 @@
 node_modules/
+dist/
+coverage/
+.vercel/
 .tmp/
 .env
 .env.*
+!.env.example
 *.local
 npm-debug.log*
+*.log
+.DS_Store

@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
 import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X, Youtube } from 'lucide-react';
 import { supabase } from './lib/supabase';
-import logoUrl from './assets/logo.png';
-import aboutImageUrl from './assets/About us.png';
-import forexMasteryThumbnail from './assets/course-forex-mastery.png';
-import fundedTraderThumbnail from './assets/course-funded-trader.png';
+import aboutImageUrl from './assets/About us.webp';
+import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
+import fundedTraderThumbnail from './assets/course-funded-trader.webp';
+
+const logoUrl = '/logo.png';
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
 
@@ -271,7 +272,7 @@ function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: 
             <p className="font-inter text-sm leading-relaxed text-white/75 line-clamp-3">"{item.quote}"</p>
             {item.photo_url && (
               <div className="mt-4 overflow-hidden rounded-lg border border-white/10 aspect-video pointer-events-none">
-                <img src={item.photo_url} alt="Trading result" className="w-full h-full object-cover hover:scale-105 transition duration-500 pointer-events-none" />
+                <img src={item.photo_url} alt="Trading result" loading="lazy" decoding="async" className="w-full h-full object-cover hover:scale-105 transition duration-500 pointer-events-none" />
               </div>
             )}
           </article>
@@ -684,7 +685,8 @@ export default function App() {
     const response = await fetch('/api/admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, passcode: adminPasscode, ...payload }),
+      credentials: 'same-origin',
+      body: JSON.stringify({ action, ...(import.meta.env.DEV ? { passcode: adminPasscode } : {}), ...payload }),
     });
     const text = await response.text();
     const result = text ? JSON.parse(text) : {};
@@ -718,6 +720,10 @@ export default function App() {
     try {
       setAdminLoading(true);
       setAdminStatus('');
+      if (!import.meta.env.DEV) {
+        await adminRequest('login', { passcode: adminPasscode });
+        setAdminPasscode('');
+      }
       await loadAdminCourses();
       await loadAdminOrders();
       await loadAdminCoupons();
@@ -731,6 +737,7 @@ export default function App() {
   };
 
   const logoutAdmin = () => {
+    void adminRequest('logout').catch(() => undefined);
     setAdminUnlocked(false);
     setAdminPasscode('');
     setAdminSection('home');
@@ -1059,6 +1066,7 @@ export default function App() {
 
   return (
     <div className="site-shell min-h-screen bg-ink text-white">
+      <a href="#main-content" className="fixed left-4 top-4 z-[100] -translate-y-24 bg-electric px-4 py-3 text-xs font-bold uppercase tracking-widest text-black transition focus:translate-y-0">Skip to content</a>
       {!adminOpen && (
         <header className={`fixed inset-x-0 top-0 z-40 px-5 py-3 transition-all duration-500 sm:px-8 lg:px-12 lg:py-4 ${hasScrolled ? 'border-b border-white/10 bg-ink/90 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl' : 'border-b border-transparent bg-transparent'}`}>
         <nav className="flex items-center justify-between">
@@ -1106,7 +1114,7 @@ export default function App() {
       )}
 
       {!adminOpen && (
-        <main>
+        <main id="main-content">
           <section id="home" className="relative flex min-h-screen items-center overflow-hidden bg-[#070b10] lg:pt-32">
             <div className="pointer-events-none absolute inset-0 bg-grid-pattern opacity-25 animate-grid-pan" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(37,174,244,0.16),rgba(7,11,16,0.58)_38%,#070b10_74%)] animate-soft-drift" />
@@ -1152,7 +1160,7 @@ export default function App() {
             <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
               <div className="group relative overflow-hidden border border-electric/20 bg-black p-2 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
                 <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/45 via-transparent to-electric/10" />
-                <img src={aboutImageUrl} alt="A bright professional trading education workspace" className="h-[420px] w-full object-cover object-center transition duration-700 group-hover:scale-[1.025] sm:h-[480px] lg:h-[520px]" />
+                <img src={aboutImageUrl} alt="A bright professional trading education workspace" loading="lazy" decoding="async" className="h-[420px] w-full object-cover object-center transition duration-700 group-hover:scale-[1.025] sm:h-[480px] lg:h-[520px]" />
                 <div className="absolute bottom-6 left-6 z-20 border border-white/15 bg-black/75 px-4 py-3 backdrop-blur-md">
                   <div className="font-podium text-2xl text-white">5+ Years</div>
                   <div className="mt-1 font-inter text-[9px] uppercase tracking-[0.24em] text-electric">Empowering traders</div>
@@ -1182,7 +1190,7 @@ export default function App() {
                   const percent = offerPercent(normalPrice, offerPrice);
                   return (
                     <article key={course.id || course.title} className="smooth-card flex h-full flex-col overflow-hidden border border-white/10 bg-ink shadow-glow hover:border-electric/35 hover:shadow-neon-blue">
-                      <img src={courseThumbnail(course)} alt={course.title} className="aspect-[16/7] w-full object-cover md:aspect-[16/8] lg:aspect-[16/7]" />
+                      <img src={courseThumbnail(course)} alt={course.title} loading="lazy" decoding="async" className="aspect-[16/7] w-full object-cover md:aspect-[16/8] lg:aspect-[16/7]" />
                       <div className="flex flex-1 flex-col p-5 sm:p-6 md:p-5 lg:p-6">
                         <div className="font-inter text-[10px] uppercase tracking-[0.3em] text-electric lg:text-xs">Course</div>
                         <h3 className="mt-3 font-podium text-[2rem] uppercase leading-[0.98] text-white sm:text-[2.5rem] md:text-[1.75rem] lg:mt-4 lg:text-[2.5rem] xl:text-5xl">{course.title}</h3>
@@ -1280,7 +1288,7 @@ export default function App() {
             <div className="grid gap-7 py-8 sm:grid-cols-[1fr_auto] sm:items-end sm:py-10">
               <div>
                 <a href="#home" aria-label="Trading Boy Academy home" className="inline-flex items-center">
-                  <img src={logoUrl} alt="Trading Boy Academy" className="h-11 w-auto object-contain sm:h-14" />
+                  <img src={logoUrl} alt="Trading Boy Academy" loading="lazy" decoding="async" className="h-11 w-auto object-contain sm:h-14" />
                 </a>
                 <p className="mt-4 max-w-sm text-xs leading-relaxed text-white/50 sm:text-sm">Practical forex, gold, and funded-account education built around discipline, risk control, and repeatable execution.</p>
                 <div className="mt-5 flex items-center gap-2.5" aria-label="Trading Boy social media">
@@ -2103,14 +2111,11 @@ export default function App() {
                                 <input 
                                   type="file" 
                                   accept="image/*" 
-                                  onChange={(e) => {
+                                  onChange={async (e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (event) => {
-                                        setCourseForm({ ...courseForm, thumbnailDataUrl: event.target?.result as string });
-                                      };
-                                      reader.readAsDataURL(file);
+                                      const thumbnailDataUrl = await compressImageToDataUrl(file);
+                                      setCourseForm((current) => ({ ...current, thumbnailDataUrl }));
                                     }
                                   }}
                                   className="w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition cursor-pointer"

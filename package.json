@@ -4,26 +4,28 @@
     "dev": "vite --configLoader runner",
     "build": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build --configLoader runner",
     "preview": "vite preview --configLoader runner",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "lint": "node ./node_modules/typescript/bin/tsc --noEmit --noUnusedLocals --noUnusedParameters -p tsconfig.app.json",
+    "check:api": "node --check api/admin.js && node --check api/checkout.js && node --check api/checkCoupon.js && node --check api/_security.js",
+    "validate": "npm run lint && npm run check:api && npm test && npm run build"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.50.3",
-    "@vitejs/plugin-react": "^4.6.0",
+    "@supabase/supabase-js": "^2.110.2",
     "embla-carousel-auto-scroll": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-fast-marquee": "^1.6.5",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.0"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.20.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17"
+    "postcss": "^8.5.19",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
   }
 }

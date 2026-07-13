@@ -117,12 +117,12 @@ test('course Discord access is private, editable, and included in paid emails', 
   assert.match(schema, /revoke select on table public\.courses from anon;/);
 });
 
-test('testimonial photos share the payment image compressor and stay below 100KB', () => {
+test('all image uploads share the compressor and testimonials stay below 100KB', () => {
   const app = read('src/App.tsx');
   const adminApi = read('api/admin.js');
 
   assert.match(app, /const compressImageToDataUrl =/);
-  assert.equal((app.match(/await compressImageToDataUrl\(file\)/g) || []).length, 2);
+  assert.equal((app.match(/await compressImageToDataUrl\(file\)/g) || []).length, 3);
   assert.match(app, /Images are automatically converted to JPEG and compressed below 100 KB\./);
   assert.match(adminApi, /body\.photoDataUrl[\s\S]*buffer\.byteLength > 100 \* 1024/);
   assert.match(adminApi, /Testimonial image must be below 100KB after compression\./);
@@ -149,4 +149,33 @@ test('course details have shareable entry files, member reviews, and Instagram s
   assert.doesNotMatch(app, /message trading_boy_tamil on Instagram/);
   assert.match(forexEntry, /#course\/forex-mastery/);
   assert.match(fundedEntry, /#course\/funded-trader-blueprint/);
+});
+
+test('production APIs share request hardening and use an HttpOnly admin session', () => {
+  const security = read('api/_security.js');
+  const adminApi = read('api/admin.js');
+  const checkoutApi = read('api/checkout.js');
+  const couponApi = read('api/checkCoupon.js');
+
+  assert.match(security, /HttpOnly; Secure; SameSite=Strict/);
+  assert.match(security, /timingSafeEqual/);
+  assert.match(security, /Request is too large\./);
+  assert.match(security, /Request origin is not allowed\./);
+  assert.match(security, /Too many requests\./);
+  assert.match(security, /buffer\[0\] !== 0xff/);
+  assert.match(adminApi, /hasValidAdminSession/);
+  assert.match(adminApi, /createAdminSession/);
+  assert.match(checkoutApi, /requireTrustedOrigin/);
+  assert.match(checkoutApi, /decodeJpegDataUrl/);
+  assert.match(couponApi, /rateLimit/);
+});
+
+test('database migration removes anonymous commerce access and adds atomic coupon redemption', () => {
+  const migration = read('migrations/20260713_production_hardening.sql');
+  assert.match(migration, /revoke all on table public\.course_orders from anon/);
+  assert.match(migration, /revoke all on table public\.coupons from anon/);
+  assert.match(migration, /for update/);
+  assert.match(migration, /create or replace function public\.create_course_order/);
+  assert.match(migration, /course_orders_status_created_idx/);
+  assert.match(migration, /allowed_mime_types = array\['image\/jpeg'\]/);
 });

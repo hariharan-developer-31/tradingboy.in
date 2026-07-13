@@ -655,6 +655,20 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), localAdminApi(env)],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('@supabase')) return 'supabase';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('embla-carousel')) return 'carousel';
+            if (id.includes('react')) return 'react-vendor';
+            return 'vendor';
+          },
+        },
+      },
+    },
     server: {
       fs: {
         strict: false,

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
+import { cleanText, decodeJpegDataUrl, escapeHtml, handleApiError, isCouponCode, isEmail, isHttpsUrl, json, rateLimit, readJsonBody, requirePost, requireTrustedOrigin } from './_security.js';
 
 const COURSE_NAME = 'Complete Forex Mastery';
 const COURSE_PRICE = 7199;
@@ -11,29 +12,7 @@ const COURSES = [
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const json = (res, status, body) => {
-  res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-};
-
-const readBody = async (req) => {
-  const chunks = [];
-
-  for await (const chunk of req) {
-    chunks.push(chunk);
-  }
-
-  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-};
-
 const formatAmount = (amount) => `Rs. ${Number(amount).toLocaleString('en-IN')}`;
-
-const decodeDataUrl = (dataUrl) => {
-  const [, base64 = ''] = String(dataUrl).split(',');
-
-  return Buffer.from(base64, 'base64');
-};
 
 const sendEmail = async ({ to, subject, html }) => {
   if (!process.env.RESEND_API_KEY) {
@@ -52,6 +31,7 @@ const sendEmail = async ({ to, subject, html }) => {
       subject,
       html,
     }),
+    signal: AbortSignal.timeout(10_000),
   });
 
   return response.ok;
@@ -121,41 +101,42 @@ const paidAccessHtml = (order) => darkEmail(`
 `);
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    json(res, 405, { error: 'Method not allowed' });
-    return;
-  }
+  if (!requirePost(req, res) || !requireTrustedOrigin(req, res)) return;
+  if (!rateLimit(req, res, { scope: 'checkout', limit: 8, windowMs: 10 * 60_000 })) return;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    json(res, 500, { error: 'Checkout API environment variables are missing.' });
+    json(res, 503, { error: 'Checkout is temporarily unavailable.' });
     return;
   }
 
-  const body = await readBody(req);
-  const fullName = String(body.name || '').trim();
-  const email = String(body.email || '').trim();
-  const phone = String(body.phone || '').trim();
-  const tradingExperience = String(body.tradingExperience || '').trim();
-  const requestedCourseName = String(body.courseName || COURSE_NAME).trim();
-  const couponCode = String(body.couponCode || '').trim().toUpperCase();
+  try {
+  const body = await readJsonBody(req, 180 * 1024);
+  const fullName = cleanText(body.name, 100);
+  const email = cleanText(body.email, 254).toLowerCase();
+  const phone = cleanText(body.phone, 25);
+  const tradingExperience = cleanText(body.tradingExperience, 80);
+  const requestedCourseName = cleanText(body.courseName || COURSE_NAME, 160);
+  const couponCode = cleanText(body.couponCode, 40).toUpperCase();
   const paymentScreenshot = body.paymentScreenshot;
   const termsAccepted = body.termsAccepted === true;
 
-  const remarks = String(body.remarks || '').trim();
+  const remarks = cleanText(body.remarks, 500);
 
-  if (!fullName || !email || !phone || !tradingExperience || !termsAccepted) {
+  if (fullName.length < 2 || !isEmail(email) || !/^[+0-9 ()-]{7,25}$/.test(phone) || !tradingExperience || !termsAccepted) {
     json(res, 400, { error: 'Name, email, phone, trading experience, and terms acceptance are required.' });
     return;
   }
+  if (couponCode && !isCouponCode(couponCode)) return json(res, 400, { error: 'Coupon code format is invalid.' });
 
-  const admin = createClient(supabaseUrl, serviceRoleKey);
+  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: courseData } = await admin
     .from('courses')
     .select('title, price, offer_price, drive_url, discord_url, active')
     .eq('title', requestedCourseName)
     .eq('active', true)
     .maybeSingle();
-  const fallbackCourse = COURSES.find((course) => course.name === requestedCourseName) || COURSES[0];
+  const fallbackCourse = COURSES.find((course) => course.name === requestedCourseName);
+  if (!courseData && !fallbackCourse) return json(res, 404, { error: 'The selected course is unavailable.' });
   const selectedCourse = courseData
     ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price), drive_url: courseData.drive_url, discord_url: courseData.discord_url }
     : fallbackCourse;
@@ -196,13 +177,9 @@ export default async function handler(req, res) {
   const orderId = randomUUID();
   let paymentScreenshotPath = null;
 
+  if (finalAmount > 0 && !paymentScreenshot?.dataUrl) return json(res, 400, { error: 'A payment screenshot is required.' });
   if (paymentScreenshot?.dataUrl) {
-    const buffer = decodeDataUrl(paymentScreenshot.dataUrl);
-
-    if (buffer.byteLength > 100 * 1024) {
-      json(res, 400, { error: 'Payment screenshot must be below 100KB after compression.' });
-      return;
-    }
+    const buffer = decodeJpegDataUrl(paymentScreenshot.dataUrl);
 
     paymentScreenshotPath = `${orderId}.jpg`;
     const { error: uploadError } = await admin.storage
@@ -213,12 +190,11 @@ export default async function handler(req, res) {
       });
 
     if (uploadError) {
-      json(res, 500, { error: uploadError.message });
-      return;
+      throw uploadError;
     }
   }
 
-  const order = {
+  const pendingOrder = {
     id: orderId,
     course_name: selectedCourse.name,
     full_name: fullName,
@@ -238,22 +214,45 @@ export default async function handler(req, res) {
     source: 'website',
   };
 
-  const { error } = await admin.from('course_orders').insert(order);
-
-  if (error) {
-    json(res, 500, { error: error.message });
-    return;
+  const { data: atomicOrder, error: atomicError } = await admin.rpc('create_course_order', {
+    p_id: orderId,
+    p_course_name: selectedCourse.name,
+    p_full_name: fullName,
+    p_email: email,
+    p_phone: phone,
+    p_trading_experience: tradingExperience,
+    p_coupon_code: appliedCoupon?.code || null,
+    p_payment_screenshot_path: paymentScreenshotPath,
+    p_remarks: remarks,
+    p_source: 'website',
+  });
+  const atomicRow = Array.isArray(atomicOrder) ? atomicOrder[0] : atomicOrder;
+  let order = atomicRow || pendingOrder;
+  if (atomicError) {
+    // Backward-compatible deployment path while the production migration is applied.
+    if (!['PGRST202', '42883'].includes(atomicError.code)) {
+      if (paymentScreenshotPath) await admin.storage.from('payment-proofs').remove([paymentScreenshotPath]);
+      throw atomicError;
+    }
+    const { error: insertError } = await admin.from('course_orders').insert(pendingOrder);
+    if (insertError) {
+      if (paymentScreenshotPath) await admin.storage.from('payment-proofs').remove([paymentScreenshotPath]);
+      throw insertError;
+    }
+    if (appliedCoupon) await admin.from('coupons').update({ current_uses: appliedCoupon.current_uses + 1 }).eq('id', appliedCoupon.id);
   }
 
-  if (appliedCoupon) {
-    await admin.from('coupons').update({ current_uses: appliedCoupon.current_uses + 1 }).eq('id', appliedCoupon.id);
-  }
+  const payableAmount = Number(order.final_amount);
 
+  const safeOrder = Object.fromEntries(Object.entries(order).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value]));
   const emailSent = await sendEmail({
     to: email,
-    subject: finalAmount === 0 ? 'Trading Boy course access approved' : `Trading Boy receipt - ${selectedCourse.name}`,
-    html: finalAmount === 0 ? paidAccessHtml({ ...order, drive_url: selectedCourse.drive_url, discord_url: selectedCourse.discord_url }) : receiptHtml(order),
+    subject: payableAmount === 0 ? 'Trading Boy course access approved' : `Trading Boy receipt - ${selectedCourse.name}`,
+    html: payableAmount === 0 ? paidAccessHtml({ ...safeOrder, drive_url: isHttpsUrl(selectedCourse.drive_url) ? escapeHtml(selectedCourse.drive_url) : null, discord_url: isHttpsUrl(selectedCourse.discord_url) ? escapeHtml(selectedCourse.discord_url) : null }) : receiptHtml(safeOrder),
   });
 
-  json(res, 200, { orderId: order.id, payableAmount: finalAmount, emailSent });
+  return json(res, 200, { orderId: order.id, payableAmount, emailSent: Boolean(emailSent) });
+  } catch (error) {
+    return handleApiError(res, error, 'checkout.create');
+  }
 }

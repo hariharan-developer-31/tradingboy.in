@@ -36,11 +36,7 @@ drop policy if exists "Allow public course order inserts" on public.course_order
 drop policy if exists "Allow frontend course order reads" on public.course_orders;
 drop policy if exists "Allow frontend payment status updates" on public.course_orders;
 
-create policy "Allow public course order inserts"
-on public.course_orders
-for insert
-to anon
-with check (true);
+revoke all on table public.course_orders from anon;
 
 create table if not exists public.coupons (
   id uuid primary key default gen_random_uuid(),
@@ -66,11 +62,7 @@ alter table public.coupons enable row level security;
 drop policy if exists "Allow public coupon reads" on public.coupons;
 drop policy if exists "Allow frontend coupon management" on public.coupons;
 
-create policy "Allow public coupon reads"
-on public.coupons
-for select
-to anon
-using (active = true);
+revoke all on table public.coupons from anon;
 
 create table if not exists public.courses (
   id uuid primary key default gen_random_uuid(),
@@ -156,12 +148,12 @@ using (bucket_id = 'payment-proofs')
 with check (bucket_id = 'payment-proofs');
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('course-thumbnails', 'course-thumbnails', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+values ('course-thumbnails', 'course-thumbnails', true, 102400, array['image/jpeg'])
 on conflict (id) do update
 set
   public = true,
-  file_size_limit = 5242880,
-  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  file_size_limit = 102400,
+  allowed_mime_types = array['image/jpeg'];
 
 drop policy if exists "Allow public course thumbnail reads" on storage.objects;
 create policy "Allow public course thumbnail reads"
@@ -201,12 +193,12 @@ to anon
 using (active = true);
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('testimonial-photos', 'testimonial-photos', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+values ('testimonial-photos', 'testimonial-photos', true, 102400, array['image/jpeg'])
 on conflict (id) do update
 set
   public = true,
-  file_size_limit = 5242880,
-  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  file_size_limit = 102400,
+  allowed_mime_types = array['image/jpeg'];
 
 drop policy if exists "Allow public testimonial photo reads" on storage.objects;
 create policy "Allow public testimonial photo reads"
