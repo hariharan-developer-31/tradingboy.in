@@ -3,6 +3,8 @@ import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Edit3
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
 import aboutImageUrl from './assets/About us.png';
+import forexMasteryThumbnail from './assets/course-forex-mastery.png';
+import fundedTraderThumbnail from './assets/course-funded-trader.png';
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
 
@@ -184,6 +186,13 @@ const money = (amount: number) => `Rs. ${Number(amount || 0).toLocaleString('en-
 const offerPercent = (normalPrice?: number | null, offerPrice?: number | null) => {
   if (!normalPrice || !offerPrice || normalPrice <= offerPrice) return 0;
   return Math.round(((normalPrice - offerPrice) / normalPrice) * 100);
+};
+
+const courseThumbnail = (course: Pick<PublicCourse, 'title' | 'thumbnail_url'>) => {
+  const title = course.title.toLowerCase();
+  if (title.includes('funded')) return fundedTraderThumbnail;
+  if (title.includes('forex')) return forexMasteryThumbnail;
+  return course.thumbnail_url || fallbackCourses[0].thumbnail_url;
 };
 
 function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: { testimonials: Testimonial[], direction?: 'forward' | 'backward', onSelect: (t: Testimonial) => void }) {
@@ -1084,7 +1093,7 @@ export default function App() {
                   const percent = offerPercent(normalPrice, offerPrice);
                   return (
                     <article key={course.id || course.title} className="smooth-card flex h-full flex-col overflow-hidden border border-white/10 bg-ink shadow-glow hover:border-electric/35 hover:shadow-neon-blue">
-                      <img src={course.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={course.title} className="aspect-[16/7] w-full object-cover md:aspect-[16/8] lg:aspect-[16/7]" />
+                      <img src={courseThumbnail(course)} alt={course.title} className="aspect-[16/7] w-full object-cover md:aspect-[16/8] lg:aspect-[16/7]" />
                       <div className="flex flex-1 flex-col p-5 sm:p-6 md:p-5 lg:p-6">
                         <div className="font-inter text-[10px] uppercase tracking-[0.3em] text-electric lg:text-xs">Course</div>
                         <h3 className="mt-3 font-podium text-[2rem] uppercase leading-[0.98] text-white sm:text-[2.5rem] md:text-[1.75rem] lg:mt-4 lg:text-[2.5rem] xl:text-5xl">{course.title}</h3>
@@ -1186,7 +1195,7 @@ export default function App() {
           </header>
           
           <div className="flex-1 w-full max-w-6xl mx-auto px-6 py-10 lg:px-8">
-             <img src={courseDetailsOpen.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={courseDetailsOpen.title} className="w-full h-[300px] md:h-[450px] object-cover mb-10 md:mb-16 border border-white/10" />
+             <img src={courseThumbnail(courseDetailsOpen)} alt={courseDetailsOpen.title} className="w-full h-[300px] md:h-[450px] object-cover mb-10 md:mb-16 border border-white/10" />
 
             <div className="grid lg:grid-cols-[1fr_400px] gap-12 font-inter text-white/80 items-start">
                {/* Left Column */}
@@ -1984,7 +1993,7 @@ export default function App() {
                           const offerPrice = course.offer_price || course.price;
                           return (
                             <article key={course.id} className="smooth-card grid gap-4 border border-white/10 bg-black p-4 sm:grid-cols-[160px_1fr] hover:border-electric/35">
-                              <img src={course.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={course.title} className="h-32 w-full object-cover sm:h-full" />
+                              <img src={courseThumbnail(course)} alt={course.title} className="h-32 w-full object-cover sm:h-full" />
                               <div className="min-w-0">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                   <div>
