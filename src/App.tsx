@@ -285,8 +285,9 @@ export default function App() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [updatingOrderId, setUpdatingOrderId] = useState('');
   const [deletingOrders, setDeletingOrders] = useState(false);
-  const [campaignAudience, setCampaignAudience] = useState<'paid' | 'all'>('paid');
+  const [campaignAudience, setCampaignAudience] = useState<'paid' | 'all' | 'manual'>('paid');
   const [campaignCourse, setCampaignCourse] = useState('all');
+  const [campaignManualEmails, setCampaignManualEmails] = useState('');
   const [campaignSubject, setCampaignSubject] = useState('');
   const [campaignMessage, setCampaignMessage] = useState('');
   const [sendingCampaign, setSendingCampaign] = useState(false);
@@ -365,15 +366,22 @@ export default function App() {
   );
 
   const campaignRecipientCount = useMemo(() => {
-    const emails = new Set(
+    const emails = new Set<string>();
+    if (campaignAudience !== 'manual') {
       adminOrders
         .filter((order) => campaignAudience === 'all' || order.payment_status === 'paid')
         .filter((order) => campaignCourse === 'all' || order.course_name === campaignCourse)
         .map((order) => order.email.trim().toLowerCase())
-        .filter(Boolean),
-    );
+        .filter(Boolean)
+        .forEach((email) => emails.add(email));
+    }
+    campaignManualEmails
+      .split(/[\s,;]+/)
+      .map((email) => email.trim().toLowerCase())
+      .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      .forEach((email) => emails.add(email));
     return emails.size;
-  }, [adminOrders, campaignAudience, campaignCourse]);
+  }, [adminOrders, campaignAudience, campaignCourse, campaignManualEmails]);
 
   useEffect(() => {
     const handleScroll = () => setHasScrolled(window.scrollY > 24);
@@ -918,6 +926,7 @@ export default function App() {
       const result = await adminRequest<{ sent: number; failed: number }>('sendCampaign', {
         audience: campaignAudience,
         courseName: campaignCourse,
+        manualEmails: campaignManualEmails,
         subject,
         message,
       });
@@ -925,6 +934,7 @@ export default function App() {
       if (result.failed === 0) {
         setCampaignSubject('');
         setCampaignMessage('');
+        setCampaignManualEmails('');
       }
     } catch (error) {
       setAdminStatus(error instanceof Error ? error.message : 'Could not send the email campaign.');
@@ -2006,18 +2016,24 @@ export default function App() {
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                           <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Audience</label>
-                          <select value={campaignAudience} onChange={(event) => setCampaignAudience(event.target.value as 'paid' | 'all')} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                          <select value={campaignAudience} onChange={(event) => setCampaignAudience(event.target.value as 'paid' | 'all' | 'manual')} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
                             <option value="paid">Paid students only</option>
                             <option value="all">All course joiners</option>
+                            <option value="manual">Manual emails only</option>
                           </select>
                         </div>
                         <div>
                           <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Course</label>
-                          <select value={campaignCourse} onChange={(event) => setCampaignCourse(event.target.value)} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                          <select value={campaignCourse} disabled={campaignAudience === 'manual'} onChange={(event) => setCampaignCourse(event.target.value)} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric disabled:cursor-not-allowed disabled:opacity-35">
                             <option value="all">All courses</option>
                             {adminCourseNames.map((course) => <option key={course} value={course}>{course}</option>)}
                           </select>
                         </div>
+                      </div>
+                      <div>
+                        <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Additional email addresses</label>
+                        <textarea rows={3} value={campaignManualEmails} onChange={(event) => setCampaignManualEmails(event.target.value)} placeholder="name@example.com, another@example.com" className="w-full resize-y border border-white/10 bg-ink px-4 py-3 font-inter text-sm leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-electric" />
+                        <p className="mt-2 font-inter text-[10px] leading-relaxed text-white/35">Separate addresses with commas, spaces, semicolons, or new lines. Valid addresses are merged and duplicates are removed.</p>
                       </div>
                       <div>
                         <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Email subject</label>

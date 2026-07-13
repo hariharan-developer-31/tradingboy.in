@@ -248,8 +248,9 @@ export default async function handler(req, res) {
   }
 
   if (action === 'sendCampaign') {
-    const audience = body.audience === 'all' ? 'all' : 'paid';
+    const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
     const courseName = String(body.courseName || 'all').trim();
+    const manualEmails = String(body.manualEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500);
     const subject = String(body.subject || '').trim().slice(0, 150);
     const message = String(body.message || '').trim().slice(0, 5000);
     if (!subject || !message) {
@@ -257,16 +258,24 @@ export default async function handler(req, res) {
       return;
     }
 
-    let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
-    if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
-    if (courseName && courseName !== 'all') recipientQuery = recipientQuery.eq('course_name', courseName);
-    const { data: rows, error: recipientError } = await recipientQuery;
-    if (recipientError) {
-      json(res, 500, { error: recipientError.message });
-      return;
+    let rows = [];
+    if (audience !== 'manual') {
+      let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
+      if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
+      if (courseName && courseName !== 'all') recipientQuery = recipientQuery.eq('course_name', courseName);
+      const { data, error: recipientError } = await recipientQuery;
+      if (recipientError) {
+        json(res, 500, { error: recipientError.message });
+        return;
+      }
+      rows = data || [];
     }
 
-    const recipients = Array.from(new Map((rows || []).filter((row) => row.email).map((row) => [row.email.trim().toLowerCase(), row])).values());
+    const recipientMap = new Map(rows.filter((row) => row.email).map((row) => [row.email.trim().toLowerCase(), row]));
+    manualEmails.forEach((email) => {
+      if (!recipientMap.has(email)) recipientMap.set(email, { email, full_name: 'Trader' });
+    });
+    const recipients = Array.from(recipientMap.values());
     if (recipients.length === 0) {
       json(res, 400, { error: 'No recipients match this audience.' });
       return;

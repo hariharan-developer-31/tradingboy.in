@@ -317,8 +317,9 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         }
 
         if (body.action === 'sendCampaign') {
-          const audience = body.audience === 'all' ? 'all' : 'paid';
+          const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
           const courseName = String(body.courseName || 'all').trim();
+          const manualEmails = String(body.manualEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500);
           const subject = String(body.subject || '').trim().slice(0, 150);
           const message = String(body.message || '').trim().slice(0, 5000);
           if (!subject || !message) {
@@ -326,16 +327,24 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             return;
           }
 
-          let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
-          if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
-          if (courseName && courseName !== 'all') recipientQuery = recipientQuery.eq('course_name', courseName);
-          const { data: rows, error: recipientError } = await recipientQuery;
-          if (recipientError) {
-            sendJson(res, 500, { error: recipientError.message });
-            return;
+          let rows: any[] = [];
+          if (audience !== 'manual') {
+            let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
+            if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
+            if (courseName && courseName !== 'all') recipientQuery = recipientQuery.eq('course_name', courseName);
+            const { data, error: recipientError } = await recipientQuery;
+            if (recipientError) {
+              sendJson(res, 500, { error: recipientError.message });
+              return;
+            }
+            rows = data || [];
           }
 
-          const recipients = Array.from(new Map((rows || []).filter((row: any) => row.email).map((row: any) => [row.email.trim().toLowerCase(), row])).values()) as any[];
+          const recipientMap = new Map(rows.filter((row: any) => row.email).map((row: any) => [row.email.trim().toLowerCase(), row]));
+          manualEmails.forEach((email) => {
+            if (!recipientMap.has(email)) recipientMap.set(email, { email, full_name: 'Trader' });
+          });
+          const recipients = Array.from(recipientMap.values()) as any[];
           if (recipients.length === 0) {
             sendJson(res, 400, { error: 'No recipients match this audience.' });
             return;

@@ -78,11 +78,14 @@ test('admin can send deduplicated course email campaigns through production and 
 
   assert.match(app, /Email Course Joiners/);
   assert.match(app, /Paid students only/);
+  assert.match(app, /Manual emails only/);
+  assert.match(app, /campaignManualEmails/);
   assert.match(app, /campaignRecipientCount/);
   assert.match(app, /window\.confirm\(`Send this email/);
   assert.match(adminApi, /action === 'sendCampaign'/);
   assert.match(adminApi, /new Map\(/);
   assert.match(adminApi, /index \+= 5/);
+  assert.match(adminApi, /manualEmails/);
   assert.match(viteConfig, /body\.action === 'sendCampaign'/);
   assert.match(viteConfig, /campaignHtml/);
 });
