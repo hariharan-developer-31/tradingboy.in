@@ -14,7 +14,7 @@ const fallbackCourses = [
   {
     id: 'complete-forex-mastery',
     title: DEFAULT_COURSE,
-    description: 'A structured forex trading course covering market structure, liquidity, risk management, and live execution.',
+    description: 'A structured forex trading course covering market structure, risk management, and live execution.',
     thumbnail_url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=85',
     normal_price: 7199,
     offer_price: 7199,
@@ -1204,7 +1204,7 @@ export default function App() {
                    <ul className="space-y-6">
                      <li className="flex items-start gap-4">
                        <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
-                       <span className="leading-relaxed text-lg">Comprehensive understanding of market structure and liquidity to read price action like a professional.</span>
+                       <span className="leading-relaxed text-lg">Comprehensive understanding of market structure to read price action like a professional.</span>
                      </li>
                      <li className="flex items-start gap-4">
                        <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
