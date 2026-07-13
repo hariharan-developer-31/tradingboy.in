@@ -975,6 +975,47 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const isFundedCourse = courseDetailsOpen?.title.toLowerCase().includes('funded') ?? false;
+  const courseLearningPoints = isFundedCourse
+    ? [
+        'Read gold price action and identify high-probability intraday market structure.',
+        'Build precise gold day-trading entry, stop-loss, and take-profit plans.',
+        'Apply strict risk and drawdown control for funded-account evaluations.',
+        'Manage gold trades with discipline around volatility, sessions, and major market events.',
+      ]
+    : [
+        'Comprehensive understanding of market structure to read price action like a professional.',
+        'Advanced risk management and position sizing strategies to protect your capital.',
+        'Live execution strategies, entry models, and precise trade management.',
+        'Developing a disciplined, risk-first trading psychology to overcome emotional trading.',
+      ];
+  const courseAudiencePoints = isFundedCourse
+    ? [
+        'Forex traders who want to specialize in gold and build a focused intraday trading process.',
+        'Day traders who need clearer gold entries, exits, session timing, and risk limits.',
+        'Traders preparing for funded-account evaluations with strict drawdown rules.',
+        'Serious learners ready to journal, review, and improve their gold trades consistently.',
+      ]
+    : [
+        'Beginners who want a clear foundation in forex, market structure, and disciplined execution.',
+        'Developing traders who struggle with inconsistent entries, overtrading, or unclear risk management.',
+        'Serious learners ready to follow a written trading plan, journal their decisions, and build repeatable habits.',
+        'Traders who want a risk-first process built around patience and capital protection.',
+      ];
+  const courseRequirementPoints = isFundedCourse
+    ? [
+        'Basic knowledge of the forex market is required before starting this gold day-trading course.',
+        'Access to a charting platform with XAUUSD or gold futures market data.',
+        'A demo or evaluation account for practising gold trades without unnecessary capital risk.',
+        'A trading journal and the commitment to review every setup, result, and risk decision.',
+      ]
+    : [
+        'No previous trading experience is required; the course begins with the core concepts.',
+        'A phone, tablet, or computer with a stable internet connection for accessing the lessons.',
+        'Access to a charting platform and a demo account for safe, practical chart practice.',
+        'A notebook or digital journal, plus the commitment to practise consistently before risking real capital.',
+      ];
+
   return (
     <div className="site-shell min-h-screen bg-ink text-white">
       {!adminOpen && (
@@ -1174,12 +1215,12 @@ export default function App() {
       )}
 
       {!adminOpen && (
-        <footer className="border-t border-white/10 bg-ink px-6 py-8 sm:px-10 lg:px-16">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 font-inter text-xs uppercase tracking-widest text-white/50 sm:flex-row sm:items-center sm:justify-between">
-            <a href="#home" aria-label="Trading Boy Academy home" className="inline-flex w-fit items-center">
-              <img src={logoUrl} alt="Trading Boy Academy" className="h-11 w-auto object-contain opacity-90 sm:h-12" />
+        <footer className="border-t border-white/10 bg-ink px-5 py-6 sm:px-10 sm:py-8 lg:px-16">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 font-inter uppercase text-white/50">
+            <a href="#home" aria-label="Trading Boy Academy home" className="inline-flex shrink-0 items-center">
+              <img src={logoUrl} alt="Trading Boy Academy" className="h-8 w-auto object-contain opacity-90 sm:h-12" />
             </a>
-            <span>Forex, gold, and funded account education.</span>
+            <span className="max-w-[190px] text-right text-[8px] leading-relaxed tracking-[0.14em] sm:max-w-none sm:text-xs sm:tracking-widest">Forex, gold, and funded account education.</span>
           </div>
         </footer>
       )}
@@ -1211,22 +1252,12 @@ export default function App() {
                  <div className="order-3 border-t border-white/10 pt-10">
                    <h3 className="text-white font-podium uppercase text-3xl mb-8">What you'll learn</h3>
                    <ul className="space-y-6">
-                     <li className="flex items-start gap-4">
-                       <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
-                       <span className="leading-relaxed text-lg">Comprehensive understanding of market structure to read price action like a professional.</span>
-                     </li>
-                     <li className="flex items-start gap-4">
-                       <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
-                       <span className="leading-relaxed text-lg">Advanced risk management and position sizing strategies to protect your capital.</span>
-                     </li>
-                     <li className="flex items-start gap-4">
-                       <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
-                       <span className="leading-relaxed text-lg">Live execution strategies, entry models, and precise trade management.</span>
-                     </li>
-                     <li className="flex items-start gap-4">
-                       <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
-                       <span className="leading-relaxed text-lg">Developing a disciplined, risk-first trading psychology to overcome emotional trading.</span>
-                     </li>
+                     {courseLearningPoints.map((point) => (
+                       <li key={point} className="flex items-start gap-4">
+                         <CheckCircle className="mt-0.5 h-6 w-6 shrink-0 text-electric" />
+                         <span className="text-lg leading-relaxed">{point}</span>
+                       </li>
+                     ))}
                    </ul>
                  </div>
 
@@ -1234,10 +1265,9 @@ export default function App() {
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Built for focused traders</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Who this course is for</h3>
                    <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Beginners who want a clear foundation in forex, gold, market structure, and disciplined execution.</span></li>
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Developing traders who struggle with inconsistent entries, overtrading, or unclear risk management.</span></li>
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Serious learners ready to follow a written trading plan, journal their decisions, and build repeatable habits.</span></li>
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Funded-account traders who want a risk-first process built around patience and capital protection.</span></li>
+                     {courseAudiencePoints.map((point) => (
+                       <li key={point} className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>{point}</span></li>
+                     ))}
                    </ul>
                  </div>
 
@@ -1245,10 +1275,9 @@ export default function App() {
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Before you begin</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Requirements</h3>
                    <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>{courseDetailsOpen.title.toLowerCase().includes('funded') ? 'Basic knowledge of the forex market is required before starting this funded-trader course.' : 'No previous trading experience is required; the course begins with the core concepts.'}</span></li>
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>A phone, tablet, or computer with a stable internet connection for accessing the lessons.</span></li>
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Access to a charting platform and a demo account for safe, practical chart practice.</span></li>
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>A notebook or digital journal, plus the commitment to practise consistently before risking real capital.</span></li>
+                     {courseRequirementPoints.map((point) => (
+                       <li key={point} className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>{point}</span></li>
+                     ))}
                    </ul>
                  </div>
                </div>
