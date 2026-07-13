@@ -1074,8 +1074,8 @@ export default function App() {
 
             <div className="grid lg:grid-cols-[1fr_400px] gap-12 font-inter text-white/80 items-start">
                {/* Left Column */}
-               <div className="space-y-12">
-                 <div>
+               <div className="contents lg:block lg:space-y-12">
+                 <div className="order-1">
                    <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric mb-3">Course Details</div>
                    <h2 className="font-podium text-4xl uppercase leading-none text-white sm:text-5xl md:text-6xl mb-6">
                      {courseDetailsOpen.title}
@@ -1083,7 +1083,7 @@ export default function App() {
                    <p className="text-lg md:text-xl leading-relaxed text-white/90">{courseDetailsOpen.description}</p>
                  </div>
                  
-                 <div className="border-t border-white/10 pt-10">
+                 <div className="order-3 border-t border-white/10 pt-10">
                    <h3 className="text-white font-podium uppercase text-3xl mb-8">What you'll learn</h3>
                    <ul className="space-y-6">
                      <li className="flex items-start gap-4">
@@ -1105,7 +1105,7 @@ export default function App() {
                    </ul>
                  </div>
 
-                 <div className="border-t border-white/10 pt-10">
+                 <div className="order-4 border-t border-white/10 pt-10">
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Built for focused traders</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Who this course is for</h3>
                    <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
@@ -1116,7 +1116,7 @@ export default function App() {
                    </ul>
                  </div>
 
-                 <div className="border-t border-white/10 pt-10">
+                 <div className="order-5 border-t border-white/10 pt-10">
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Before you begin</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Requirements</h3>
                    <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
@@ -1129,10 +1129,10 @@ export default function App() {
                </div>
 
                {/* Right Column / Sticky Sidebar */}
-               <div className="border border-white/10 bg-black p-8 sticky top-24 smooth-card">
-                  <div className="text-sm font-bold uppercase tracking-widest text-white/50 mb-4">Enrollment</div>
-                  <div className="flex flex-wrap items-end gap-3 mb-8">
-                     <div className="text-5xl font-bold text-white">{money(courseDetailsOpen.offer_price || courseDetailsOpen.price)}</div>
+               <div className="order-2 border border-white/10 bg-black p-6 smooth-card sm:p-8 lg:order-none lg:sticky lg:top-24">
+                  <div className="mb-3 text-xs font-bold uppercase tracking-widest text-white/50 sm:mb-4 sm:text-sm">Enrollment</div>
+                  <div className="mb-6 flex flex-wrap items-end gap-3 sm:mb-8">
+                     <div className="text-4xl font-bold text-white sm:text-5xl">{money(courseDetailsOpen.offer_price || courseDetailsOpen.price)}</div>
                      {(courseDetailsOpen.normal_price || courseDetailsOpen.price) > (courseDetailsOpen.offer_price || courseDetailsOpen.price) && (
                        <div className="pb-1.5 text-lg text-white/40 line-through">{money(courseDetailsOpen.normal_price || courseDetailsOpen.price)}</div>
                      )}
@@ -1143,10 +1143,10 @@ export default function App() {
                       setCourseDetailsOpen(null);
                       openCheckout(title);
                     }} 
-                    className="group bg-electric px-8 py-5 font-inter text-sm font-bold uppercase tracking-widest text-black transition hover:bg-skyline text-center w-full block"
+                    className="group block w-full bg-electric px-5 py-3.5 text-center font-inter text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-skyline sm:px-6 sm:py-4 sm:text-xs lg:px-8 lg:py-5 lg:text-sm"
                   >
                     Join Course Now
-                    <ArrowUpRight className="ml-2 inline h-5 w-5 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                    <ArrowUpRight className="ml-1.5 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 sm:ml-2 lg:h-5 lg:w-5" />
                   </button>
                   <ul className="mt-6 space-y-3 text-sm text-white/60">
                     <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-white/40" /> Full lifetime access</li>
