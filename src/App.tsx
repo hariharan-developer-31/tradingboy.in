@@ -932,10 +932,10 @@ export default function App() {
                 Practical trading courses for serious learners who want process, risk control, and disciplined execution.
               </p>
               <div className="mt-8 flex flex-nowrap items-center justify-center gap-2.5 sm:gap-3 animate-hero-actions">
-                <button onClick={() => openCheckout()} className="group inline-flex min-h-12 items-center justify-center bg-electric px-5 py-3 font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline sm:min-w-[165px] sm:px-6 sm:text-[11px] whitespace-nowrap">
+                <a href="#course" className="group inline-flex min-h-12 items-center justify-center bg-electric px-5 py-3 font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline sm:min-w-[165px] sm:px-6 sm:text-[11px] whitespace-nowrap">
                   Join Course
                   <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </button>
+                </a>
                 <a href="#course" className="inline-flex min-h-12 items-center justify-center border border-white/20 bg-white/[0.03] px-5 py-3 font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-white/75 transition hover:border-electric/60 hover:text-white sm:min-w-[165px] sm:px-6 sm:text-[11px] whitespace-nowrap">
                   View Courses
                 </a>
@@ -984,13 +984,13 @@ export default function App() {
                             </>
                           )}
                         </div>
-                        <div className="mt-7 flex flex-wrap gap-4 font-inter">
-                          <button onClick={() => setCourseDetailsOpen(course)} className="group border border-electric bg-transparent px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-electric hover:text-black">
+                        <div className="mt-7 flex flex-nowrap gap-3 font-inter sm:gap-4">
+                          <button onClick={() => setCourseDetailsOpen(course)} className="group inline-flex min-w-0 flex-1 items-center justify-center border border-electric bg-transparent px-3 py-3.5 font-inter text-[9px] font-bold uppercase tracking-wider text-white transition hover:bg-electric hover:text-black sm:px-6 sm:py-4 sm:text-xs sm:tracking-widest">
                             View Course
                           </button>
-                          <button onClick={() => openCheckout(course.title)} className="group bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
+                          <button onClick={() => openCheckout(course.title)} className="group inline-flex min-w-0 flex-1 items-center justify-center bg-electric px-3 py-3.5 font-inter text-[9px] font-bold uppercase tracking-wider text-black transition hover:bg-skyline sm:px-6 sm:py-4 sm:text-xs sm:tracking-widest">
                             Join Course
-                            <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                            <ArrowUpRight className="ml-1 h-3.5 w-3.5 shrink-0 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 sm:ml-2 sm:h-4 sm:w-4" />
                           </button>
                         </div>
                       </div>
