@@ -293,6 +293,84 @@
     transform: translateY(-4px);
   }
 
+  @keyframes hero-glow-pulse {
+    0%, 100% {
+      opacity: 0.55;
+      transform: translateX(-50%) scale(0.94);
+    }
+    50% {
+      opacity: 1;
+      transform: translateX(-50%) scale(1.08);
+    }
+  }
+
+  @keyframes hero-core-drift {
+    0%, 100% {
+      opacity: 0.45;
+      transform: translate3d(-50%, 0, 0) scaleX(0.9);
+    }
+    50% {
+      opacity: 0.85;
+      transform: translate3d(-50%, -12px, 0) scaleX(1.08);
+    }
+  }
+
+  @keyframes cta-glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 24px rgba(37, 174, 244, 0.24);
+    }
+    50% {
+      box-shadow: 0 0 42px rgba(37, 174, 244, 0.48);
+    }
+  }
+
+  .hero-glow-orb {
+    animation: hero-glow-pulse 7s ease-in-out infinite;
+  }
+
+  .hero-glow-core {
+    animation: hero-core-drift 9s ease-in-out infinite;
+  }
+
+  .hero-heading-glow {
+    filter: drop-shadow(0 0 30px rgba(37, 174, 244, 0.16));
+  }
+
+  .hero-cta-glow {
+    animation: cta-glow-pulse 3.6s ease-in-out infinite;
+  }
+
+  .site-shell main a,
+  .site-shell main button,
+  .site-shell header a,
+  .site-shell header button {
+    will-change: transform;
+  }
+
+  .site-shell main a:hover,
+  .site-shell main button:hover,
+  .site-shell header a:hover,
+  .site-shell header button:hover {
+    transform: translateY(-2px);
+  }
+
+  .site-shell main img {
+    transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .site-shell main img:hover {
+    transform: scale(1.018);
+    filter: brightness(1.06);
+  }
+
+  .site-shell section h2,
+  .site-shell section h3,
+  .site-shell section p,
+  .site-shell section li {
+    transition: color 320ms ease, opacity 320ms ease, transform 320ms ease;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;

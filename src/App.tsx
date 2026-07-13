@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Loader2, LogOut, MessageSquareQuote, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Loader2, LogOut, MessageSquareQuote, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -862,7 +862,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-ink text-white">
+    <div className="site-shell min-h-screen bg-ink text-white">
       {!adminOpen && (
         <header className={`fixed inset-x-0 top-0 z-40 px-5 py-3 transition-all duration-500 sm:px-8 lg:px-12 lg:py-4 ${hasScrolled ? 'border-b border-white/10 bg-ink/90 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl' : 'border-b border-transparent bg-transparent'}`}>
         <nav className="flex items-center justify-between">
@@ -916,14 +916,15 @@ export default function App() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(37,174,244,0.16),rgba(7,11,16,0.58)_38%,#070b10_74%)] animate-soft-drift" />
             <div className="pointer-events-none absolute inset-y-0 left-0 w-[42%] origin-left bg-[linear-gradient(90deg,rgba(37,174,244,0.22),rgba(37,174,244,0.055)_45%,transparent)] blur-[3px] animate-edge-breathe" />
             <div className="pointer-events-none absolute inset-y-0 right-0 w-[42%] origin-right bg-[linear-gradient(270deg,rgba(37,174,244,0.2),rgba(37,174,244,0.055)_45%,transparent)] blur-[3px] animate-edge-breathe" />
-            <div className="pointer-events-none absolute left-1/2 top-[38%] h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-electric/10 blur-[120px]" />
+            <div className="hero-glow-orb pointer-events-none absolute left-1/2 top-[38%] h-[460px] w-[820px] -translate-x-1/2 rounded-full bg-electric/20 blur-[120px]" />
+            <div className="hero-glow-core pointer-events-none absolute left-1/2 top-[46%] h-40 w-[58%] -translate-x-1/2 rounded-full bg-skyline/15 blur-[70px]" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
 
             <div className="relative z-10 mx-auto flex w-full max-w-[1300px] flex-col items-center px-6 py-16 text-center sm:px-10 lg:px-16">
               <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-950/20 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.12)] animate-hero-kicker">
                 Live Trading Education
               </div>
-              <h1 className="mt-8 w-full font-podium font-bold uppercase tracking-normal text-white animate-hero-title">
+              <h1 className="hero-heading-glow mt-8 w-full font-podium font-bold uppercase tracking-normal text-white animate-hero-title">
                 <span className="block text-[clamp(2.05rem,10.8vw,3.55rem)] leading-[0.9] md:hidden">
                   <span className="block">Trade Price</span>
                   <span className="block">
@@ -940,7 +941,7 @@ export default function App() {
                 Practical trading courses for serious learners who want process, risk control, and disciplined execution.
               </p>
               <div className="mt-8 flex flex-nowrap items-center justify-center gap-2.5 sm:gap-3 animate-hero-actions">
-                <a href="#course" className="group inline-flex min-h-12 items-center justify-center bg-electric px-5 py-3 font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline sm:min-w-[165px] sm:px-6 sm:text-[11px] whitespace-nowrap">
+                <a href="#course" className="hero-cta-glow group inline-flex min-h-12 items-center justify-center bg-electric px-5 py-3 font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline sm:min-w-[165px] sm:px-6 sm:text-[11px] whitespace-nowrap">
                   Join Course
                   <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </a>
@@ -2049,11 +2050,6 @@ export default function App() {
         </div>
       )}
 
-      {!adminOpen && (
-        <a href="#admin" className="fixed bottom-4 right-4 z-30 flex h-10 w-10 items-center justify-center border border-white/10 bg-black/70 text-electric backdrop-blur transition hover:border-electric" aria-label="Open admin">
-          <Crown className="h-4 w-4" />
-        </a>
-      )}
     </div>
   );
 }
