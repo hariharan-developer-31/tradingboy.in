@@ -885,7 +885,7 @@ export default function App() {
               {link}
             </a>
           ))}
-          <button onClick={() => { setMenuOpen(false); openCheckout(); }} className="border border-white/30 px-7 py-4 font-inter text-xs uppercase tracking-widest text-white">
+          <button onClick={() => { setMenuOpen(false); openCheckout(); }} className="bg-electric px-7 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline">
             Join Now
           </button>
         </div>
@@ -943,10 +943,6 @@ export default function App() {
                 <p className="mt-6 font-inter leading-relaxed text-white/65">
                   Trading Boy Academy is built around clean market logic, disciplined risk, and practical execution. We teach students how to read markets with patience and trade with a written plan.
                 </p>
-                <button onClick={() => openCheckout()} className="group mt-8 border border-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-electric hover:text-black">
-                  Join The Course
-                  <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </button>
               </div>
             </div>
           </section>
