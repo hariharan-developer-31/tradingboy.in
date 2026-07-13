@@ -247,6 +247,8 @@ const courseThumbnail = (course: Pick<PublicCourse, 'title' | 'thumbnail_url'>) 
   return course.thumbnail_url || fallbackCourses[0].thumbnail_url;
 };
 
+const courseSlug = (title: string) => (title.toLowerCase().includes('funded') ? 'funded-trader-blueprint' : 'forex-mastery');
+
 function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: { testimonials: Testimonial[], direction?: 'forward' | 'backward', onSelect: (t: Testimonial) => void }) {
   const [emblaRef] = useEmblaCarousel({ loop: true, dragFree: true }, [
     AutoScroll({ playOnInit: true, direction, speed: 1, stopOnInteraction: false, stopOnMouseEnter: true })
@@ -467,6 +469,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const syncCoursePage = () => {
+      const slug = window.location.hash.startsWith('#course/') ? window.location.hash.slice('#course/'.length) : '';
+      if (!slug) {
+        setCourseDetailsOpen(null);
+        return;
+      }
+      setCourseDetailsOpen(publicCourses.find((course) => courseSlug(course.title) === slug) || null);
+    };
+    syncCoursePage();
+    window.addEventListener('hashchange', syncCoursePage);
+    return () => window.removeEventListener('hashchange', syncCoursePage);
+  }, [publicCourses]);
+
+  useEffect(() => {
     const loadPublicCourses = async () => {
       if (!supabase) return;
       const { data, error } = await supabase
@@ -538,6 +554,16 @@ export default function App() {
     setCreatedOrderId('');
     setJoinForm((current) => ({ ...current, courseName }));
     window.location.hash = 'checkout';
+  };
+
+  const openCourseDetails = (course: PublicCourse) => {
+    setCourseDetailsOpen(course);
+    window.location.hash = `course/${courseSlug(course.title)}`;
+  };
+
+  const closeCourseDetails = () => {
+    history.pushState(null, '', window.location.pathname + window.location.search);
+    setCourseDetailsOpen(null);
   };
 
   const closeHashPage = () => {
@@ -1171,7 +1197,7 @@ export default function App() {
                           )}
                         </div>
                         <div className="mt-auto flex flex-nowrap gap-2.5 pt-6 font-inter lg:gap-4 lg:pt-7">
-                          <button onClick={() => setCourseDetailsOpen(course)} className="group inline-flex min-w-0 flex-1 items-center justify-center border border-electric bg-transparent px-3 py-3 font-inter text-[9px] font-bold uppercase tracking-[0.1em] text-white transition hover:bg-electric hover:text-black sm:px-4 sm:text-[10px] md:px-2 md:text-[8px] lg:px-6 lg:py-4 lg:text-xs lg:tracking-widest">
+                          <button onClick={() => openCourseDetails(course)} className="group inline-flex min-w-0 flex-1 items-center justify-center border border-electric bg-transparent px-3 py-3 font-inter text-[9px] font-bold uppercase tracking-[0.1em] text-white transition hover:bg-electric hover:text-black sm:px-4 sm:text-[10px] md:px-2 md:text-[8px] lg:px-6 lg:py-4 lg:text-xs lg:tracking-widest">
                             View Course
                           </button>
                           <button onClick={() => openCheckout(course.title)} className="group inline-flex min-w-0 flex-1 items-center justify-center bg-electric px-3 py-3 font-inter text-[9px] font-bold uppercase tracking-[0.1em] text-black transition hover:bg-skyline sm:px-4 sm:text-[10px] md:px-2 md:text-[8px] lg:px-6 lg:py-4 lg:text-xs lg:tracking-widest">
@@ -1192,7 +1218,7 @@ export default function App() {
               <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
                 <div>
                   <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">Testimonials</div>
-                  <h2 className="font-podium text-[2.5rem] uppercase leading-none text-white sm:text-6xl">Student feedback.</h2>
+                  <h2 className="font-podium text-[2.5rem] uppercase leading-none text-white sm:text-6xl">Members Review.</h2>
                 </div>
                 <p className="max-w-md font-inter text-sm text-white/60">Results vary by student. The courses focus on process, discipline, and risk-first decision making.</p>
               </div>
@@ -1290,7 +1316,7 @@ export default function App() {
       {courseDetailsOpen && (
         <div className="fixed inset-0 z-50 bg-ink overflow-y-auto page-enter flex flex-col">
           <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/90 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
-            <button onClick={() => setCourseDetailsOpen(null)} className="flex h-10 w-10 items-center justify-center text-electric transition hover:text-skyline" aria-label="Back to home">
+            <button onClick={closeCourseDetails} className="flex h-10 w-10 items-center justify-center text-electric transition hover:text-skyline" aria-label="Back to home">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="font-podium text-lg uppercase text-white">Course Details</div>
@@ -1374,6 +1400,28 @@ export default function App() {
                   </ul>
                </div>
             </div>
+
+            <section className="mt-14 border-t border-white/10 pt-12 font-inter md:mt-20 md:pt-16">
+              <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                  <div className="mb-3 text-xs uppercase tracking-[0.3em] text-electric">Real learning experiences</div>
+                  <h3 className="font-podium text-[2.5rem] uppercase leading-none text-white sm:text-5xl">Members Review</h3>
+                </div>
+                <p className="max-w-sm text-sm leading-relaxed text-white/50">Feedback from Trading Boy members learning disciplined, risk-first execution.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {testimonials.slice(0, 6).map((testimonial) => (
+                  <button key={testimonial.id} type="button" onClick={() => setSelectedTestimonial(testimonial)} className="smooth-card flex h-full flex-col border border-white/10 bg-black p-5 text-left hover:border-electric/35">
+                    <MessageSquareQuote className="h-6 w-6 text-electric" />
+                    <p className="mt-5 flex-1 text-sm leading-relaxed text-white/75">“{testimonial.quote}”</p>
+                    <div className="mt-6 border-t border-white/10 pt-4">
+                      <div className="text-sm font-semibold text-white">{testimonial.name}</div>
+                      <div className="mt-1 text-[9px] uppercase tracking-[0.18em] text-electric">{testimonial.role}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
       )}
@@ -1605,8 +1653,13 @@ export default function App() {
                 <CheckCircle className="h-9 w-9 text-electric" />
                 <h3 className="mt-4 text-2xl font-bold text-white">Thank you for joining {selectedCourse.title}.</h3>
                 <p className="mt-3 leading-relaxed text-white/70">
-                  Your payment is waiting for admin approval. You will get course access via email within 12 hours. If not, message trading_boy_tamil on Instagram.
+                  Your payment is waiting for admin approval. You will get course access via email within 12 hours. If you need help, contact us on Instagram.
                 </p>
+                <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 border border-electric bg-electric px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline">
+                  <Instagram className="h-4 w-4" />
+                  Message on Instagram
+                  <ArrowUpRight className="h-4 w-4" />
+                </a>
                 {createdOrderId && <p className="mt-4 text-xs text-white/45">Order ID: {createdOrderId}</p>}
               </div>
             )}

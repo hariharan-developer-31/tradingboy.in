@@ -136,3 +136,17 @@ test('footer exposes accessible social media links', () => {
   assert.match(app, /https:\/\/www\.youtube\.com\/@trading_boy/);
   assert.equal((app.match(/target="_blank" rel="noreferrer" aria-label=/g) || []).length >= 3, true);
 });
+
+test('course details have shareable entry files, member reviews, and Instagram support CTA', () => {
+  const app = read('src/App.tsx');
+  const forexEntry = read('public/courses/forex-mastery.html');
+  const fundedEntry = read('public/courses/funded-trader-blueprint.html');
+
+  assert.match(app, /window\.location\.hash = `course\/\$\{courseSlug\(course\.title\)\}`/);
+  assert.match(app, /Members Review/);
+  assert.match(app, /testimonials\.slice\(0, 6\)/);
+  assert.match(app, /Message on Instagram/);
+  assert.doesNotMatch(app, /message trading_boy_tamil on Instagram/);
+  assert.match(forexEntry, /#course\/forex-mastery/);
+  assert.match(fundedEntry, /#course\/funded-trader-blueprint/);
+});
