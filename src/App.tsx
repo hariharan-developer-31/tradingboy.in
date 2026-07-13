@@ -1236,7 +1236,7 @@ export default function App() {
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Before you begin</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Requirements</h3>
                    <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
-                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>No previous trading experience is required; the course begins with the core concepts.</span></li>
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>{courseDetailsOpen.title.toLowerCase().includes('funded') ? 'Basic knowledge of the forex market is required before starting this funded-trader course.' : 'No previous trading experience is required; the course begins with the core concepts.'}</span></li>
                      <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>A phone, tablet, or computer with a stable internet connection for accessing the lessons.</span></li>
                      <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Access to a charting platform and a demo account for safe, practical chart practice.</span></li>
                      <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>A notebook or digital journal, plus the commitment to practise consistently before risking real capital.</span></li>
