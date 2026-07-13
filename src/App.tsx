@@ -188,6 +188,58 @@ const offerPercent = (normalPrice?: number | null, offerPrice?: number | null) =
   return Math.round(((normalPrice - offerPrice) / normalPrice) * 100);
 };
 
+const compressImageToDataUrl = (file: File, maxBytes = 95 * 1024, maxDimension = 800) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read this image.'));
+    reader.onload = (event) => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('Please choose a valid image file.'));
+      image.onload = () => {
+        let width = image.width;
+        let height = image.height;
+        const resizeRatio = Math.min(1, maxDimension / Math.max(width, height));
+        width = Math.max(1, Math.round(width * resizeRatio));
+        height = Math.max(1, Math.round(height * resizeRatio));
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) {
+          reject(new Error('Image compression is not available in this browser.'));
+          return;
+        }
+
+        let quality = 0.85;
+        let scale = 1;
+        let dataUrl = '';
+        let byteLength = Number.POSITIVE_INFINITY;
+
+        while (byteLength > maxBytes && scale >= 0.2) {
+          canvas.width = Math.max(1, Math.round(width * scale));
+          canvas.height = Math.max(1, Math.round(height * scale));
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          const base64Length = dataUrl.length - dataUrl.indexOf(',') - 1;
+          byteLength = Math.ceil((base64Length * 3) / 4);
+
+          if (byteLength > maxBytes) {
+            if (quality > 0.35) quality = Math.max(0.35, quality - 0.1);
+            else scale *= 0.82;
+          }
+        }
+
+        if (!dataUrl || byteLength > maxBytes) {
+          reject(new Error('This image could not be compressed below 100 KB.'));
+          return;
+        }
+        resolve(dataUrl);
+      };
+      image.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+
 const courseThumbnail = (course: Pick<PublicCourse, 'title' | 'thumbnail_url'>) => {
   const title = course.title.toLowerCase();
   if (title.includes('funded')) return fundedTraderThumbnail;
@@ -556,50 +608,17 @@ export default function App() {
     }
   };
 
-  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        let quality = 0.8;
-        let scale = 1;
-        let dataUrl = '';
-        const MAX = 800;
-        
-        let width = img.width;
-        let height = img.height;
-        if (width > height && width > MAX) {
-          height *= MAX / width;
-          width = MAX;
-        } else if (height > MAX) {
-          width *= MAX / height;
-          height = MAX;
-        }
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        do {
-          canvas.width = width * scale;
-          canvas.height = height * scale;
-          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-          dataUrl = canvas.toDataURL('image/jpeg', quality);
-          
-          if (quality > 0.3) {
-            quality -= 0.15;
-          } else {
-            scale -= 0.2;
-          }
-        } while (dataUrl.length * 0.75 > 90000 && scale > 0.1);
-
-        setPaymentScreenshot({ dataUrl, name: file.name });
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const dataUrl = await compressImageToDataUrl(file);
+      setPaymentScreenshot({ dataUrl, name: file.name });
+      setSubmitStatus('idle');
+    } catch {
+      setPaymentScreenshot(null);
+      setSubmitStatus('error');
+    }
   };
 
   const submitPaymentConfirmation = async () => {
@@ -989,19 +1008,6 @@ export default function App() {
         'Live execution strategies, entry models, and precise trade management.',
         'Developing a disciplined, risk-first trading psychology to overcome emotional trading.',
       ];
-  const courseAudiencePoints = isFundedCourse
-    ? [
-        'Forex traders who want to specialize in gold and build a focused intraday trading process.',
-        'Day traders who need clearer gold entries, exits, session timing, and risk limits.',
-        'Traders preparing for funded-account evaluations with strict drawdown rules.',
-        'Serious learners ready to journal, review, and improve their gold trades consistently.',
-      ]
-    : [
-        'Beginners who want a clear foundation in forex, market structure, and disciplined execution.',
-        'Developing traders who struggle with inconsistent entries, overtrading, or unclear risk management.',
-        'Serious learners ready to follow a written trading plan, journal their decisions, and build repeatable habits.',
-        'Traders who want a risk-first process built around patience and capital protection.',
-      ];
   const courseRequirementPoints = isFundedCourse
     ? [
         'Basic knowledge of the forex market is required before starting this gold day-trading course.',
@@ -1295,18 +1301,6 @@ export default function App() {
                  </div>
                  
                  <div className="order-3 border-t border-white/10 pt-10">
-                   <h3 className="text-white font-podium uppercase text-3xl mb-8">What you'll learn</h3>
-                   <ul className="space-y-6">
-                     {courseLearningPoints.map((point) => (
-                       <li key={point} className="flex items-start gap-4">
-                         <CheckCircle className="mt-0.5 h-6 w-6 shrink-0 text-electric" />
-                         <span className="text-lg leading-relaxed">{point}</span>
-                       </li>
-                     ))}
-                   </ul>
-                 </div>
-
-                 <div className="order-4 border-t border-white/10 pt-10">
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Learn from basic to advanced</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Course access & support</h3>
                    <div className="grid gap-3 sm:grid-cols-2">
@@ -1319,17 +1313,19 @@ export default function App() {
                    </div>
                  </div>
 
-                 <div className="order-5 border-t border-white/10 pt-10">
-                   <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Built for focused traders</div>
-                   <h3 className="mb-8 font-podium text-3xl uppercase text-white">Who this course is for</h3>
-                   <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
-                     {courseAudiencePoints.map((point) => (
-                       <li key={point} className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>{point}</span></li>
+                 <div className="order-4 border-t border-white/10 pt-10">
+                   <h3 className="text-white font-podium uppercase text-3xl mb-8">What you'll learn</h3>
+                   <ul className="space-y-6">
+                     {courseLearningPoints.map((point) => (
+                       <li key={point} className="flex items-start gap-4">
+                         <CheckCircle className="mt-0.5 h-6 w-6 shrink-0 text-electric" />
+                         <span className="text-lg leading-relaxed">{point}</span>
+                       </li>
                      ))}
                    </ul>
                  </div>
 
-                 <div className="order-6 border-t border-white/10 pt-10">
+                 <div className="order-5 border-t border-white/10 pt-10">
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Before you begin</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Requirements</h3>
                    <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
@@ -1948,19 +1944,21 @@ export default function App() {
                                 <input 
                                   type="file" 
                                   accept="image/*" 
-                                  onChange={(e) => {
+                                  onChange={async (e) => {
                                     const file = e.target.files?.[0];
-                                    if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (event) => {
-                                        setTestimonialForm({ ...testimonialForm, photoDataUrl: event.target?.result as string });
-                                      };
-                                      reader.readAsDataURL(file);
+                                    if (!file) return;
+                                    try {
+                                      const photoDataUrl = await compressImageToDataUrl(file);
+                                      setTestimonialForm((current) => ({ ...current, photoDataUrl }));
+                                      setAdminStatus('Testimonial image compressed below 100 KB.');
+                                    } catch (error) {
+                                      setAdminStatus(error instanceof Error ? error.message : 'Could not compress this image.');
                                     }
                                   }}
                                   className="w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition cursor-pointer"
                                 />
                               </div>
+                              <p className="font-inter text-[10px] uppercase tracking-[0.14em] text-white/35">Images are automatically converted to JPEG and compressed below 100 KB.</p>
                             </div>
                             <input value={testimonialForm.name} onChange={(event) => setTestimonialForm({ ...testimonialForm, name: event.target.value })} placeholder="Student Name" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <input value={testimonialForm.role} onChange={(event) => setTestimonialForm({ ...testimonialForm, role: event.target.value })} placeholder="Role (e.g. Funded account trader)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />

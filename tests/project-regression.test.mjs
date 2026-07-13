@@ -116,3 +116,14 @@ test('course Discord access is private, editable, and included in paid emails', 
   assert.match(schema, /alter table public\.courses add column if not exists discord_url text;/);
   assert.match(schema, /revoke select on table public\.courses from anon;/);
 });
+
+test('testimonial photos share the payment image compressor and stay below 100KB', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+
+  assert.match(app, /const compressImageToDataUrl =/);
+  assert.equal((app.match(/await compressImageToDataUrl\(file\)/g) || []).length, 2);
+  assert.match(app, /Images are automatically converted to JPEG and compressed below 100 KB\./);
+  assert.match(adminApi, /body\.photoDataUrl[\s\S]*buffer\.byteLength > 100 \* 1024/);
+  assert.match(adminApi, /Testimonial image must be below 100KB after compression\./);
+});

@@ -497,8 +497,8 @@ export default async function handler(req, res) {
 
     if (body.photoDataUrl) {
       const buffer = decodeDataUrl(body.photoDataUrl);
-      if (buffer.byteLength > 5 * 1024 * 1024) {
-        json(res, 400, { error: 'Image must be below 5MB.' });
+      if (buffer.byteLength > 100 * 1024) {
+        json(res, 400, { error: 'Testimonial image must be below 100KB after compression.' });
         return;
       }
       const imageId = randomUUID();
