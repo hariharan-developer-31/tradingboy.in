@@ -214,3 +214,18 @@ for all
 to service_role
 using (bucket_id = 'testimonial-photos')
 with check (bucket_id = 'testimonial-photos');
+
+create table if not exists public.email_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  audience text not null check (audience in ('all', 'course', 'manual')),
+  course_name text,
+  subject text not null,
+  message text not null,
+  recipients integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.email_campaigns enable row level security;
+drop policy if exists "Service role can manage campaigns" on public.email_campaigns;
+-- Only service role (api endpoints) can manage email_campaigns
+

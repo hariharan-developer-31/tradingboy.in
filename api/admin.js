@@ -560,6 +560,95 @@ export default async function handler(req, res) {
     json(res, 200, { ok: true });
     return;
   }
+  if (action === 'campaigns') {
+    const { data, error } = await admin
+      .from('email_campaigns')
+      .select('id, audience, course_name, subject, message, recipients, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100);
 
+    if (error) {
+      json(res, 500, { error: error.message });
+      return;
+    }
+
+    json(res, 200, { data });
+    return;
+  }
+
+  if (action === 'sendCampaign') {
+    if (!process.env.RESEND_API_KEY) {
+      return json(res, 400, { error: 'Email service is not configured (missing Resend API key).' });
+    }
+
+    const { audience, courseName, additionalEmails, subject, message } = body;
+    if (!['all', 'course', 'manual'].includes(audience)) {
+      return json(res, 400, { error: 'Invalid audience selected.' });
+    }
+    if (!subject || !message) {
+      return json(res, 400, { error: 'Subject and message are required.' });
+    }
+
+    let recipientEmails = [];
+
+    if (audience !== 'manual') {
+      let query = admin.from('course_orders').select('email').eq('payment_status', 'paid');
+      if (audience === 'course' && courseName && courseName !== 'All courses') {
+        query = query.eq('course_name', courseName);
+      }
+      const { data: students, error: studentError } = await query;
+      if (studentError) {
+        return json(res, 500, { error: studentError.message });
+      }
+      if (students) {
+        recipientEmails.push(...students.map(s => s.email));
+      }
+    }
+
+    if (additionalEmails) {
+      const extraEmails = additionalEmails
+        .split(',')
+        .map(e => e.trim())
+        .filter(e => isEmail(e));
+      recipientEmails.push(...extraEmails);
+    }
+
+    recipientEmails = [...new Set(recipientEmails)]; // deduplicate
+    
+    if (recipientEmails.length === 0) {
+      return json(res, 400, { error: 'No recipients found for this campaign.' });
+    }
+
+    let successCount = 0;
+    for (const email of recipientEmails) {
+      const emailHtml = campaignHtml({ message });
+      const emailResult = await sendEmail({
+        to: email,
+        subject: cleanText(subject, 200),
+        html: emailHtml
+      });
+      if (emailResult.ok) successCount++;
+      await new Promise(r => setTimeout(r, 100)); // sleep 100ms
+    }
+
+    if (successCount === 0) {
+       return json(res, 500, { error: 'Failed to send emails.' });
+    }
+
+    const { error: dbError } = await admin.from('email_campaigns').insert({
+      audience,
+      course_name: audience === 'course' && courseName !== 'All courses' ? courseName : null,
+      subject: cleanText(subject, 200),
+      message: cleanText(message, 10000),
+      recipients: successCount
+    });
+
+    if (dbError) {
+       logServerError('campaigns.insert', dbError);
+    }
+
+    json(res, 200, { ok: true, sentCount: successCount });
+    return;
+  }
   json(res, 400, { error: 'Unknown action.' });
 }
