@@ -61,8 +61,10 @@ const sendEmail = async ({ to, subject, html }) => {
   }
 };
 
-const paidAccessHtml = (order) => `
-  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
+const darkEmail = (content) => `<!doctype html><html><head><meta name="color-scheme" content="dark only"><meta name="supported-color-schemes" content="dark only"><style>:root{color-scheme:dark only;supported-color-schemes:dark only}html,body{margin:0!important;padding:0!important;background:#000000!important;color:#ffffff!important}a{color:#25aef4}</style></head><body bgcolor="#000000" style="margin:0;padding:0;background:#000000;color:#ffffff;">${content}</body></html>`;
+
+const paidAccessHtml = (order) => darkEmail(`
+  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;">
     <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
       <div style="text-align:center;margin-bottom:32px;">
         <img src="https://tradingboy.in/logo.png" alt="Trading Boy" style="height:60px;width:auto;margin:0 auto;display:block;" />
@@ -103,10 +105,10 @@ const paidAccessHtml = (order) => `
       </div>
     </div>
   </div>
-`;
+`);
 
-const statusHtml = (order) => `
-  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
+const statusHtml = (order) => darkEmail(`
+  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;">
     <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
       <div style="text-align:center;margin-bottom:32px;">
         <img src="https://tradingboy.in/logo.png" alt="Trading Boy" style="height:60px;width:auto;margin:0 auto;display:block;" />
@@ -130,7 +132,7 @@ const statusHtml = (order) => `
       </div>
     </div>
   </div>
-`;
+`);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -201,6 +203,36 @@ export default async function handler(req, res) {
     });
 
     json(res, 200, { ok: true, emailSent: emailResult.ok, emailError: emailResult.error });
+    return;
+  }
+
+  if (action === 'deleteOrders') {
+    const deleteAll = body.deleteAll === true;
+    const orderIds = Array.isArray(body.orderIds) ? body.orderIds.map(String).filter(Boolean) : [];
+    if (!deleteAll && orderIds.length === 0) {
+      json(res, 400, { error: 'Select at least one payment record.' });
+      return;
+    }
+
+    let proofQuery = admin.from('course_orders').select('id, payment_screenshot_path');
+    if (!deleteAll) proofQuery = proofQuery.in('id', orderIds);
+    const { data: records, error: recordsError } = await proofQuery;
+    if (recordsError) {
+      json(res, 500, { error: recordsError.message });
+      return;
+    }
+
+    let deleteQuery = admin.from('course_orders').delete();
+    deleteQuery = deleteAll ? deleteQuery.not('id', 'is', null) : deleteQuery.in('id', orderIds);
+    const { error: deleteError } = await deleteQuery;
+    if (deleteError) {
+      json(res, 500, { error: deleteError.message });
+      return;
+    }
+
+    const proofPaths = (records || []).map((record) => record.payment_screenshot_path).filter(Boolean);
+    if (proofPaths.length > 0) await admin.storage.from('payment-proofs').remove(proofPaths);
+    json(res, 200, { ok: true, deleted: records?.length || 0 });
     return;
   }
 

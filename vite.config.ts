@@ -286,6 +286,36 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           return;
         }
 
+        if (body.action === 'deleteOrders') {
+          const deleteAll = body.deleteAll === true;
+          const orderIds = Array.isArray(body.orderIds) ? body.orderIds.map(String).filter(Boolean) : [];
+          if (!deleteAll && orderIds.length === 0) {
+            sendJson(res, 400, { error: 'Select at least one payment record.' });
+            return;
+          }
+
+          let proofQuery = admin.from('course_orders').select('id, payment_screenshot_path');
+          if (!deleteAll) proofQuery = proofQuery.in('id', orderIds);
+          const { data: records, error: recordsError } = await proofQuery;
+          if (recordsError) {
+            sendJson(res, 500, { error: recordsError.message });
+            return;
+          }
+
+          let deleteQuery = admin.from('course_orders').delete();
+          deleteQuery = deleteAll ? deleteQuery.not('id', 'is', null) : deleteQuery.in('id', orderIds);
+          const { error: deleteError } = await deleteQuery;
+          if (deleteError) {
+            sendJson(res, 500, { error: deleteError.message });
+            return;
+          }
+
+          const proofPaths = (records || []).map((record: any) => record.payment_screenshot_path).filter(Boolean);
+          if (proofPaths.length > 0) await admin.storage.from('payment-proofs').remove(proofPaths);
+          sendJson(res, 200, { ok: true, deleted: records?.length || 0 });
+          return;
+        }
+
         if (body.action === 'coupons') {
           const { data, error } = await admin
             .from('coupons')
@@ -473,7 +503,9 @@ const sendMail = async (
   return response.ok;
 };
 
-const receiptHtml = (order: any) => `
+const darkEmail = (content: string) => `<!doctype html><html><head><meta name="color-scheme" content="dark only"><meta name="supported-color-schemes" content="dark only"><style>:root{color-scheme:dark only;supported-color-schemes:dark only}html,body{margin:0!important;padding:0!important;background:#000000!important;color:#ffffff!important}a{color:#25aef4}</style></head><body bgcolor="#000000" style="margin:0;padding:0;background:#000000;color:#ffffff;">${content}</body></html>`;
+
+const receiptHtml = (order: any) => darkEmail(`
   <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">
     <div style="max-width:620px;margin:0 auto;border:1px solid #1f2933;padding:28px">
       <h1 style="margin:0 0 12px;color:#25aef4">Trading Boy Academy</h1>
@@ -492,9 +524,9 @@ const receiptHtml = (order: any) => `
       <p style="margin-top:24px;color:#9ca3af">From: admin@tradingboy.in</p>
     </div>
   </div>
-`;
+`);
 
-const statusHtml = (order: any) => `
+const statusHtml = (order: any) => darkEmail(`
   <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">
     <div style="max-width:620px;margin:0 auto;border:1px solid #1f2933;padding:28px">
       <h1 style="margin:0 0 12px;color:#25aef4">Trading Boy Academy</h1>
@@ -510,9 +542,9 @@ const statusHtml = (order: any) => `
       <p style="margin-top:24px;color:#9ca3af">From: admin@tradingboy.in</p>
     </div>
   </div>
-`;
+`);
 
-const paidAccessHtml = (env: Record<string, string>, order: any) => `
+const paidAccessHtml = (env: Record<string, string>, order: any) => darkEmail(`
   <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">
     <div style="max-width:620px;margin:0 auto;border:1px solid #1f2933;padding:28px">
       <h1 style="margin:0 0 12px;color:#25aef4">Trading Boy Academy</h1>
@@ -539,7 +571,7 @@ const paidAccessHtml = (env: Record<string, string>, order: any) => `
       <p style="margin-top:8px;color:#9ca3af">From: admin@tradingboy.in</p>
     </div>
   </div>
-`;
+`);
 
 const readJsonBody = async (req: any) =>
   new Promise<any>((resolve, reject) => {

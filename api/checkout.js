@@ -57,7 +57,9 @@ const sendEmail = async ({ to, subject, html }) => {
   return response.ok;
 };
 
-const receiptHtml = (order) => `
+const darkEmail = (content) => `<!doctype html><html><head><meta name="color-scheme" content="dark only"><meta name="supported-color-schemes" content="dark only"><style>:root{color-scheme:dark only;supported-color-schemes:dark only}html,body{margin:0!important;padding:0!important;background:#000000!important;color:#ffffff!important}a{color:#25aef4}</style></head><body bgcolor="#000000" style="margin:0;padding:0;background:#000000;color:#ffffff;">${content}</body></html>`;
+
+const receiptHtml = (order) => darkEmail(`
   <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">
     <div style="max-width:620px;margin:0 auto;border:1px solid #1f2933;padding:28px">
       <img src="https://tradingboy.in/logo.png" alt="Trading Boy Academy" style="height:48px;width:auto;margin:0 0 16px;display:block;" />
@@ -76,10 +78,10 @@ const receiptHtml = (order) => `
       <p style="margin-top:24px;color:#9ca3af">From: admin@tradingboy.in</p>
     </div>
   </div>
-`;
+`);
 
-const paidAccessHtml = (order) => `
-  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;min-height:100vh;">
+const paidAccessHtml = (order) => darkEmail(`
+  <div style="font-family:'Inter',Arial,sans-serif;background:#000000;color:#ffffff;padding:40px 20px;">
     <div style="max-width:600px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;border-radius:16px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
       <div style="text-align:center;margin-bottom:32px;">
         <img src="https://tradingboy.in/logo.png" alt="Trading Boy" style="height:60px;width:auto;margin:0 auto;display:block;" />
@@ -116,7 +118,7 @@ const paidAccessHtml = (order) => `
       </div>
     </div>
   </div>
-`;
+`);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

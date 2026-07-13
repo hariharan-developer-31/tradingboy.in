@@ -279,6 +279,11 @@ export default function App() {
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentCourseFilter, setPaymentCourseFilter] = useState('all');
+  const [paymentDateFilter, setPaymentDateFilter] = useState<'all' | 'today' | 'custom'>('all');
+  const [paymentCustomDate, setPaymentCustomDate] = useState('');
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [updatingOrderId, setUpdatingOrderId] = useState('');
+  const [deletingOrders, setDeletingOrders] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
@@ -330,18 +335,23 @@ export default function App() {
 
   const filteredOrders = useMemo(() => {
     const query = paymentSearch.trim().toLowerCase();
+    const today = new Date();
+    const localDateKey = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    const todayKey = localDateKey(today);
     return adminOrders.filter((order) => {
       const matchesStatus = paymentStatusFilter === 'all' || order.payment_status === paymentStatusFilter;
       const matchesCourse = paymentCourseFilter === 'all' || order.course_name === paymentCourseFilter;
+      const orderDateKey = localDateKey(new Date(order.created_at));
+      const matchesDate = paymentDateFilter === 'all' || (paymentDateFilter === 'today' ? orderDateKey === todayKey : !paymentCustomDate || orderDateKey === paymentCustomDate);
       const matchesSearch =
         !query ||
         [order.full_name, order.email, order.phone, order.course_name || '', order.trading_experience || '']
           .join(' ')
           .toLowerCase()
           .includes(query);
-      return matchesStatus && matchesCourse && matchesSearch;
+      return matchesStatus && matchesCourse && matchesDate && matchesSearch;
     });
-  }, [adminOrders, paymentCourseFilter, paymentSearch, paymentStatusFilter]);
+  }, [adminOrders, paymentCourseFilter, paymentCustomDate, paymentDateFilter, paymentSearch, paymentStatusFilter]);
 
   const adminCourseNames = useMemo(
     () => Array.from(new Set(adminCourses.map((course) => course.title).filter(Boolean))),
@@ -653,6 +663,9 @@ export default function App() {
     setPaymentSearch('');
     setPaymentStatusFilter('all');
     setPaymentCourseFilter('all');
+    setPaymentDateFilter('all');
+    setPaymentCustomDate('');
+    setSelectedOrderIds([]);
   };
 
   const resetCourseForm = () => {
@@ -830,7 +843,12 @@ export default function App() {
   };
 
   const updateOrderStatus = async (orderId: string, paymentStatus: string) => {
+    const order = adminOrders.find((item) => item.id === orderId);
+    if (!order || order.payment_status === paymentStatus) return;
+    if (!window.confirm(`Change ${order.full_name}'s payment status from ${order.payment_status.replace('_', ' ')} to ${paymentStatus.replace('_', ' ')}?`)) return;
     try {
+      setUpdatingOrderId(orderId);
+      setAdminStatus('Updating payment status and sending email...');
       const result = await adminRequest('updateOrder', { orderId, paymentStatus }) as any;
       
       if (result.emailSent === false) {
@@ -842,6 +860,29 @@ export default function App() {
       await loadAdminOrders();
     } catch (error) {
       setAdminStatus(error instanceof Error ? error.message : 'Could not update payment status.');
+    } finally {
+      setUpdatingOrderId('');
+    }
+  };
+
+  const deletePaymentOrders = async (deleteAll = false) => {
+    const orderIds = deleteAll ? [] : selectedOrderIds;
+    if (!deleteAll && orderIds.length === 0) return;
+    const message = deleteAll
+      ? `Delete all ${adminOrders.length} payment records and their uploaded proofs? This cannot be undone.`
+      : `Delete ${orderIds.length} selected payment record${orderIds.length === 1 ? '' : 's'} and uploaded proof${orderIds.length === 1 ? '' : 's'}?`;
+    if (!window.confirm(message)) return;
+    try {
+      setDeletingOrders(true);
+      setAdminStatus('Deleting payment records...');
+      await adminRequest('deleteOrders', { orderIds, deleteAll });
+      setSelectedOrderIds([]);
+      setAdminStatus(deleteAll ? 'All payment records deleted.' : 'Selected payment records deleted.');
+      await loadAdminOrders();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not delete payment records.');
+    } finally {
+      setDeletingOrders(false);
     }
   };
 
@@ -1890,25 +1931,6 @@ export default function App() {
                 </div>
                 ) : (
                   <div className="space-y-5">
-                    <div className="grid gap-3 border border-white/10 bg-black p-3 xl:grid-cols-[minmax(260px,1fr)_180px_260px_auto_auto]">
-                      <input value={paymentSearch} onChange={(event) => setPaymentSearch(event.target.value)} placeholder="Search name, email, phone, course" className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                      <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
-                        <option value="all">All status</option>
-                        <option value="pending">Pending</option>
-                        <option value="under_review">Under Review</option>
-                        <option value="paid">Paid</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                      <select value={paymentCourseFilter} onChange={(event) => setPaymentCourseFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
-                        <option value="all">All courses</option>
-                        {adminCourseNames.map((course) => <option key={course}>{course}</option>)}
-                      </select>
-                      <button onClick={loadAdminOrders} className="inline-flex h-12 items-center justify-center gap-2 border border-white/15 px-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">
-                        <RefreshCcw className="h-4 w-4" />
-                        Refresh
-                      </button>
-                      <button onClick={downloadOrdersCsv} disabled={filteredOrders.length === 0} className="h-12 bg-electric px-5 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">CSV</button>
-                    </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="border border-white/10 bg-black p-5">
                         <div className="font-inter text-xs uppercase tracking-widest text-white/45">Payments</div>
@@ -1923,10 +1945,49 @@ export default function App() {
                         <div className="mt-2 font-inter text-3xl font-bold text-white">{filteredOrders.filter((order) => order.payment_status === 'pending').length}</div>
                       </div>
                     </div>
+                    <div className="space-y-3 border border-white/10 bg-black p-3">
+                      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_170px_230px_170px_170px]">
+                        <input value={paymentSearch} onChange={(event) => setPaymentSearch(event.target.value)} placeholder="Search name, email, phone, course" className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                        <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                          <option value="all">All status</option>
+                          <option value="pending">Pending</option>
+                          <option value="under_review">Under Review</option>
+                          <option value="paid">Paid</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                        <select value={paymentCourseFilter} onChange={(event) => setPaymentCourseFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                          <option value="all">All courses</option>
+                          {adminCourseNames.map((course) => <option key={course}>{course}</option>)}
+                        </select>
+                        <select value={paymentDateFilter} onChange={(event) => setPaymentDateFilter(event.target.value as 'all' | 'today' | 'custom')} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                          <option value="all">All dates</option>
+                          <option value="today">Today only</option>
+                          <option value="custom">Choose date</option>
+                        </select>
+                        {paymentDateFilter === 'custom' ? (
+                          <input type="date" value={paymentCustomDate} onChange={(event) => setPaymentCustomDate(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric" />
+                        ) : <div className="hidden xl:block" />}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                        <button onClick={loadAdminOrders} className="inline-flex h-11 items-center justify-center gap-2 border border-white/15 px-4 font-inter text-[10px] font-bold uppercase tracking-widest text-white transition hover:border-electric">
+                          <RefreshCcw className="h-4 w-4" /> Refresh
+                        </button>
+                        <button onClick={downloadOrdersCsv} disabled={filteredOrders.length === 0} className="h-11 bg-electric px-5 font-inter text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">Export CSV</button>
+                        <button onClick={() => deletePaymentOrders(false)} disabled={selectedOrderIds.length === 0 || deletingOrders} className="inline-flex h-11 items-center gap-2 border border-red-400/35 px-4 font-inter text-[10px] font-bold uppercase tracking-widest text-red-300 transition hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-35">
+                          {deletingOrders ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete selected ({selectedOrderIds.length})
+                        </button>
+                        <button onClick={() => deletePaymentOrders(true)} disabled={adminOrders.length === 0 || deletingOrders} className="ml-auto inline-flex h-11 items-center gap-2 border border-red-500/50 bg-red-950/20 px-4 font-inter text-[10px] font-bold uppercase tracking-widest text-red-200 transition hover:bg-red-950/40 disabled:opacity-35">
+                          <Trash2 className="h-4 w-4" /> Delete all
+                        </button>
+                      </div>
+                    </div>
                     <div className="overflow-x-auto border border-white/10 bg-black">
-                      <table className="min-w-[1320px] w-full table-fixed border-collapse font-inter text-sm">
+                      <table className="min-w-[1370px] w-full table-fixed border-collapse font-inter text-sm">
                         <thead className="bg-white/[0.04] text-left text-xs uppercase tracking-widest text-white/45">
                           <tr>
+                            <th className="w-[50px] px-4 py-4">
+                              <input type="checkbox" aria-label="Select all filtered payments" checked={filteredOrders.length > 0 && filteredOrders.every((order) => selectedOrderIds.includes(order.id))} onChange={(event) => setSelectedOrderIds(event.target.checked ? Array.from(new Set([...selectedOrderIds, ...filteredOrders.map((order) => order.id)])) : selectedOrderIds.filter((id) => !filteredOrders.some((order) => order.id === id)))} className="h-4 w-4 accent-[#25aef4]" />
+                            </th>
                             <th className="w-[120px] px-4 py-4">Date</th>
                             <th className="w-[210px] px-4 py-4">Student</th>
                             <th className="w-[300px] px-4 py-4">Contact</th>
@@ -1939,10 +2000,13 @@ export default function App() {
                         </thead>
                         <tbody className="divide-y divide-white/10">
                           {filteredOrders.length === 0 ? (
-                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={8}>No payments found.</td></tr>
+                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={9}>No payments found.</td></tr>
                           ) : (
                             filteredOrders.map((order) => (
                               <tr key={order.id} className="align-top transition hover:bg-white/[0.03]">
+                                <td className="px-4 py-5">
+                                  <input type="checkbox" aria-label={`Select payment from ${order.full_name}`} checked={selectedOrderIds.includes(order.id)} onChange={(event) => setSelectedOrderIds((current) => event.target.checked ? [...current, order.id] : current.filter((id) => id !== order.id))} className="h-4 w-4 accent-[#25aef4]" />
+                                </td>
                                 <td className="px-4 py-5 text-white/70">
                                   <div>{new Date(order.created_at).toLocaleDateString('en-IN')}</div>
                                   <div className="mt-1 text-xs text-white/40">{new Date(order.created_at).toLocaleTimeString('en-IN')}</div>
@@ -1972,12 +2036,15 @@ export default function App() {
                                   {order.remarks && <div className="max-w-[130px] truncate text-xs text-white/70" title={order.remarks}>Note: {order.remarks}</div>}
                                 </td>
                                 <td className="px-4 py-5">
-                                  <select value={order.payment_status} onChange={(event) => updateOrderStatus(order.id, event.target.value)} className="h-11 w-full border border-white/10 bg-ink px-3 font-inter text-xs uppercase tracking-widest text-white outline-none focus:border-electric">
+                                  <div className="relative">
+                                  <select value={order.payment_status} disabled={updatingOrderId === order.id} onChange={(event) => updateOrderStatus(order.id, event.target.value)} className="h-11 w-full border border-white/10 bg-ink px-3 font-inter text-xs uppercase tracking-widest text-white outline-none focus:border-electric disabled:cursor-wait disabled:opacity-50">
                                     <option value="pending">Pending</option>
                                     <option value="under_review">Under Review</option>
                                     <option value="paid">Paid</option>
                                     <option value="cancelled">Cancelled</option>
                                   </select>
+                                  {updatingOrderId === order.id && <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-electric" />}
+                                  </div>
                                 </td>
                               </tr>
                             ))

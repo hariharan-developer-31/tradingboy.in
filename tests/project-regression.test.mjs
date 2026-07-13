@@ -43,8 +43,32 @@ test('admin tables keep empty-state cells aligned with visible columns', () => {
   const app = read('src/App.tsx');
 
   assert.match(app, /<td colSpan=\{6\}[^>]*>\s*No coupons found\./);
-  assert.match(app, /colSpan=\{8\}>No payments found\./);
+  assert.match(app, /colSpan=\{9\}>No payments found\./);
   assert.match(app, /order\.payment_screenshot_path && supabase/);
+});
+
+test('payment admin supports safe bulk deletion, date filters, and confirmed status changes', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+  const viteConfig = read('vite.config.ts');
+
+  assert.match(app, /Today only/);
+  assert.match(app, /Delete selected/);
+  assert.match(app, /Delete all/);
+  assert.match(app, /window\.confirm\(`Change/);
+  assert.match(app, /updatingOrderId === order\.id/);
+  assert.match(adminApi, /action === 'deleteOrders'/);
+  assert.match(adminApi, /storage\.from\('payment-proofs'\)\.remove/);
+  assert.match(viteConfig, /body\.action === 'deleteOrders'/);
+});
+
+test('email templates force dark mode and avoid viewport-height whitespace', () => {
+  for (const file of ['api/admin.js', 'api/checkout.js', 'vite.config.ts']) {
+    const source = read(file);
+    assert.match(source, /color-scheme/);
+    assert.match(source, /background:#000000/);
+    assert.doesNotMatch(source, /min-height:100vh/);
+  }
 });
 
 test('coupon management supports editing and course scoping', () => {
