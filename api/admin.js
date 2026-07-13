@@ -577,78 +577,69 @@ export default async function handler(req, res) {
   }
 
   if (action === 'sendCampaign') {
-    if (!process.env.RESEND_API_KEY) {
-      return json(res, 400, { error: 'Email service is not configured (missing Resend API key).' });
-    }
-
-    const { audience, courseName, additionalEmails, subject, message } = body;
-    if (!['all', 'course', 'manual'].includes(audience)) {
-      return json(res, 400, { error: 'Invalid audience selected.' });
-    }
+    const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
+    const courseName = String(body.courseName || 'all').trim();
+    const manualEmails = String(body.manualEmails || body.additionalEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter(isEmail).slice(0, 500);
+    const subject = String(body.subject || '').trim().slice(0, 150);
+    const message = String(body.message || '').trim().slice(0, 5000);
     if (!subject || !message) {
-      return json(res, 400, { error: 'Subject and message are required.' });
+      json(res, 400, { error: 'Email subject and message are required.' });
+      return;
     }
 
-    let recipientEmails = [];
-
+    let rows = [];
     if (audience !== 'manual') {
-      let query = admin.from('course_orders').select('email').eq('payment_status', 'paid');
-      if (audience === 'course' && courseName && courseName !== 'All courses') {
-        query = query.eq('course_name', courseName);
+      let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
+      if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
+      if (courseName && courseName !== 'all' && courseName.toLowerCase() !== 'all courses') recipientQuery = recipientQuery.eq('course_name', courseName);
+      recipientQuery = recipientQuery.limit(500);
+      const { data, error: recipientError } = await recipientQuery;
+      if (recipientError) {
+        json(res, 500, { error: recipientError.message });
+        return;
       }
-      const { data: students, error: studentError } = await query;
-      if (studentError) {
-        return json(res, 500, { error: studentError.message });
-      }
-      if (students) {
-        recipientEmails.push(...students.map(s => s.email));
-      }
+      rows = data || [];
     }
 
-    if (additionalEmails) {
-      const extraEmails = additionalEmails
-        .split(',')
-        .map(e => e.trim())
-        .filter(e => isEmail(e));
-      recipientEmails.push(...extraEmails);
+    const recipientMap = new Map(rows.filter((row) => row.email).map((row) => [row.email.trim().toLowerCase(), row]));
+    manualEmails.forEach((email) => {
+      if (!recipientMap.has(email)) recipientMap.set(email, { email, full_name: 'Trader' });
+    });
+    const recipients = Array.from(recipientMap.values()).slice(0, 500);
+    if (recipients.length === 0) {
+      json(res, 400, { error: 'No recipients match this audience.' });
+      return;
     }
 
-    recipientEmails = [...new Set(recipientEmails)]; // deduplicate
-    
-    if (recipientEmails.length === 0) {
-      return json(res, 400, { error: 'No recipients found for this campaign.' });
-    }
-
-    let successCount = 0;
-    for (const email of recipientEmails) {
-      const emailHtml = campaignHtml({ message });
-      const emailResult = await sendEmail({
-        to: email,
-        subject: cleanText(subject, 200),
-        html: emailHtml
-      });
-      if (emailResult.ok) successCount++;
+    let sent = 0;
+    let failed = 0;
+    for (let index = 0; index < recipients.length; index += 5) {
+      const results = await Promise.all(recipients.slice(index, index + 5).map((recipient) => sendEmail({
+        to: recipient.email,
+        subject,
+        html: campaignHtml({ name: recipient.full_name, message }),
+      })));
+      sent += results.filter((result) => result.ok).length;
+      failed += results.filter((result) => !result.ok).length;
       await new Promise(r => setTimeout(r, 100)); // sleep 100ms
     }
 
-    if (successCount === 0) {
-       return json(res, 500, { error: 'Failed to send emails.' });
+    if (sent > 0) {
+      const { error: dbError } = await admin.from('email_campaigns').insert({
+        audience: ['all', 'course', 'manual'].includes(audience) ? audience : 'all',
+        course_name: courseName && courseName !== 'all' && courseName.toLowerCase() !== 'all courses' ? courseName : null,
+        subject,
+        message,
+        recipients: sent
+      });
+      if (dbError) {
+        logServerError('campaigns.insert', dbError);
+      }
     }
 
-    const { error: dbError } = await admin.from('email_campaigns').insert({
-      audience,
-      course_name: audience === 'course' && courseName !== 'All courses' ? courseName : null,
-      subject: cleanText(subject, 200),
-      message: cleanText(message, 10000),
-      recipients: successCount
-    });
-
-    if (dbError) {
-       logServerError('campaigns.insert', dbError);
-    }
-
-    json(res, 200, { ok: true, sentCount: successCount });
+    json(res, 200, { ok: true, sent, failed, recipients: recipients.length });
     return;
   }
+
   json(res, 400, { error: 'Unknown action.' });
 }
