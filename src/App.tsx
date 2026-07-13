@@ -1950,7 +1950,7 @@ export default function App() {
         </main>
       )}
 
-      {promoOpen && (
+      {promoOpen && !adminOpen && !checkoutOpen && !courseDetailsOpen && (!window.location.hash || window.location.hash === '#home') && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md" onClick={() => setPromoOpen(false)}>
           <div className="relative w-full max-w-lg overflow-hidden border border-electric/35 bg-[#07131c] p-6 shadow-[0_0_80px_rgba(37,174,244,0.3)] sm:p-9" onClick={(event) => event.stopPropagation()}>
             <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-electric/20 blur-3xl" />
