@@ -167,6 +167,7 @@ test('course details have shareable entry files, member reviews, and Instagram s
 });
 
 test('production APIs share request hardening and use an HttpOnly admin session', () => {
+  const app = read('src/App.tsx');
   const security = read('api/_security.js');
   const adminApi = read('api/admin.js');
   const checkoutApi = read('api/checkout.js');
@@ -180,6 +181,10 @@ test('production APIs share request hardening and use an HttpOnly admin session'
   assert.match(security, /buffer\[0\] !== 0xff/);
   assert.match(adminApi, /hasValidAdminSession/);
   assert.match(adminApi, /createAdminSession/);
+  assert.match(adminApi, /createHmac\('sha256', serviceRoleKey\)/);
+  assert.match(adminApi, /isValidAdminPasscode/);
+  assert.match(app, /aria-label=\{showAdminPasscode \? 'Hide admin passcode' : 'Show admin passcode'\}/);
+  assert.match(app, /showAdminPasscode \? <EyeOff/);
   assert.match(checkoutApi, /requireTrustedOrigin/);
   assert.match(checkoutApi, /decodeJpegDataUrl/);
   assert.match(couponApi, /rateLimit/);

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Eye, EyeOff, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import aboutImageUrl from './assets/About us.webp';
 import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
@@ -314,6 +314,7 @@ export default function App() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
+  const [showAdminPasscode, setShowAdminPasscode] = useState(false);
   const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails'>('home');
   const [adminStatus, setAdminStatus] = useState('');
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
@@ -747,6 +748,7 @@ export default function App() {
     void adminRequest('logout').catch(() => undefined);
     setAdminUnlocked(false);
     setAdminPasscode('');
+    setShowAdminPasscode(false);
     setAdminSection('home');
     setAdminStatus('');
     setAdminCourses([]);
@@ -1727,14 +1729,27 @@ export default function App() {
                 <h2 className="mt-3 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
                 <p className="mt-4 font-inter text-sm leading-relaxed text-white/55">Enter the admin passcode to manage courses, payments, and coupons.</p>
                 <div className="mt-8 space-y-4">
-                  <input
-                    type="password"
-                    value={adminPasscode}
-                    onChange={(event) => setAdminPasscode(event.target.value)}
-                    placeholder="Admin passcode"
-                    disabled={adminLoading}
-                    className="h-14 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric disabled:cursor-not-allowed disabled:opacity-60"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showAdminPasscode ? 'text' : 'password'}
+                      value={adminPasscode}
+                      onChange={(event) => setAdminPasscode(event.target.value)}
+                      placeholder="Admin passcode"
+                      autoComplete="current-password"
+                      disabled={adminLoading}
+                      className="h-14 w-full border border-white/10 bg-ink px-4 pr-14 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPasscode((current) => !current)}
+                      disabled={adminLoading}
+                      aria-label={showAdminPasscode ? 'Hide admin passcode' : 'Show admin passcode'}
+                      aria-pressed={showAdminPasscode}
+                      className="absolute inset-y-0 right-0 flex w-14 items-center justify-center text-white/50 transition hover:text-electric disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {showAdminPasscode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                   <button disabled={adminLoading || !adminPasscode.trim()} className="inline-flex h-14 w-full items-center justify-center gap-2 bg-electric px-6 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-60">
                     {adminLoading && <RefreshCcw className="h-4 w-4 animate-spin" />}
                     {adminLoading ? 'Unlocking...' : 'Unlock Admin'}
