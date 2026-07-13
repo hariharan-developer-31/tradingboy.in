@@ -95,6 +95,11 @@ const paidAccessHtml = (order) => `
             ? `<a href="${order.course_drive_url || order.drive_url}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:700;font-size:14px;padding:16px 32px;border-radius:8px;display:inline-block;text-transform:uppercase;letter-spacing:1px;">Access Your Course Now</a>`
             : '<p style="color:#25aef4;font-weight:600;font-size:15px;padding:16px;border:1px dashed #25aef4;border-radius:8px;">The admin team will share your course access via email within 12 hours.</p>'
         }
+        ${
+          order.course_discord_url || order.discord_url
+            ? `<a href="${order.course_discord_url || order.discord_url}" style="margin-top:14px;background:#5865F2;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:16px 32px;border-radius:8px;display:inline-block;text-transform:uppercase;letter-spacing:1px;">Join the Course Discord</a>`
+            : ''
+        }
       </div>
       
       <h3 style="color:#ffffff;font-size:14px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1f2933;padding-bottom:12px;margin-bottom:20px;">Order Details</h3>
@@ -144,13 +149,13 @@ export default async function handler(req, res) {
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data: courseData } = await admin
     .from('courses')
-    .select('title, price, offer_price, drive_url, active')
+    .select('title, price, offer_price, drive_url, discord_url, active')
     .eq('title', requestedCourseName)
     .eq('active', true)
     .maybeSingle();
   const fallbackCourse = COURSES.find((course) => course.name === requestedCourseName) || COURSES[0];
   const selectedCourse = courseData
-    ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price), drive_url: courseData.drive_url }
+    ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price), drive_url: courseData.drive_url, discord_url: courseData.discord_url }
     : fallbackCourse;
   let discountAmount = 0;
   let appliedCoupon = null;
@@ -245,7 +250,7 @@ export default async function handler(req, res) {
   const emailSent = await sendEmail({
     to: email,
     subject: finalAmount === 0 ? 'Trading Boy course access approved' : `Trading Boy receipt - ${selectedCourse.name}`,
-    html: finalAmount === 0 ? paidAccessHtml({ ...order, drive_url: selectedCourse.drive_url }) : receiptHtml(order),
+    html: finalAmount === 0 ? paidAccessHtml({ ...order, drive_url: selectedCourse.drive_url, discord_url: selectedCourse.discord_url }) : receiptHtml(order),
   });
 
   json(res, 200, { orderId: order.id, payableAmount: finalAmount, emailSent });

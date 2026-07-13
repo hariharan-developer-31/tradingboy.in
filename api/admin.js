@@ -82,6 +82,11 @@ const paidAccessHtml = (order) => `
             ? `<a href="${order.course_drive_url || driveCourseUrl}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:700;font-size:14px;padding:16px 32px;border-radius:8px;display:inline-block;text-transform:uppercase;letter-spacing:1px;">Access Your Course Now</a>`
             : '<p style="color:#25aef4;font-weight:600;font-size:15px;padding:16px;border:1px dashed #25aef4;border-radius:8px;">The admin team will share your course access via email within 12 hours.</p>'
         }
+        ${
+          order.course_discord_url
+            ? `<a href="${order.course_discord_url}" style="margin-top:14px;background:#5865F2;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:16px 32px;border-radius:8px;display:inline-block;text-transform:uppercase;letter-spacing:1px;">Join the Course Discord</a>`
+            : ''
+        }
       </div>
       
       <h3 style="color:#ffffff;font-size:14px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1f2933;padding-bottom:12px;margin-bottom:20px;">Order Details</h3>
@@ -179,11 +184,13 @@ export default async function handler(req, res) {
     }
 
     let courseDriveUrl = null;
+    let courseDiscordUrl = null;
     if (data.course_name) {
-      const { data: course } = await admin.from('courses').select('drive_url').eq('title', data.course_name).maybeSingle();
+      const { data: course } = await admin.from('courses').select('drive_url, discord_url').eq('title', data.course_name).maybeSingle();
       courseDriveUrl = course?.drive_url || null;
+      courseDiscordUrl = course?.discord_url || null;
     }
-    const emailOrder = { ...data, course_drive_url: courseDriveUrl };
+    const emailOrder = { ...data, course_drive_url: courseDriveUrl, course_discord_url: courseDiscordUrl };
     const emailResult = await sendEmail({
       to: data.email,
       subject:
@@ -215,7 +222,7 @@ export default async function handler(req, res) {
   if (action === 'courses') {
     const { data, error } = await admin
       .from('courses')
-      .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, active, created_at')
+      .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -244,6 +251,7 @@ export default async function handler(req, res) {
       offer_price: offerPrice,
       price: offerPrice,
       drive_url: String(body.driveUrl || '').trim() || null,
+      discord_url: String(body.discordUrl || '').trim() || null,
     };
 
     if (body.thumbnailDataUrl) {

@@ -266,11 +266,13 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           }
 
           let courseDriveUrl = null;
+          let courseDiscordUrl = null;
           if (data.course_name) {
-            const { data: course } = await admin.from('courses').select('drive_url').eq('title', data.course_name).maybeSingle();
+            const { data: course } = await admin.from('courses').select('drive_url, discord_url').eq('title', data.course_name).maybeSingle();
             courseDriveUrl = course?.drive_url || null;
+            courseDiscordUrl = course?.discord_url || null;
           }
-          const emailOrder = { ...data, course_drive_url: courseDriveUrl };
+          const emailOrder = { ...data, course_drive_url: courseDriveUrl, course_discord_url: courseDiscordUrl };
           const emailSent = await sendMail(env, {
             to: data.email,
             subject:
@@ -297,7 +299,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (body.action === 'courses') {
           const { data, error } = await admin
             .from('courses')
-            .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, active, created_at')
+            .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at')
             .order('created_at', { ascending: false });
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
@@ -321,6 +323,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             offer_price: offerPrice,
             price: offerPrice,
             drive_url: String(body.driveUrl || '').trim() || null,
+            discord_url: String(body.discordUrl || '').trim() || null,
             thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
           };
 
@@ -521,6 +524,11 @@ const paidAccessHtml = (env: Record<string, string>, order: any) => `
         order.course_drive_url || env.DRIVE_COURSE_URL
           ? `<p style="margin:28px 0"><a href="${order.course_drive_url || env.DRIVE_COURSE_URL}" style="background:#25aef4;color:#000000;text-decoration:none;font-weight:bold;padding:14px 20px;display:inline-block">Open Course Drive Folder</a></p>`
           : '<p>The team will share your course access by email within 12 hours.</p>'
+      }
+      ${
+        order.course_discord_url
+          ? `<p style="margin:14px 0 28px"><a href="${order.course_discord_url}" style="background:#5865F2;color:#ffffff;text-decoration:none;font-weight:bold;padding:14px 20px;display:inline-block">Join the Course Discord</a></p>`
+          : ''
       }
       <table style="width:100%;border-collapse:collapse;margin-top:20px">
         <tr><td style="padding:8px 0;color:#9ca3af">Order ID</td><td style="padding:8px 0;text-align:right">${order.id}</td></tr>

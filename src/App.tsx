@@ -19,6 +19,7 @@ const fallbackCourses = [
     offer_price: 7199,
     price: 7199,
     drive_url: null,
+    discord_url: null,
     active: true,
     created_at: '',
   },
@@ -32,6 +33,7 @@ const fallbackCourses = [
     offer_price: 5399,
     price: 5399,
     drive_url: null,
+    discord_url: null,
     active: true,
     created_at: '',
   },
@@ -89,6 +91,7 @@ type PublicCourse = {
   offer_price: number | null;
   price: number;
   drive_url: string | null;
+  discord_url: string | null;
   active: boolean;
   created_at: string;
 };
@@ -172,6 +175,7 @@ type AdminCourseForm = {
   normalPrice: string;
   offerPrice: string;
   driveUrl: string;
+  discordUrl: string;
 };
 
 const money = (amount: number) => `Rs. ${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -287,6 +291,7 @@ export default function App() {
     normalPrice: '',
     offerPrice: '',
     driveUrl: '',
+    discordUrl: '',
   });
 
   const selectedCourse = useMemo(
@@ -370,7 +375,7 @@ export default function App() {
       if (!supabase) return;
       const { data, error } = await supabase
         .from('courses')
-        .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, active, created_at')
+        .select('id, title, description, thumbnail_url, normal_price, offer_price, price, active, created_at')
         .eq('active', true)
         .order('created_at', { ascending: true });
 
@@ -651,7 +656,7 @@ export default function App() {
   };
 
   const resetCourseForm = () => {
-    setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', thumbnailDataUrl: undefined, normalPrice: '', offerPrice: '', driveUrl: '' });
+    setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', thumbnailDataUrl: undefined, normalPrice: '', offerPrice: '', driveUrl: '', discordUrl: '' });
     setShowCourseForm(false);
   };
 
@@ -673,6 +678,7 @@ export default function App() {
         normalPrice,
         offerPrice,
         driveUrl: courseForm.driveUrl,
+        discordUrl: courseForm.discordUrl,
       });
       resetCourseForm();
       setAdminStatus('Course saved.');
@@ -691,6 +697,7 @@ export default function App() {
       normalPrice: String(course.normal_price || course.price),
       offerPrice: String(course.offer_price || course.price),
       driveUrl: course.drive_url || '',
+      discordUrl: course.discord_url || '',
     });
     setShowCourseForm(true);
     setAdminSection('courses');
@@ -1817,6 +1824,7 @@ export default function App() {
                             </div>
                             <div className="border border-white/10 bg-ink p-4 font-inter text-sm text-white/60">Auto offer: {offerPercent(Number(courseForm.normalPrice), Number(courseForm.offerPrice))}% Off</div>
                             <input value={courseForm.driveUrl} onChange={(event) => setCourseForm({ ...courseForm, driveUrl: event.target.value })} placeholder="Private Google Drive folder URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            <input value={courseForm.discordUrl} onChange={(event) => setCourseForm({ ...courseForm, discordUrl: event.target.value })} placeholder="Private Discord invite URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <div className="flex flex-wrap gap-3 pt-2">
                               <button type="submit" className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">{courseForm.id ? 'Update Course' : 'Save Course'}</button>
                               <button type="button" onClick={resetCourseForm} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>

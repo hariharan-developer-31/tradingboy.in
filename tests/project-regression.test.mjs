@@ -56,3 +56,20 @@ test('coupon management supports editing and course scoping', () => {
   assert.match(app, /courseName: coupon\.course_name \|\| ''/);
   assert.match(schema, /alter table public\.coupons add column if not exists course_name text;/);
 });
+
+test('course Discord access is private, editable, and included in paid emails', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+  const checkoutApi = read('api/checkout.js');
+  const viteConfig = read('vite.config.ts');
+  const schema = read('supabase.sql');
+
+  assert.match(app, /placeholder="Private Discord invite URL"/);
+  assert.match(app, /discordUrl: course\.discord_url \|\| ''/);
+  assert.match(adminApi, /select\('drive_url, discord_url'\)/);
+  assert.match(adminApi, /Join the Course Discord/);
+  assert.match(checkoutApi, /Join the Course Discord/);
+  assert.match(viteConfig, /course_discord_url/);
+  assert.match(schema, /alter table public\.courses add column if not exists discord_url text;/);
+  assert.match(schema, /revoke select on table public\.courses from anon;/);
+});

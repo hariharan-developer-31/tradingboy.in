@@ -81,6 +81,7 @@ create table if not exists public.courses (
   offer_price integer,
   price integer not null default 7199 check (price > 0),
   drive_url text,
+  discord_url text,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -89,6 +90,7 @@ alter table public.courses enable row level security;
 alter table public.courses add column if not exists thumbnail_url text;
 alter table public.courses add column if not exists normal_price integer;
 alter table public.courses add column if not exists offer_price integer;
+alter table public.courses add column if not exists discord_url text;
 
 drop policy if exists "Allow public active course reads" on public.courses;
 
@@ -97,6 +99,10 @@ on public.courses
 for select
 to anon
 using (active = true);
+
+revoke select on table public.courses from anon;
+grant select (id, title, description, thumbnail_url, normal_price, offer_price, price, active, created_at)
+on table public.courses to anon;
 
 insert into public.courses (title, description, price, drive_url, active)
 select
