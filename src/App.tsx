@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X, Youtube } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
 import aboutImageUrl from './assets/About us.png';
@@ -1257,6 +1257,17 @@ export default function App() {
                   <img src={logoUrl} alt="Trading Boy Academy" className="h-11 w-auto object-contain sm:h-14" />
                 </a>
                 <p className="mt-4 max-w-sm text-xs leading-relaxed text-white/50 sm:text-sm">Practical forex, gold, and funded-account education built around discipline, risk control, and repeatable execution.</p>
+                <div className="mt-5 flex items-center gap-2.5" aria-label="Trading Boy social media">
+                  <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" aria-label="Follow Trading Boy on Instagram" className="group flex h-10 w-10 items-center justify-center border border-white/10 bg-white/[0.03] text-white/60 transition hover:border-electric/60 hover:bg-electric/10 hover:text-electric">
+                    <Instagram className="h-[18px] w-[18px] transition group-hover:scale-110" />
+                  </a>
+                  <a href="https://www.threads.com/@trading_boy_tamil" target="_blank" rel="noreferrer" aria-label="Follow Trading Boy on Threads" className="group flex h-10 w-10 items-center justify-center border border-white/10 bg-white/[0.03] text-white/60 transition hover:border-electric/60 hover:bg-electric/10 hover:text-electric">
+                    <AtSign className="h-[18px] w-[18px] transition group-hover:scale-110" />
+                  </a>
+                  <a href="https://www.youtube.com/@trading_boy" target="_blank" rel="noreferrer" aria-label="Watch Trading Boy on YouTube" className="group flex h-10 w-10 items-center justify-center border border-white/10 bg-white/[0.03] text-white/60 transition hover:border-electric/60 hover:bg-electric/10 hover:text-electric">
+                    <Youtube className="h-5 w-5 transition group-hover:scale-110" />
+                  </a>
+                </div>
               </div>
 
               <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-5 gap-y-3 sm:justify-end lg:gap-x-7">

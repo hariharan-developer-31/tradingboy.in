@@ -127,3 +127,12 @@ test('testimonial photos share the payment image compressor and stay below 100KB
   assert.match(adminApi, /body\.photoDataUrl[\s\S]*buffer\.byteLength > 100 \* 1024/);
   assert.match(adminApi, /Testimonial image must be below 100KB after compression\./);
 });
+
+test('footer exposes accessible social media links', () => {
+  const app = read('src/App.tsx');
+
+  assert.match(app, /https:\/\/www\.instagram\.com\/trading_boy_tamil\/\?hl=en/);
+  assert.match(app, /https:\/\/www\.threads\.com\/@trading_boy_tamil/);
+  assert.match(app, /https:\/\/www\.youtube\.com\/@trading_boy/);
+  assert.equal((app.match(/target="_blank" rel="noreferrer" aria-label=/g) || []).length >= 3, true);
+});
