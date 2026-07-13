@@ -1073,10 +1073,10 @@ export default function App() {
       {courseDetailsOpen && (
         <div className="fixed inset-0 z-50 bg-ink overflow-y-auto page-enter flex flex-col">
           <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/90 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
-            <button onClick={() => setCourseDetailsOpen(null)} className="flex h-10 w-10 items-center justify-center text-white/70 transition hover:text-electric" aria-label="Back to home">
+            <button onClick={() => setCourseDetailsOpen(null)} className="flex h-10 w-10 items-center justify-center text-electric transition hover:text-skyline" aria-label="Back to home">
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <div className="font-podium text-lg uppercase text-white truncate max-w-[200px] sm:max-w-md">{courseDetailsOpen.title}</div>
+            <div className="font-podium text-lg uppercase text-white">Course Details</div>
             <div className="w-20" /> {/* Spacer for centering */}
           </header>
           
