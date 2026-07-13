@@ -31,6 +31,21 @@ test('local dev API exposes the same coupon route and limits as production', () 
   assert.match(viteConfig, /current_uses: appliedCoupon\.current_uses \+ 1/);
 });
 
+test('checkout loads live public courses and resolves legacy course names', () => {
+  const app = read('src/App.tsx');
+  const checkout = read('api/checkout.js');
+  const courses = read('api/courses.js');
+  const viteConfig = read('vite.config.ts');
+
+  assert.match(app, /fetch\('\/api\/courses'\)/);
+  assert.match(app, /setSubmitError\(result\.error/);
+  assert.match(checkout, /courseKind\(course\.title\) === requestedKind/);
+  assert.match(checkout, /context: 'checkout\.receipt'/);
+  assert.match(courses, /\.eq\('active', true\)/);
+  assert.doesNotMatch(courses, /drive_url|discord_url/);
+  assert.match(viteConfig, /server\.middlewares\.use\('\/api\/courses'/);
+});
+
 test('local dev admin API returns payment proof and coupon metadata', () => {
   const viteConfig = read('vite.config.ts');
 

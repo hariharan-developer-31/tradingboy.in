@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X, Youtube } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import aboutImageUrl from './assets/About us.webp';
 import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
@@ -309,6 +309,7 @@ export default function App() {
   const [promptedAt, setPromptedAt] = useState<number[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<{ dataUrl: string; name: string } | null>(null);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState('');
   const [createdOrderId, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -485,21 +486,22 @@ export default function App() {
 
   useEffect(() => {
     const loadPublicCourses = async () => {
-      if (!supabase) return;
-      const { data, error } = await supabase
-        .from('courses')
-        .select('id, title, description, thumbnail_url, normal_price, offer_price, price, active, created_at')
-        .eq('active', true)
-        .order('created_at', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        setPublicCourses(data as PublicCourse[]);
-        setJoinForm((current) => ({
-          ...current,
-          courseName: data.some((course) => course.title === current.courseName) ? current.courseName : data[0].title,
-        }));
+      try {
+        const response = await fetch('/api/courses');
+        const result = await response.json();
+        const data = response.ok && Array.isArray(result.data) ? result.data as PublicCourse[] : [];
+        if (data.length > 0) {
+          setPublicCourses(data);
+          setJoinForm((current) => ({
+            ...current,
+            courseName: data.some((course) => course.title === current.courseName) ? current.courseName : data[0].title,
+          }));
+        }
+      } catch {
+        // The built-in courses keep the page usable during a temporary API outage.
       }
 
+      if (!supabase) return;
       const { data: testimonialsData, error: tError } = await supabase
         .from('testimonials')
         .select('id, quote, name, role, photo_url, active, created_at')
@@ -642,14 +644,17 @@ export default function App() {
       const dataUrl = await compressImageToDataUrl(file);
       setPaymentScreenshot({ dataUrl, name: file.name });
       setSubmitStatus('idle');
+      setSubmitError('');
     } catch {
       setPaymentScreenshot(null);
       setSubmitStatus('error');
+      setSubmitError('Could not prepare this image. Please choose a JPG, PNG, or WEBP screenshot.');
     }
   };
 
   const submitPaymentConfirmation = async () => {
     setSubmitStatus('sending');
+    setSubmitError('');
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
@@ -670,6 +675,7 @@ export default function App() {
       const result = text ? JSON.parse(text) : {};
       if (!response.ok) {
         setSubmitStatus('error');
+        setSubmitError(result.error || 'Could not submit your payment proof. Please try again.');
         return;
       }
       setCreatedOrderId(result.orderId || '');
@@ -678,6 +684,7 @@ export default function App() {
       setJoinStep('thanks');
     } catch {
       setSubmitStatus('error');
+      setSubmitError('Could not connect to checkout. Please check your connection and try again.');
     }
   };
 
@@ -1299,7 +1306,10 @@ export default function App() {
                     <AtSign className="h-[20px] w-[20px] stroke-[2.4] transition group-hover:scale-110" />
                   </a>
                   <a href="https://www.youtube.com/@trading_boy" target="_blank" rel="noreferrer" aria-label="Watch Trading Boy on YouTube" className="group flex h-10 w-10 items-center justify-center border border-[#ff4d4d] bg-[#ff0000] text-white shadow-[0_8px_24px_rgba(255,0,0,0.2)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(255,0,0,0.38)]">
-                    <Youtube className="h-[21px] w-[21px] fill-white stroke-white transition group-hover:scale-110" />
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[22px] w-[22px] transition group-hover:scale-110">
+                      <path fill="white" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8Z" />
+                      <path fill="#ff0000" d="m9.6 15.6 6.3-3.6-6.3-3.6v7.2Z" />
+                    </svg>
                   </a>
                 </div>
               </div>
@@ -1651,7 +1661,7 @@ export default function App() {
                     {submitStatus === 'sending' && <Loader2 className="h-4 w-4 animate-spin" />}
                     {submitStatus === 'sending' ? 'Submitting...' : 'Submit for Verification'}
                   </button>
-                  {submitStatus === 'error' && <p className="mt-4 text-sm text-red-300">Could not submit your payment proof. Try again.</p>}
+                  {submitStatus === 'error' && <p className="mt-4 text-sm text-red-300" role="alert">{submitError || 'Could not submit your payment proof. Please try again.'}</p>}
                 </div>
               </div>
             )}

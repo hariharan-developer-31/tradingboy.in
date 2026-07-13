@@ -9,6 +9,13 @@ const COURSES = [
   { name: 'Blueprint to Become a Funded Trader', price: 5399 },
 ];
 
+const courseKind = (name) => {
+  const normalized = String(name || '').toLowerCase();
+  if (normalized.includes('funded')) return 'funded';
+  if (normalized.includes('forex')) return 'forex';
+  return normalized;
+};
+
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -19,22 +26,27 @@ const sendEmail = async ({ to, subject, html }) => {
     return false;
   }
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: process.env.MAIL_FROM || 'Trading Boy <admin@tradingboy.in>',
-      to,
-      subject,
-      html,
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.MAIL_FROM || 'Trading Boy <admin@tradingboy.in>',
+        to,
+        subject,
+        html,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
 
-  return response.ok;
+    return response.ok;
+  } catch (error) {
+    console.error(JSON.stringify({ level: 'error', context: 'checkout.receipt', message: error instanceof Error ? error.message.slice(0, 300) : 'Email delivery failed' }));
+    return false;
+  }
 };
 
 const darkEmail = (content) => `<!doctype html><html><head><meta name="color-scheme" content="dark only"><meta name="supported-color-schemes" content="dark only"><style>:root{color-scheme:dark only;supported-color-schemes:dark only}html,body{margin:0!important;padding:0!important;background:#000000!important;color:#ffffff!important}a{color:#25aef4}</style></head><body bgcolor="#000000" style="margin:0;padding:0;background:#000000;color:#ffffff;">${content}</body></html>`;
@@ -129,13 +141,15 @@ export default async function handler(req, res) {
   if (couponCode && !isCouponCode(couponCode)) return json(res, 400, { error: 'Coupon code format is invalid.' });
 
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data: courseData } = await admin
+  const { data: activeCourses, error: coursesError } = await admin
     .from('courses')
     .select('title, price, offer_price, drive_url, discord_url, active')
-    .eq('title', requestedCourseName)
-    .eq('active', true)
-    .maybeSingle();
-  const fallbackCourse = COURSES.find((course) => course.name === requestedCourseName);
+    .eq('active', true);
+  if (coursesError) throw coursesError;
+  const requestedKind = courseKind(requestedCourseName);
+  const courseData = (activeCourses || []).find((course) => course.title === requestedCourseName)
+    || (activeCourses || []).find((course) => courseKind(course.title) === requestedKind);
+  const fallbackCourse = COURSES.find((course) => courseKind(course.name) === requestedKind);
   if (!courseData && !fallbackCourse) return json(res, 404, { error: 'The selected course is unavailable.' });
   const selectedCourse = courseData
     ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price), drive_url: courseData.drive_url, discord_url: courseData.discord_url }
