@@ -1464,76 +1464,76 @@ export default function App() {
               <div>
                 {adminSection === 'home' ? (
                   <div className="mx-auto mt-12 grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-                    <button onClick={() => setAdminSection('courses')} className="group relative flex flex-col text-left border border-white/10 bg-gradient-to-b from-black to-ink p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 hover:border-electric/50 hover:shadow-glow overflow-hidden">
+                    <button onClick={() => setAdminSection('courses')} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40 hover:shadow-[0_16px_45px_rgba(37,174,244,0.12)]">
                       <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
                       <div className="relative flex justify-between w-full mb-8">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/40 group-hover:shadow-[0_0_20px_rgba(56,182,255,0.4)] transition-all duration-300">
+                        <div className="flex h-12 w-12 items-center justify-center border border-white/10 bg-black text-white transition-all duration-300 group-hover:border-electric/50 group-hover:text-electric">
                           <BookOpen className="h-6 w-6" />
                         </div>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-electric/10 text-xs font-bold text-electric border border-electric/20 group-hover:bg-electric group-hover:text-black transition-all duration-300">
+                        <div className="flex min-w-9 items-center justify-center border border-electric/25 bg-electric/10 px-2 py-1 text-xs font-bold text-electric transition-all duration-300 group-hover:bg-electric group-hover:text-black">
                           {adminCourses.length}
                         </div>
                       </div>
                       <div className="relative">
                         <div className="font-inter text-xs font-bold uppercase tracking-[0.2em] text-electric/70 mb-2">Catalog</div>
-                        <h3 className="font-podium text-3xl text-white mb-4 tracking-wide group-hover:text-electric transition-colors duration-300">Manage <span className="italic font-light">Courses</span></h3>
+                        <h3 className="mb-4 font-podium text-2xl font-semibold tracking-wide text-white transition-colors duration-300 group-hover:text-electric">Manage Courses</h3>
                         <p className="font-inter text-sm text-white/60 leading-relaxed group-hover:text-white/80 transition-colors duration-300">
                           Add new courses, edit course details, update pricing, and manage your academy offerings.
                         </p>
                       </div>
                     </button>
 
-                    <button onClick={() => setAdminSection('payments')} className="group relative flex flex-col text-left border border-white/10 bg-gradient-to-b from-black to-ink p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 hover:border-electric/50 hover:shadow-glow overflow-hidden">
+                    <button onClick={() => setAdminSection('payments')} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40 hover:shadow-[0_16px_45px_rgba(37,174,244,0.12)]">
                       <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
                       <div className="relative flex justify-between w-full mb-8">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/40 group-hover:shadow-[0_0_20px_rgba(56,182,255,0.4)] transition-all duration-300">
+                        <div className="flex h-12 w-12 items-center justify-center border border-white/10 bg-black text-white transition-all duration-300 group-hover:border-electric/50 group-hover:text-electric">
                           <CreditCard className="h-6 w-6" />
                         </div>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-electric/10 text-xs font-bold text-electric border border-electric/20 group-hover:bg-electric group-hover:text-black transition-all duration-300">
+                        <div className="flex min-w-9 items-center justify-center border border-electric/25 bg-electric/10 px-2 py-1 text-xs font-bold text-electric transition-all duration-300 group-hover:bg-electric group-hover:text-black">
                           {filteredOrders.length}
                         </div>
                       </div>
                       <div className="relative">
                         <div className="font-inter text-xs font-bold uppercase tracking-[0.2em] text-electric/70 mb-2">Sales</div>
-                        <h3 className="font-podium text-3xl text-white mb-4 tracking-wide group-hover:text-electric transition-colors duration-300">Manage <span className="italic font-light">Payments</span></h3>
+                        <h3 className="mb-4 font-podium text-2xl font-semibold tracking-wide text-white transition-colors duration-300 group-hover:text-electric">Manage Payments</h3>
                         <p className="font-inter text-sm text-white/60 leading-relaxed group-hover:text-white/80 transition-colors duration-300">
                           Review customer orders, update payment statuses, verify screenshots, and track revenue.
                         </p>
                       </div>
                     </button>
 
-                    <button onClick={() => setAdminSection('coupons')} className="group relative flex flex-col text-left border border-white/10 bg-gradient-to-b from-black to-ink p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 hover:border-electric/50 hover:shadow-glow overflow-hidden">
+                    <button onClick={() => setAdminSection('coupons')} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40 hover:shadow-[0_16px_45px_rgba(37,174,244,0.12)]">
                       <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
                       <div className="relative flex justify-between w-full mb-8">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/40 group-hover:shadow-[0_0_20px_rgba(56,182,255,0.4)] transition-all duration-300">
+                        <div className="flex h-12 w-12 items-center justify-center border border-white/10 bg-black text-white transition-all duration-300 group-hover:border-electric/50 group-hover:text-electric">
                           <Ticket className="h-6 w-6" />
                         </div>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-electric/10 text-xs font-bold text-electric border border-electric/20 group-hover:bg-electric group-hover:text-black transition-all duration-300">
+                        <div className="flex min-w-9 items-center justify-center border border-electric/25 bg-electric/10 px-2 py-1 text-xs font-bold text-electric transition-all duration-300 group-hover:bg-electric group-hover:text-black">
                           {adminCoupons.length}
                         </div>
                       </div>
                       <div className="relative">
                         <div className="font-inter text-xs font-bold uppercase tracking-[0.2em] text-electric/70 mb-2">Promotions</div>
-                        <h3 className="font-podium text-3xl text-white mb-4 tracking-wide group-hover:text-electric transition-colors duration-300">Manage <span className="italic font-light">Coupons</span></h3>
+                        <h3 className="mb-4 font-podium text-2xl font-semibold tracking-wide text-white transition-colors duration-300 group-hover:text-electric">Manage Coupons</h3>
                         <p className="font-inter text-sm text-white/60 leading-relaxed group-hover:text-white/80 transition-colors duration-300">
                           Create promotional codes, set percentage or flat discounts, and toggle coupon activity.
                         </p>
                       </div>
                     </button>
 
-                    <button onClick={() => setAdminSection('testimonials')} className="group relative flex flex-col text-left border border-white/10 bg-gradient-to-b from-black to-ink p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 hover:border-electric/50 hover:shadow-glow overflow-hidden">
+                    <button onClick={() => setAdminSection('testimonials')} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40 hover:shadow-[0_16px_45px_rgba(37,174,244,0.12)]">
                       <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
                       <div className="relative flex justify-between w-full mb-8">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/40 group-hover:shadow-[0_0_20px_rgba(56,182,255,0.4)] transition-all duration-300">
+                        <div className="flex h-12 w-12 items-center justify-center border border-white/10 bg-black text-white transition-all duration-300 group-hover:border-electric/50 group-hover:text-electric">
                           <MessageSquareQuote className="h-6 w-6" />
                         </div>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-electric/10 text-xs font-bold text-electric border border-electric/20 group-hover:bg-electric group-hover:text-black transition-all duration-300">
+                        <div className="flex min-w-9 items-center justify-center border border-electric/25 bg-electric/10 px-2 py-1 text-xs font-bold text-electric transition-all duration-300 group-hover:bg-electric group-hover:text-black">
                           {adminTestimonials.length}
                         </div>
                       </div>
                       <div className="relative">
                         <div className="font-inter text-xs font-bold uppercase tracking-[0.2em] text-electric/70 mb-2">Social Proof</div>
-                        <h3 className="font-podium text-3xl text-white mb-4 tracking-wide group-hover:text-electric transition-colors duration-300">Manage <span className="italic font-light">Testimonials</span></h3>
+                        <h3 className="mb-4 font-podium text-2xl font-semibold tracking-wide text-white transition-colors duration-300 group-hover:text-electric">Manage Testimonials</h3>
                         <p className="font-inter text-sm text-white/60 leading-relaxed group-hover:text-white/80 transition-colors duration-300">
                           Add student feedback, upload trading results, and control which testimonials appear publicly.
                         </p>
