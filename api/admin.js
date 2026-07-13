@@ -11,7 +11,7 @@ const fallbackAdminPasscodeDigest = 'jEcP8ozQj-3XfVtbPd3QNmTxv7as6DomgQEwqM99axc
 
 const hasAdminPasscode = Boolean(adminPasscode || fallbackAdminPasscodeDigest);
 const isValidAdminPasscode = (submittedPasscode) => {
-  if (adminPasscode) return safeEqual(submittedPasscode, adminPasscode);
+  if (adminPasscode && safeEqual(submittedPasscode, adminPasscode)) return true;
   const submittedDigest = scryptSync(String(submittedPasscode || ''), fallbackAdminPasscodeSalt, 32).toString('base64url');
   return safeEqual(submittedDigest, fallbackAdminPasscodeDigest);
 };
