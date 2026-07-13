@@ -969,7 +969,7 @@ export default function App() {
             <div className="mx-auto max-w-7xl">
               <div className="mb-10 max-w-3xl">
                 <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">Courses</div>
-                <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl lg:text-7xl">Start your trading journey today</h2>
+                <h2 className="font-podium text-[2.5rem] uppercase leading-none text-white sm:text-6xl lg:text-7xl">Start your trading journey today</h2>
                 <p className="mt-6 font-inter text-white/65">Select the course that matches your goals and begin learning professional trading with a structured, step-by-step approach.</p>
               </div>
               <div className="grid items-stretch gap-5 md:grid-cols-2 lg:gap-6">
@@ -1015,7 +1015,7 @@ export default function App() {
               <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
                 <div>
                   <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">Testimonials</div>
-                  <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl">Student feedback.</h2>
+                  <h2 className="font-podium text-[2.5rem] uppercase leading-none text-white sm:text-6xl">Student feedback.</h2>
                 </div>
                 <p className="max-w-md font-inter text-sm text-white/60">Results vary by student. The courses focus on process, discipline, and risk-first decision making.</p>
               </div>
@@ -1044,7 +1044,7 @@ export default function App() {
             <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr]">
               <div>
                 <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">FAQ</div>
-                <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl">Before you enroll.</h2>
+                <h2 className="font-podium text-[2.5rem] uppercase leading-none text-white sm:text-6xl">Before you enroll.</h2>
               </div>
               <div className="space-y-4">
                 {faqs.map(([question, answer]) => (
