@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Loader2, LogOut, MessageSquareQuote, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Loader2, LogOut, MessageSquareQuote, Plus, RefreshCcw, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -1324,28 +1324,53 @@ export default function App() {
             )}
 
             {joinStep === 'proof' && (
-              <div className="animate-scale-in border border-electric/30 bg-ink p-6 lg:p-8">
-                <h3 className="font-podium text-3xl uppercase leading-none text-white">Upload Payment Proof</h3>
-                <p className="mt-2 font-inter text-sm leading-relaxed text-white/70">
+              <div className="animate-scale-in border border-electric/25 bg-[linear-gradient(145deg,#101820,#0b0d0f_55%)] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)] sm:p-6 lg:p-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center border border-electric/30 bg-electric/10 text-electric">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-inter text-[9px] font-bold uppercase tracking-[0.25em] text-electric">Final verification</div>
+                    <h3 className="mt-1 font-podium text-2xl uppercase leading-none text-white sm:text-3xl">Upload Payment Proof</h3>
+                  </div>
+                </div>
+                <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">
                   Please upload a screenshot of your successful payment of {money(selectedOfferPrice)}. This is required to verify your enrollment.
                 </p>
                 
-                <div className="mt-8 space-y-6 font-inter">
+                <div className="mt-7 space-y-6 font-inter">
                   <div>
                     <label className="mb-3 block text-xs font-bold uppercase tracking-widest text-electric">
                       Payment Screenshot *
                     </label>
-                    <div className="flex items-center gap-4">
-                      <label className="cursor-pointer border border-white/20 bg-black px-6 py-4 text-xs font-bold text-white transition hover:bg-white/10 uppercase tracking-widest">
-                        Select Image
-                        <input type="file" accept="image/*" onChange={handleScreenshotUpload} className="hidden" />
-                      </label>
+                    <label className={`group relative block cursor-pointer border border-dashed p-5 transition sm:p-6 ${paymentScreenshot ? 'border-emerald-400/45 bg-emerald-400/[0.05]' : 'border-electric/35 bg-black/40 hover:border-electric hover:bg-electric/[0.06]'}`}>
                       {paymentScreenshot ? (
-                        <span className="text-sm text-green-400 font-bold truncate">✓ {paymentScreenshot.name} (Ready)</span>
+                        <div className="flex items-center gap-4">
+                          <img src={paymentScreenshot.dataUrl} alt="Payment screenshot preview" className="h-20 w-20 shrink-0 border border-white/10 object-cover sm:h-24 sm:w-28" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400">
+                              <CheckCircle className="h-4 w-4" /> Ready to submit
+                            </div>
+                            <div className="mt-2 truncate text-sm font-semibold text-white">{paymentScreenshot.name}</div>
+                            <div className="mt-1 text-xs text-white/40">Tap to choose a different image</div>
+                          </div>
+                        </div>
                       ) : (
-                        <span className="text-sm text-white/40">No file selected</span>
+                        <div className="flex flex-col items-center py-3 text-center">
+                          <div className="flex h-12 w-12 items-center justify-center bg-electric/10 text-electric transition group-hover:scale-105 group-hover:bg-electric group-hover:text-black">
+                            <Upload className="h-5 w-5" />
+                          </div>
+                          <div className="mt-4 text-xs font-bold uppercase tracking-[0.16em] text-white">Choose payment screenshot</div>
+                          <div className="mt-2 text-xs leading-relaxed text-white/40">JPG, PNG or WEBP · Clear screenshots work best</div>
+                        </div>
                       )}
-                    </div>
+                      <input type="file" accept="image/*" onChange={handleScreenshotUpload} className="hidden" />
+                    </label>
+                    {paymentScreenshot && (
+                      <button type="button" onClick={() => setPaymentScreenshot(null)} className="mt-3 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/45 transition hover:text-red-300">
+                        <Trash2 className="h-3.5 w-3.5" /> Remove image
+                      </button>
+                    )}
                   </div>
 
                   <div>
@@ -1357,16 +1382,17 @@ export default function App() {
                       value={joinForm.remarks}
                       onChange={(e) => setJoinForm({ ...joinForm, remarks: e.target.value })}
                       placeholder="e.g. 312345678901"
-                      className="w-full border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric"
+                      className="h-12 w-full border border-white/10 bg-black/70 px-4 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-electric"
                     />
                   </div>
 
                   <button
                     onClick={submitPaymentConfirmation}
                     disabled={!paymentScreenshot || submitStatus === 'sending'}
-                    className="mt-6 w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="mt-2 inline-flex w-full items-center justify-center gap-2 bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30 disabled:shadow-none"
                   >
-                    {submitStatus === 'sending' ? 'Submitting...' : 'Submit Enrollment'}
+                    {submitStatus === 'sending' && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {submitStatus === 'sending' ? 'Submitting...' : 'Submit for Verification'}
                   </button>
                   {submitStatus === 'error' && <p className="mt-4 text-sm text-red-300">Could not submit your payment proof. Try again.</p>}
                 </div>
