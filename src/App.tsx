@@ -1109,7 +1109,14 @@ export default function App() {
 
           <section id="about" className="section-rise bg-ink px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
             <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
-              <img src={aboutImageUrl} alt="Trading Boy Academy" className="h-[420px] w-full object-cover" />
+              <div className="group relative overflow-hidden border border-electric/20 bg-black p-2 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+                <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/45 via-transparent to-electric/10" />
+                <img src={aboutImageUrl} alt="A bright professional trading education workspace" className="h-[420px] w-full object-cover object-center transition duration-700 group-hover:scale-[1.025] sm:h-[480px] lg:h-[520px]" />
+                <div className="absolute bottom-6 left-6 z-20 border border-white/15 bg-black/75 px-4 py-3 backdrop-blur-md">
+                  <div className="font-podium text-2xl text-white">5+ Years</div>
+                  <div className="mt-1 font-inter text-[9px] uppercase tracking-[0.24em] text-electric">Empowering traders</div>
+                </div>
+              </div>
               <div>
                 <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">About Us</div>
                 <h2 className="font-podium text-[2.5rem] uppercase leading-none text-white sm:text-6xl">Empowering traders for over 5+ years</h2>
@@ -1215,12 +1222,41 @@ export default function App() {
       )}
 
       {!adminOpen && (
-        <footer className="border-t border-white/10 bg-ink px-5 py-6 sm:px-10 sm:py-8 lg:px-16">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 font-inter uppercase text-white/50">
-            <a href="#home" aria-label="Trading Boy Academy home" className="inline-flex shrink-0 items-center">
-              <img src={logoUrl} alt="Trading Boy Academy" className="h-8 w-auto object-contain opacity-90 sm:h-12" />
-            </a>
-            <span className="max-w-[190px] text-right text-[8px] leading-relaxed tracking-[0.14em] sm:max-w-none sm:text-xs sm:tracking-widest">Forex, gold, and funded account education.</span>
+        <footer className="relative overflow-hidden border-t border-electric/20 bg-[#080d12] px-5 sm:px-10 lg:px-16">
+          <div className="pointer-events-none absolute left-1/2 top-0 h-44 w-[80%] -translate-x-1/2 bg-electric/10 blur-[90px]" />
+          <div className="relative mx-auto max-w-7xl font-inter">
+            <div className="flex flex-col gap-6 border-b border-white/10 py-9 sm:flex-row sm:items-center sm:justify-between sm:py-12">
+              <div className="max-w-2xl">
+                <div className="text-[9px] font-bold uppercase tracking-[0.28em] text-electric sm:text-[10px]">Trade with structure</div>
+                <h2 className="mt-3 font-podium text-2xl uppercase leading-tight text-white sm:text-3xl lg:text-4xl">Build skill. Protect capital. Trade with confidence.</h2>
+              </div>
+              <a href="#course" className="group inline-flex min-h-12 w-full items-center justify-center bg-electric px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline sm:w-auto sm:min-w-[190px]">
+                Explore courses
+                <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </a>
+            </div>
+
+            <div className="grid gap-7 py-8 sm:grid-cols-[1fr_auto] sm:items-end sm:py-10">
+              <div>
+                <a href="#home" aria-label="Trading Boy Academy home" className="inline-flex items-center">
+                  <img src={logoUrl} alt="Trading Boy Academy" className="h-11 w-auto object-contain sm:h-14" />
+                </a>
+                <p className="mt-4 max-w-sm text-xs leading-relaxed text-white/50 sm:text-sm">Practical forex, gold, and funded-account education built around discipline, risk control, and repeatable execution.</p>
+              </div>
+
+              <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-5 gap-y-3 sm:justify-end lg:gap-x-7">
+                {navLinks.map((item) => (
+                  <a key={item} href={`#${item.toLowerCase()}`} className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55 transition hover:text-electric sm:text-[10px]">
+                    {item}
+                  </a>
+                ))}
+              </nav>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 border-t border-white/10 py-5 text-[8px] uppercase tracking-[0.14em] text-white/30 sm:text-[9px] sm:tracking-[0.2em]">
+              <span>© 2026 Trading Boy</span>
+              <span className="text-right">Education · Discipline · Execution</span>
+            </div>
           </div>
         </footer>
       )}
