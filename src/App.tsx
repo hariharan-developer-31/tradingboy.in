@@ -972,34 +972,34 @@ export default function App() {
                 <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl lg:text-7xl">Start your trading journey today</h2>
                 <p className="mt-6 font-inter text-white/65">Select the course that matches your goals and begin learning professional trading with a structured, step-by-step approach.</p>
               </div>
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid items-stretch gap-5 md:grid-cols-2 lg:gap-6">
                 {publicCourses.map((course) => {
                   const normalPrice = course.normal_price || course.price;
                   const offerPrice = course.offer_price || course.price;
                   const percent = offerPercent(normalPrice, offerPrice);
                   return (
-                    <article key={course.id || course.title} className="smooth-card border border-white/10 bg-ink shadow-glow hover:border-electric/35 hover:shadow-neon-blue">
-                      <img src={course.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={course.title} className="h-56 w-full object-cover" />
-                      <div className="p-6">
-                        <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Course</div>
-                        <h3 className="mt-4 font-podium text-4xl uppercase leading-none text-white sm:text-5xl">{course.title}</h3>
-                        <p className="mt-5 font-inter text-sm leading-relaxed text-white/65">{course.description}</p>
-                        <div className="mt-7 flex flex-wrap items-end gap-3 font-inter">
-                          <div className="text-4xl font-bold text-white">{money(offerPrice)}</div>
+                    <article key={course.id || course.title} className="smooth-card flex h-full flex-col overflow-hidden border border-white/10 bg-ink shadow-glow hover:border-electric/35 hover:shadow-neon-blue">
+                      <img src={course.thumbnail_url || fallbackCourses[0].thumbnail_url} alt={course.title} className="aspect-[16/7] w-full object-cover md:aspect-[16/8] lg:aspect-[16/7]" />
+                      <div className="flex flex-1 flex-col p-5 sm:p-6 md:p-5 lg:p-6">
+                        <div className="font-inter text-[10px] uppercase tracking-[0.3em] text-electric lg:text-xs">Course</div>
+                        <h3 className="mt-3 font-podium text-[2rem] uppercase leading-[0.98] text-white sm:text-[2.5rem] md:text-[1.75rem] lg:mt-4 lg:text-[2.5rem] xl:text-5xl">{course.title}</h3>
+                        <p className="mt-4 font-inter text-xs leading-relaxed text-white/65 sm:text-sm md:text-[11px] lg:mt-5 lg:text-sm">{course.description}</p>
+                        <div className="mt-5 flex flex-wrap items-end gap-2.5 font-inter lg:mt-7 lg:gap-3">
+                          <div className="text-3xl font-bold text-white md:text-[1.65rem] lg:text-4xl">{money(offerPrice)}</div>
                           {percent > 0 && (
                             <>
-                              <div className="pb-1 text-sm text-white/40 line-through">{money(normalPrice)}</div>
-                              <div className="mb-1 bg-electric px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-black">{percent}% Off</div>
+                              <div className="pb-1 text-xs text-white/40 line-through lg:text-sm">{money(normalPrice)}</div>
+                              <div className="mb-1 bg-electric px-2 py-1 text-[8px] font-bold uppercase tracking-widest text-black lg:px-2.5 lg:text-[10px]">{percent}% Off</div>
                             </>
                           )}
                         </div>
-                        <div className="mt-7 flex flex-nowrap gap-3 font-inter sm:gap-4">
-                          <button onClick={() => setCourseDetailsOpen(course)} className="group inline-flex min-w-0 flex-1 items-center justify-center border border-electric bg-transparent px-3 py-3.5 font-inter text-[9px] font-bold uppercase tracking-wider text-white transition hover:bg-electric hover:text-black sm:px-6 sm:py-4 sm:text-xs sm:tracking-widest">
+                        <div className="mt-auto flex flex-nowrap gap-2.5 pt-6 font-inter lg:gap-4 lg:pt-7">
+                          <button onClick={() => setCourseDetailsOpen(course)} className="group inline-flex min-w-0 flex-1 items-center justify-center border border-electric bg-transparent px-3 py-3 font-inter text-[9px] font-bold uppercase tracking-[0.1em] text-white transition hover:bg-electric hover:text-black sm:px-4 sm:text-[10px] md:px-2 md:text-[8px] lg:px-6 lg:py-4 lg:text-xs lg:tracking-widest">
                             View Course
                           </button>
-                          <button onClick={() => openCheckout(course.title)} className="group inline-flex min-w-0 flex-1 items-center justify-center bg-electric px-3 py-3.5 font-inter text-[9px] font-bold uppercase tracking-wider text-black transition hover:bg-skyline sm:px-6 sm:py-4 sm:text-xs sm:tracking-widest">
+                          <button onClick={() => openCheckout(course.title)} className="group inline-flex min-w-0 flex-1 items-center justify-center bg-electric px-3 py-3 font-inter text-[9px] font-bold uppercase tracking-[0.1em] text-black transition hover:bg-skyline sm:px-4 sm:text-[10px] md:px-2 md:text-[8px] lg:px-6 lg:py-4 lg:text-xs lg:tracking-widest">
                             Join Course
-                            <ArrowUpRight className="ml-1 h-3.5 w-3.5 shrink-0 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 sm:ml-2 sm:h-4 sm:w-4" />
+                            <ArrowUpRight className="ml-1 h-3.5 w-3.5 shrink-0 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 lg:ml-2 lg:h-4 lg:w-4" />
                           </button>
                         </div>
                       </div>
