@@ -1062,7 +1062,9 @@ export default function App() {
       {!adminOpen && (
         <footer className="border-t border-white/10 bg-ink px-6 py-8 sm:px-10 lg:px-16">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 font-inter text-xs uppercase tracking-widest text-white/50 sm:flex-row sm:items-center sm:justify-between">
-            <span>Trading Boy Academy</span>
+            <a href="#home" aria-label="Trading Boy Academy home" className="inline-flex w-fit items-center">
+              <img src={logoUrl} alt="Trading Boy Academy" className="h-11 w-auto object-contain opacity-90 sm:h-12" />
+            </a>
             <span>Forex, gold, and funded account education.</span>
           </div>
         </footer>
