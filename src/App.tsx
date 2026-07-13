@@ -1015,6 +1015,15 @@ export default function App() {
         'Access to a charting platform and a demo account for safe, practical chart practice.',
         'A notebook or digital journal, plus the commitment to practise consistently before risking real capital.',
       ];
+  const courseAccessPoints = [
+    'Lifetime support throughout your learning journey.',
+    '8 hours of structured recorded video lessons.',
+    'Every Sunday live meet for guidance and market review.',
+    'Daily chart updates to support consistent practice.',
+    'Live support when you need help with the lessons.',
+    'Private Discord community access.',
+    'Weekly educational calls for continued development.',
+  ];
 
   return (
     <div className="site-shell min-h-screen bg-ink text-white">
@@ -1298,6 +1307,19 @@ export default function App() {
                  </div>
 
                  <div className="order-4 border-t border-white/10 pt-10">
+                   <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Learn from basic to advanced</div>
+                   <h3 className="mb-8 font-podium text-3xl uppercase text-white">Course access & support</h3>
+                   <div className="grid gap-3 sm:grid-cols-2">
+                     {courseAccessPoints.map((point, index) => (
+                       <div key={point} className="smooth-card flex items-start gap-4 border border-white/10 bg-black/35 p-4 hover:border-electric/35">
+                         <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-electric/10 font-mono text-xs font-bold text-electric">{String(index + 1).padStart(2, '0')}</span>
+                         <span className="pt-1 text-sm leading-relaxed text-white/75 md:text-base">{point}</span>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+
+                 <div className="order-5 border-t border-white/10 pt-10">
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Built for focused traders</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Who this course is for</h3>
                    <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
@@ -1307,7 +1329,7 @@ export default function App() {
                    </ul>
                  </div>
 
-                 <div className="order-5 border-t border-white/10 pt-10">
+                 <div className="order-6 border-t border-white/10 pt-10">
                    <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Before you begin</div>
                    <h3 className="mb-8 font-podium text-3xl uppercase text-white">Requirements</h3>
                    <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
