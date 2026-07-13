@@ -911,7 +911,7 @@ export default function App() {
 
       {!adminOpen && (
         <main>
-          <section id="home" className="relative flex min-h-screen items-center overflow-hidden bg-[#070b10] pt-28 lg:pt-32">
+          <section id="home" className="relative flex min-h-screen items-center overflow-hidden bg-[#070b10] lg:pt-32">
             <div className="pointer-events-none absolute inset-0 bg-grid-pattern opacity-25 animate-grid-pan" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(37,174,244,0.16),rgba(7,11,16,0.58)_38%,#070b10_74%)] animate-soft-drift" />
             <div className="pointer-events-none absolute inset-y-0 left-0 w-[42%] origin-left bg-[linear-gradient(90deg,rgba(37,174,244,0.22),rgba(37,174,244,0.055)_45%,transparent)] blur-[3px] animate-edge-breathe" />
