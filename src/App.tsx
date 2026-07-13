@@ -324,7 +324,7 @@ export default function App() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [updatingOrderId, setUpdatingOrderId] = useState('');
   const [deletingOrders, setDeletingOrders] = useState(false);
-  const [campaignAudience, setCampaignAudience] = useState<'all' | 'course' | 'manual'>('all');
+  const [campaignAudience, setCampaignAudience] = useState<'paid' | 'all' | 'manual'>('paid');
   const [campaignCourse, setCampaignCourse] = useState('All courses');
   const [campaignManualEmails, setCampaignManualEmails] = useState('');
   const [campaignSubject, setCampaignSubject] = useState('');
@@ -409,8 +409,8 @@ export default function App() {
     const emails = new Set<string>();
     if (campaignAudience !== 'manual') {
       adminOrders
-        .filter((order) => order.payment_status === 'paid')
-        .filter((order) => campaignAudience === 'all' || campaignCourse === 'All courses' || order.course_name === campaignCourse)
+        .filter((order) => campaignAudience === 'all' || order.payment_status === 'paid')
+        .filter((order) => campaignCourse === 'all' || campaignCourse === 'All courses' || order.course_name === campaignCourse)
         .map((order) => order.email?.trim().toLowerCase())
         .filter(Boolean)
         .forEach((email) => emails.add(email as string));
@@ -2188,46 +2188,61 @@ export default function App() {
                   </div>
                 </div>
                 ) : adminSection === 'emails' ? (
-                  <div className="space-y-6">
-                    <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-                      <form onSubmit={sendEmailCampaign} className="border border-white/10 bg-black p-6">
-                        <h3 className="mb-4 font-podium text-xl uppercase tracking-widest text-white">New Campaign</h3>
-                        <div className="space-y-4 font-inter text-sm">
-                          <div>
-                            <label className="mb-2 block text-[10px] uppercase tracking-widest text-white/50">Audience</label>
-                            <select value={campaignAudience} onChange={(e) => setCampaignAudience(e.target.value as any)} className="w-full border border-white/10 bg-ink px-4 py-3 text-white outline-none focus:border-electric">
-                              <option value="all">All Paid Students</option>
-                              <option value="course">Students by Course</option>
-                              <option value="manual">Manual Entry Only</option>
-                            </select>
-                          </div>
-                          {campaignAudience === 'course' && (
-                            <div>
-                              <label className="mb-2 block text-[10px] uppercase tracking-widest text-white/50">Target Course</label>
-                              <select value={campaignCourse} onChange={(e) => setCampaignCourse(e.target.value)} className="w-full border border-white/10 bg-ink px-4 py-3 text-white outline-none focus:border-electric">
-                                <option value="All courses">All courses</option>
-                                {adminCourseNames.map((course) => <option key={course} value={course}>{course}</option>)}
-                              </select>
-                            </div>
-                          )}
-                          <div>
-                            <label className="mb-2 block text-[10px] uppercase tracking-widest text-white/50">Additional Emails (Comma separated)</label>
-                            <textarea value={campaignManualEmails} onChange={(e) => setCampaignManualEmails(e.target.value)} rows={2} className="w-full border border-white/10 bg-ink px-4 py-3 text-white outline-none focus:border-electric" placeholder="e.g. test@example.com, another@example.com"></textarea>
-                          </div>
-                          <div>
-                            <label className="mb-2 block text-[10px] uppercase tracking-widest text-white/50">Subject</label>
-                            <input required value={campaignSubject} onChange={(e) => setCampaignSubject(e.target.value)} className="w-full border border-white/10 bg-ink px-4 py-3 text-white outline-none focus:border-electric" placeholder="Email Subject" />
-                          </div>
-                          <div>
-                            <label className="mb-2 block text-[10px] uppercase tracking-widest text-white/50">Message Body (HTML supported)</label>
-                            <textarea required value={campaignMessage} onChange={(e) => setCampaignMessage(e.target.value)} rows={6} className="w-full border border-white/10 bg-ink px-4 py-3 text-white outline-none focus:border-electric" placeholder="Type your message here..."></textarea>
-                          </div>
-                          <button type="submit" disabled={sendingCampaign} className="w-full bg-electric px-6 py-4 font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50 disabled:cursor-not-allowed">
-                            {sendingCampaign ? 'Sending...' : 'Send Campaign'}
-                          </button>
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <form onSubmit={sendEmailCampaign} className="space-y-5 border border-white/10 bg-black p-5 sm:p-7">
+                      <div>
+                        <div className="font-inter text-xs font-bold uppercase tracking-[0.25em] text-electric">Compose campaign</div>
+                        <h3 className="mt-3 font-podium text-3xl uppercase text-white">Send an update</h3>
+                        <p className="mt-2 font-inter text-sm leading-relaxed text-white/50">Use this for course announcements, new lessons, community updates, or relevant offers.</p>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Audience</label>
+                          <select value={campaignAudience} onChange={(event) => setCampaignAudience(event.target.value as 'paid' | 'all' | 'manual')} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                            <option value="paid">Paid students only</option>
+                            <option value="all">All course joiners</option>
+                            <option value="manual">Manual emails only</option>
+                          </select>
                         </div>
-                      </form>
-                      <div className="border border-white/10 bg-black p-6">
+                        <div>
+                          <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Course</label>
+                          <select value={campaignCourse} disabled={campaignAudience === 'manual'} onChange={(event) => setCampaignCourse(event.target.value)} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric disabled:cursor-not-allowed disabled:opacity-35">
+                            <option value="All courses">All courses</option>
+                            {adminCourseNames.map((course) => <option key={course} value={course}>{course}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Additional email addresses</label>
+                        <textarea rows={3} value={campaignManualEmails} onChange={(event) => setCampaignManualEmails(event.target.value)} placeholder="name@example.com, another@example.com" className="w-full resize-y border border-white/10 bg-ink px-4 py-3 font-inter text-sm leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-electric" />
+                        <p className="mt-2 font-inter text-[10px] leading-relaxed text-white/35">Separate addresses with commas, spaces, semicolons, or new lines. Valid addresses are merged and duplicates are removed.</p>
+                      </div>
+                      <div>
+                        <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Email subject</label>
+                        <input required maxLength={150} value={campaignSubject} onChange={(event) => setCampaignSubject(event.target.value)} placeholder="e.g. New live trading session this Sunday" className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none placeholder:text-white/30 focus:border-electric" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Message</label>
+                        <textarea required maxLength={5000} rows={10} value={campaignMessage} onChange={(event) => setCampaignMessage(event.target.value)} placeholder="Write your announcement or course update..." className="w-full resize-y border border-white/10 bg-ink px-4 py-4 font-inter text-sm leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-electric" />
+                        <div className="mt-2 text-right font-inter text-[10px] text-white/30">{campaignMessage.length}/5000</div>
+                      </div>
+                      <button type="submit" disabled={sendingCampaign || campaignRecipientCount === 0 || !campaignSubject.trim() || !campaignMessage.trim()} className="inline-flex w-full items-center justify-center gap-2 bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-35">
+                        {sendingCampaign ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {sendingCampaign ? 'Sending campaign...' : `Send to ${campaignRecipientCount} recipient${campaignRecipientCount === 1 ? '' : 's'}`}
+                      </button>
+                    </form>
+                    <aside className="space-y-6">
+                      <div className="h-fit border border-electric/25 bg-electric/[0.05] p-5 sm:p-6">
+                        <Mail className="h-7 w-7 text-electric" />
+                        <div className="mt-5 font-inter text-xs font-bold uppercase tracking-widest text-white/45">Unique recipients</div>
+                        <div className="mt-2 font-podium text-5xl font-bold text-white">{campaignRecipientCount}</div>
+                        <div className="mt-5 space-y-3 border-t border-white/10 pt-5 font-inter text-sm leading-relaxed text-white/55">
+                          <p>Duplicate email addresses are automatically removed.</p>
+                          <p>Paid students are selected by default to keep messages relevant.</p>
+                          <p>You will be asked to confirm the final recipient count before sending.</p>
+                        </div>
+                      </div>
+                      <div className="border border-white/10 bg-black p-5 sm:p-6">
                         <h3 className="mb-4 font-podium text-xl uppercase tracking-widest text-white">Campaign History</h3>
                         <div className="space-y-4">
                           {adminCampaigns.length === 0 ? (
@@ -2241,14 +2256,14 @@ export default function App() {
                                   <span>{camp.recipients} sent</span>
                                 </div>
                                 <div className="mt-1 text-[10px] uppercase tracking-widest text-electric">
-                                  {camp.audience === 'course' ? camp.course_name : camp.audience}
+                                  {camp.course_name ? camp.course_name : camp.audience}
                                 </div>
                               </div>
                             ))
                           )}
                         </div>
                       </div>
-                    </div>
+                    </aside>
                   </div>
                 ) : (
                   <div className="space-y-5">
