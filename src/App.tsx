@@ -923,11 +923,11 @@ export default function App() {
                 Practical trading courses for serious learners who want process, risk control, and disciplined execution.
               </p>
               <div className="mt-8 flex flex-nowrap items-center justify-center gap-3 sm:gap-4 animate-hero-actions">
-                <button onClick={() => openCheckout()} className="group inline-flex items-center justify-center rounded-full bg-electric px-5 py-3.5 sm:px-7 sm:py-4 font-inter text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline whitespace-nowrap">
+                <button onClick={() => openCheckout()} className="group inline-flex min-h-14 items-center justify-center bg-electric px-6 py-4 font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline sm:min-w-[190px] sm:px-8 sm:text-[11px] whitespace-nowrap">
                   Join Course
                   <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </button>
-                <a href="#course" className="rounded-full border border-white/12 bg-white/[0.03] px-5 py-3.5 sm:px-7 sm:py-4 font-inter text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-white/75 transition hover:border-electric/60 hover:text-white whitespace-nowrap">
+                <a href="#course" className="inline-flex min-h-14 items-center justify-center border border-white/20 bg-white/[0.03] px-6 py-4 font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-white/75 transition hover:border-electric/60 hover:text-white sm:min-w-[190px] sm:px-8 sm:text-[11px] whitespace-nowrap">
                   View Courses
                 </a>
               </div>
