@@ -972,7 +972,7 @@ export default function App() {
                 <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl lg:text-7xl">Start your trading journey today</h2>
                 <p className="mt-6 font-inter text-white/65">Select the course that matches your goals and begin learning professional trading with a structured, step-by-step approach.</p>
               </div>
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2">
                 {publicCourses.map((course) => {
                   const normalPrice = course.normal_price || course.price;
                   const offerPrice = course.offer_price || course.price;
