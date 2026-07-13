@@ -974,15 +974,15 @@ export default function App() {
     try {
       setSendingCampaign(true);
       setAdminStatus(`Sending campaign to ${campaignRecipientCount} recipients...`);
-      const result = await adminRequest<{ sentCount: number }>('sendCampaign', {
+      const result = await adminRequest<{ sent: number }>('sendCampaign', {
         audience: campaignAudience,
         courseName: campaignCourse,
         additionalEmails: campaignManualEmails,
         subject,
         message,
       });
-      setAdminStatus(`Campaign complete: ${result.sentCount} sent.`);
-      if (result.sentCount > 0) {
+      setAdminStatus(`Campaign complete: ${result.sent} sent.`);
+      if (result.sent > 0) {
         setCampaignSubject('');
         setCampaignMessage('');
         setCampaignManualEmails('');
