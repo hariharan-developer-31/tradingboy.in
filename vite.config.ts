@@ -316,6 +316,46 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           return;
         }
 
+        if (body.action === 'sendCampaign') {
+          const audience = body.audience === 'all' ? 'all' : 'paid';
+          const courseName = String(body.courseName || 'all').trim();
+          const subject = String(body.subject || '').trim().slice(0, 150);
+          const message = String(body.message || '').trim().slice(0, 5000);
+          if (!subject || !message) {
+            sendJson(res, 400, { error: 'Email subject and message are required.' });
+            return;
+          }
+
+          let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
+          if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
+          if (courseName && courseName !== 'all') recipientQuery = recipientQuery.eq('course_name', courseName);
+          const { data: rows, error: recipientError } = await recipientQuery;
+          if (recipientError) {
+            sendJson(res, 500, { error: recipientError.message });
+            return;
+          }
+
+          const recipients = Array.from(new Map((rows || []).filter((row: any) => row.email).map((row: any) => [row.email.trim().toLowerCase(), row])).values()) as any[];
+          if (recipients.length === 0) {
+            sendJson(res, 400, { error: 'No recipients match this audience.' });
+            return;
+          }
+
+          let sent = 0;
+          let failed = 0;
+          for (let index = 0; index < recipients.length; index += 5) {
+            const results = await Promise.all(recipients.slice(index, index + 5).map((recipient) => sendMail(env, {
+              to: recipient.email,
+              subject,
+              html: campaignHtml({ name: recipient.full_name, message }),
+            })));
+            sent += results.filter(Boolean).length;
+            failed += results.filter((result) => !result).length;
+          }
+          sendJson(res, 200, { ok: true, sent, failed, recipients: recipients.length });
+          return;
+        }
+
         if (body.action === 'coupons') {
           const { data, error } = await admin
             .from('coupons')
@@ -504,6 +544,17 @@ const sendMail = async (
 };
 
 const darkEmail = (content: string) => `<!doctype html><html><head><meta name="color-scheme" content="dark only"><meta name="supported-color-schemes" content="dark only"><style>:root{color-scheme:dark only;supported-color-schemes:dark only}html,body{margin:0!important;padding:0!important;background:#000000!important;color:#ffffff!important}a{color:#25aef4}</style></head><body bgcolor="#000000" style="margin:0;padding:0;background:#000000;color:#ffffff;">${content}</body></html>`;
+const escapeHtml = (value: unknown) => String(value || '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] || character);
+const campaignHtml = ({ name, message }: { name: string; message: string }) => darkEmail(`
+  <div style="font-family:Arial,sans-serif;background:#000000;color:#ffffff;padding:32px 16px;">
+    <div style="max-width:620px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;padding:32px;">
+      <img src="https://tradingboy.in/logo.png" alt="Trading Boy Academy" style="height:52px;width:auto;margin:0 0 24px;display:block;" />
+      <p style="margin:0 0 18px;color:#ffffff;font-size:16px;line-height:1.6;">Hi ${escapeHtml(name || 'Trader')},</p>
+      <div style="color:#cbd5e1;font-size:15px;line-height:1.75;white-space:pre-wrap;">${escapeHtml(message)}</div>
+      <div style="margin-top:32px;padding-top:20px;border-top:1px solid #1f2933;color:#64748b;font-size:12px;line-height:1.6;">You received this message because you joined a Trading Boy Academy course.<br>From: admin@tradingboy.in</div>
+    </div>
+  </div>
+`);
 
 const receiptHtml = (order: any) => darkEmail(`
   <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">

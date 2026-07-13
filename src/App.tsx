@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Loader2, LogOut, MessageSquareQuote, Plus, RefreshCcw, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
 import aboutImageUrl from './assets/About us.png';
@@ -249,7 +249,7 @@ export default function App() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
-  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials'>('home');
+  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails'>('home');
   const [adminStatus, setAdminStatus] = useState('');
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
   const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
@@ -285,6 +285,11 @@ export default function App() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [updatingOrderId, setUpdatingOrderId] = useState('');
   const [deletingOrders, setDeletingOrders] = useState(false);
+  const [campaignAudience, setCampaignAudience] = useState<'paid' | 'all'>('paid');
+  const [campaignCourse, setCampaignCourse] = useState('all');
+  const [campaignSubject, setCampaignSubject] = useState('');
+  const [campaignMessage, setCampaignMessage] = useState('');
+  const [sendingCampaign, setSendingCampaign] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
@@ -358,6 +363,17 @@ export default function App() {
     () => Array.from(new Set(adminCourses.map((course) => course.title).filter(Boolean))),
     [adminCourses],
   );
+
+  const campaignRecipientCount = useMemo(() => {
+    const emails = new Set(
+      adminOrders
+        .filter((order) => campaignAudience === 'all' || order.payment_status === 'paid')
+        .filter((order) => campaignCourse === 'all' || order.course_name === campaignCourse)
+        .map((order) => order.email.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    return emails.size;
+  }, [adminOrders, campaignAudience, campaignCourse]);
 
   useEffect(() => {
     const handleScroll = () => setHasScrolled(window.scrollY > 24);
@@ -884,6 +900,36 @@ export default function App() {
       setAdminStatus(error instanceof Error ? error.message : 'Could not delete payment records.');
     } finally {
       setDeletingOrders(false);
+    }
+  };
+
+  const sendEmailCampaign = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const subject = campaignSubject.trim();
+    const message = campaignMessage.trim();
+    if (!subject || !message || campaignRecipientCount === 0) {
+      setAdminStatus(campaignRecipientCount === 0 ? 'No recipients match this audience.' : 'Enter an email subject and message.');
+      return;
+    }
+    if (!window.confirm(`Send this email to ${campaignRecipientCount} unique course joiner${campaignRecipientCount === 1 ? '' : 's'}?`)) return;
+    try {
+      setSendingCampaign(true);
+      setAdminStatus(`Sending campaign to ${campaignRecipientCount} recipients...`);
+      const result = await adminRequest<{ sent: number; failed: number }>('sendCampaign', {
+        audience: campaignAudience,
+        courseName: campaignCourse,
+        subject,
+        message,
+      });
+      setAdminStatus(`Campaign complete: ${result.sent} sent${result.failed ? `, ${result.failed} failed` : ''}.`);
+      if (result.failed === 0) {
+        setCampaignSubject('');
+        setCampaignMessage('');
+      }
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not send the email campaign.');
+    } finally {
+      setSendingCampaign(false);
     }
   };
 
@@ -1538,7 +1584,7 @@ export default function App() {
               </div>
               <div>
                 {adminSection === 'home' ? (
-                  <div className="mx-auto mt-12 grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+                  <div className="mx-auto mt-12 grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
                     <button onClick={() => setAdminSection('courses')} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40 hover:shadow-[0_16px_45px_rgba(37,174,244,0.12)]">
                       <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
                       <div className="relative flex justify-between w-full mb-8">
@@ -1614,6 +1660,25 @@ export default function App() {
                         </p>
                       </div>
                     </button>
+
+                    <button onClick={() => setAdminSection('emails')} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40 hover:shadow-[0_16px_45px_rgba(37,174,244,0.12)]">
+                      <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
+                      <div className="relative mb-8 flex w-full justify-between">
+                        <div className="flex h-12 w-12 items-center justify-center border border-white/10 bg-black text-white transition-all duration-300 group-hover:border-electric/50 group-hover:text-electric">
+                          <Mail className="h-6 w-6" />
+                        </div>
+                        <div className="flex min-w-9 items-center justify-center border border-electric/25 bg-electric/10 px-2 py-1 text-xs font-bold text-electric transition-all duration-300 group-hover:bg-electric group-hover:text-black">
+                          {new Set(adminOrders.map((order) => order.email.trim().toLowerCase()).filter(Boolean)).size}
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <div className="mb-2 font-inter text-xs font-bold uppercase tracking-[0.2em] text-electric/70">Communication</div>
+                        <h3 className="mb-4 font-podium text-2xl font-semibold tracking-wide text-white transition-colors duration-300 group-hover:text-electric">Email Course Joiners</h3>
+                        <p className="font-inter text-sm leading-relaxed text-white/60 transition-colors duration-300 group-hover:text-white/80">
+                          Send course updates, announcements, and marketing messages to selected student audiences.
+                        </p>
+                      </div>
+                    </button>
                   </div>
                 ) : (
                   <div>
@@ -1624,7 +1689,7 @@ export default function App() {
                       </button>
                       <div className="hidden sm:block h-6 w-px bg-white/20 shrink-0"></div>
                       <div className="font-podium text-xl tracking-wider uppercase text-white break-words">
-                        {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : adminSection === 'testimonials' ? 'Testimonial Management' : 'Coupon Management'}
+                        {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : adminSection === 'testimonials' ? 'Testimonial Management' : adminSection === 'emails' ? 'Email Campaigns' : 'Coupon Management'}
                       </div>
                     </div>
                     {adminStatus && <div className="mb-5 border border-white/10 bg-black p-4 font-inter text-sm text-white/70">{adminStatus}</div>}
@@ -1930,6 +1995,55 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+                ) : adminSection === 'emails' ? (
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <form onSubmit={sendEmailCampaign} className="space-y-5 border border-white/10 bg-black p-5 sm:p-7">
+                      <div>
+                        <div className="font-inter text-xs font-bold uppercase tracking-[0.25em] text-electric">Compose campaign</div>
+                        <h3 className="mt-3 font-podium text-3xl uppercase text-white">Send an update</h3>
+                        <p className="mt-2 font-inter text-sm leading-relaxed text-white/50">Use this for course announcements, new lessons, community updates, or relevant offers.</p>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Audience</label>
+                          <select value={campaignAudience} onChange={(event) => setCampaignAudience(event.target.value as 'paid' | 'all')} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                            <option value="paid">Paid students only</option>
+                            <option value="all">All course joiners</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Course</label>
+                          <select value={campaignCourse} onChange={(event) => setCampaignCourse(event.target.value)} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                            <option value="all">All courses</option>
+                            {adminCourseNames.map((course) => <option key={course} value={course}>{course}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Email subject</label>
+                        <input required maxLength={150} value={campaignSubject} onChange={(event) => setCampaignSubject(event.target.value)} placeholder="e.g. New live trading session this Sunday" className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none placeholder:text-white/30 focus:border-electric" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Message</label>
+                        <textarea required maxLength={5000} rows={10} value={campaignMessage} onChange={(event) => setCampaignMessage(event.target.value)} placeholder="Write your announcement or course update..." className="w-full resize-y border border-white/10 bg-ink px-4 py-4 font-inter text-sm leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-electric" />
+                        <div className="mt-2 text-right font-inter text-[10px] text-white/30">{campaignMessage.length}/5000</div>
+                      </div>
+                      <button type="submit" disabled={sendingCampaign || campaignRecipientCount === 0 || !campaignSubject.trim() || !campaignMessage.trim()} className="inline-flex w-full items-center justify-center gap-2 bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-35">
+                        {sendingCampaign ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {sendingCampaign ? 'Sending campaign...' : `Send to ${campaignRecipientCount} recipient${campaignRecipientCount === 1 ? '' : 's'}`}
+                      </button>
+                    </form>
+                    <aside className="h-fit border border-electric/25 bg-electric/[0.05] p-5 sm:p-6">
+                      <Mail className="h-7 w-7 text-electric" />
+                      <div className="mt-5 font-inter text-xs font-bold uppercase tracking-widest text-white/45">Unique recipients</div>
+                      <div className="mt-2 font-podium text-5xl font-bold text-white">{campaignRecipientCount}</div>
+                      <div className="mt-5 space-y-3 border-t border-white/10 pt-5 font-inter text-sm leading-relaxed text-white/55">
+                        <p>Duplicate email addresses are automatically removed.</p>
+                        <p>Paid students are selected by default to keep messages relevant.</p>
+                        <p>You will be asked to confirm the final recipient count before sending.</p>
+                      </div>
+                    </aside>
+                  </div>
                 ) : (
                   <div className="space-y-5">
                     <div className="grid gap-3 sm:grid-cols-3">

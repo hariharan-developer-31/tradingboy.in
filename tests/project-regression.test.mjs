@@ -71,6 +71,22 @@ test('email templates force dark mode and avoid viewport-height whitespace', () 
   }
 });
 
+test('admin can send deduplicated course email campaigns through production and local APIs', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+  const viteConfig = read('vite.config.ts');
+
+  assert.match(app, /Email Course Joiners/);
+  assert.match(app, /Paid students only/);
+  assert.match(app, /campaignRecipientCount/);
+  assert.match(app, /window\.confirm\(`Send this email/);
+  assert.match(adminApi, /action === 'sendCampaign'/);
+  assert.match(adminApi, /new Map\(/);
+  assert.match(adminApi, /index \+= 5/);
+  assert.match(viteConfig, /body\.action === 'sendCampaign'/);
+  assert.match(viteConfig, /campaignHtml/);
+});
+
 test('coupon management supports editing and course scoping', () => {
   const app = read('src/App.tsx');
   const schema = read('supabase.sql');
