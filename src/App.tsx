@@ -957,9 +957,9 @@ export default function App() {
               <img src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1600&q=85" alt="Trading charts on a workstation" className="h-[420px] w-full object-cover" />
               <div>
                 <div className="mb-4 font-inter text-xs uppercase tracking-[0.3em] text-electric">About Us</div>
-                <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl">Practical trading education for serious learners.</h2>
+                <h2 className="font-podium text-5xl uppercase leading-none text-white sm:text-6xl">Empowering traders for over 5+ years</h2>
                 <p className="mt-6 font-inter leading-relaxed text-white/65">
-                  Trading Boy Academy is built around clean market logic, disciplined risk, and practical execution. We teach students how to read markets with patience and trade with a written plan.
+                  TradingBoy was founded over 5 years ago with a mission to help aspiring traders master the markets through practical education, disciplined risk management, and proven trading strategies. Our goal is to build confident, consistent traders who are ready to succeed in funded trading.
                 </p>
               </div>
             </div>
