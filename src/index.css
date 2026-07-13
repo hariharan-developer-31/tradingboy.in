@@ -279,7 +279,7 @@
   }
 
   .page-enter {
-    animation: fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
   .smooth-card {
