@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Loader2, LogOut, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, BookOpen, CheckCircle, Copy, CreditCard, Crown, Edit3, Loader2, LogOut, MessageSquareQuote, Plus, RefreshCcw, Smartphone, Ticket, Trash2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import logoUrl from './assets/logo.png';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -1443,19 +1443,9 @@ export default function App() {
                     <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {(['home', 'courses', 'payments', 'coupons', 'testimonials'] as const).map((section) => (
-                      <button
-                        key={section}
-                        onClick={() => setAdminSection(section)}
-                        className={`border px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest transition ${
-                          adminSection === section
-                            ? 'border-electric bg-electric text-black'
-                            : 'border-white/10 bg-black text-white/65 hover:border-electric hover:text-white'
-                        }`}
-                      >
-                        {section === 'home' ? 'Dashboard' : section}
-                      </button>
-                    ))}
+                    <button onClick={() => setAdminSection('home')} className={`border px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest transition ${adminSection === 'home' ? 'border-electric bg-electric text-black' : 'border-white/10 bg-black text-white/65 hover:border-electric hover:text-white'}`}>
+                      Dashboard
+                    </button>
                     <button onClick={logoutAdmin} className="inline-flex items-center gap-2 border border-red-400/30 bg-red-950/20 px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest text-red-200 transition hover:bg-red-950/40">
                       <LogOut className="h-4 w-4" />
                       Logout
@@ -1470,7 +1460,7 @@ export default function App() {
               </div>
               <div>
                 {adminSection === 'home' ? (
-                  <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+                  <div className="mx-auto mt-12 grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
                     <button onClick={() => setAdminSection('courses')} className="group relative flex flex-col text-left border border-white/10 bg-gradient-to-b from-black to-ink p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 hover:border-electric/50 hover:shadow-glow overflow-hidden">
                       <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
                       <div className="relative flex justify-between w-full mb-8">
@@ -1527,6 +1517,25 @@ export default function App() {
                         </p>
                       </div>
                     </button>
+
+                    <button onClick={() => setAdminSection('testimonials')} className="group relative flex flex-col text-left border border-white/10 bg-gradient-to-b from-black to-ink p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 hover:border-electric/50 hover:shadow-glow overflow-hidden">
+                      <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
+                      <div className="relative flex justify-between w-full mb-8">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink border border-white/10 text-white group-hover:text-electric group-hover:border-electric/40 group-hover:shadow-[0_0_20px_rgba(56,182,255,0.4)] transition-all duration-300">
+                          <MessageSquareQuote className="h-6 w-6" />
+                        </div>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-electric/10 text-xs font-bold text-electric border border-electric/20 group-hover:bg-electric group-hover:text-black transition-all duration-300">
+                          {adminTestimonials.length}
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <div className="font-inter text-xs font-bold uppercase tracking-[0.2em] text-electric/70 mb-2">Social Proof</div>
+                        <h3 className="font-podium text-3xl text-white mb-4 tracking-wide group-hover:text-electric transition-colors duration-300">Manage <span className="italic font-light">Testimonials</span></h3>
+                        <p className="font-inter text-sm text-white/60 leading-relaxed group-hover:text-white/80 transition-colors duration-300">
+                          Add student feedback, upload trading results, and control which testimonials appear publicly.
+                        </p>
+                      </div>
+                    </button>
                   </div>
                 ) : (
                   <div>
@@ -1537,7 +1546,7 @@ export default function App() {
                       </button>
                       <div className="hidden sm:block h-6 w-px bg-white/20 shrink-0"></div>
                       <div className="font-podium text-xl tracking-wider uppercase text-white break-words">
-                        {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : 'Coupon Management'}
+                        {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : adminSection === 'testimonials' ? 'Testimonial Management' : 'Coupon Management'}
                       </div>
                     </div>
                     {adminStatus && <div className="mb-5 border border-white/10 bg-black p-4 font-inter text-sm text-white/70">{adminStatus}</div>}
