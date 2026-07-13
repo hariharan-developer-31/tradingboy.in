@@ -7,6 +7,7 @@ import AutoScroll from 'embla-carousel-auto-scroll';
 
 const UPI_ID = 'harishsankar023@okaxis';
 const DEFAULT_COURSE = 'Complete Forex Mastery';
+const PROMO_COUPON_CODE = 'SAVE1000';
 
 const fallbackCourses = [
   {
@@ -214,6 +215,8 @@ function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: 
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoCopied, setPromoCopied] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [courseDetailsOpen, setCourseDetailsOpen] = useState<PublicCourse | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -345,6 +348,11 @@ export default function App() {
     handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setPromoOpen(true), 5000);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -1940,6 +1948,50 @@ export default function App() {
             )}
           </div>
         </main>
+      )}
+
+      {promoOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md" onClick={() => setPromoOpen(false)}>
+          <div className="relative w-full max-w-lg overflow-hidden border border-electric/35 bg-[#07131c] p-6 shadow-[0_0_80px_rgba(37,174,244,0.3)] sm:p-9" onClick={(event) => event.stopPropagation()}>
+            <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-electric/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-24 -left-20 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl" />
+            <button onClick={() => setPromoOpen(false)} className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center border border-white/10 bg-black/30 text-white/60 transition hover:border-electric hover:text-white" aria-label="Close offer">
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 font-inter text-[9px] font-bold uppercase tracking-[0.24em] text-emerald-300 sm:text-[10px]">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" /> Limited Course Offer
+              </div>
+              <div className="mt-7 font-inter text-xs font-bold uppercase tracking-[0.3em] text-electric">Unlock your trading journey</div>
+              <h2 className="mt-3 max-w-md font-podium text-4xl font-bold uppercase leading-[0.95] text-white sm:text-5xl">
+                Save <span className="text-electric">₹1,000</span> on your course
+              </h2>
+              <p className="mt-5 max-w-md font-inter text-sm leading-relaxed text-white/65 sm:text-base">
+                Start learning market structure, risk control, and disciplined execution for less. Apply the code below during enrollment.
+              </p>
+
+              <div className="mt-7 flex items-stretch border border-dashed border-electric/50 bg-black/40">
+                <div className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3.5">
+                  <Ticket className="h-5 w-5 shrink-0 text-electric" />
+                  <div>
+                    <div className="font-inter text-[9px] uppercase tracking-widest text-white/40">Coupon code</div>
+                    <div className="mt-0.5 font-mono text-lg font-bold tracking-[0.16em] text-white">{PROMO_COUPON_CODE}</div>
+                  </div>
+                </div>
+                <button onClick={async () => { await navigator.clipboard?.writeText(PROMO_COUPON_CODE); setPromoCopied(true); window.setTimeout(() => setPromoCopied(false), 1800); }} className="flex min-w-24 items-center justify-center gap-2 border-l border-electric/25 px-4 font-inter text-[10px] font-bold uppercase tracking-widest text-electric transition hover:bg-electric hover:text-black">
+                  <Copy className="h-4 w-4" /> {promoCopied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+
+              <button onClick={() => { setPromoOpen(false); setCouponInput(PROMO_COUPON_CODE); setAppliedCoupon(null); setCouponError(''); openCheckout(); }} className="group mt-5 flex w-full items-center justify-center bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.18em] text-black shadow-glow transition hover:bg-skyline sm:py-5">
+                Claim ₹1,000 Off
+                <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </button>
+              <p className="mt-3 text-center font-inter text-[10px] uppercase tracking-wider text-white/35">Enter the code at checkout · Course terms apply</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {termsOpen && (
