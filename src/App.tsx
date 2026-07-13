@@ -1402,18 +1402,27 @@ export default function App() {
                 </div>
                 <p className="max-w-sm text-sm leading-relaxed text-white/50">Feedback from Trading Boy members learning disciplined, risk-first execution.</p>
               </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {testimonials.slice(0, 6).map((testimonial) => (
-                  <button key={testimonial.id} type="button" onClick={() => setSelectedTestimonial(testimonial)} className="smooth-card flex h-full flex-col border border-white/10 bg-black p-5 text-left hover:border-electric/35">
-                    <MessageSquareQuote className="h-6 w-6 text-electric" />
-                    <p className="mt-5 flex-1 text-sm leading-relaxed text-white/75">“{testimonial.quote}”</p>
-                    <div className="mt-6 border-t border-white/10 pt-4">
-                      <div className="text-sm font-semibold text-white">{testimonial.name}</div>
-                      <div className="mt-1 text-[9px] uppercase tracking-[0.18em] text-electric">{testimonial.role}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {testimonials.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {testimonials.map((testimonial) => (
+                    <button key={testimonial.id} type="button" onClick={() => setSelectedTestimonial(testimonial)} className="smooth-card flex h-full min-w-0 flex-col border border-white/10 bg-black p-5 text-left hover:border-electric/35">
+                      <MessageSquareQuote className="h-6 w-6 text-electric" />
+                      <p className="mt-5 text-sm leading-relaxed text-white/75">“{testimonial.quote}”</p>
+                      {testimonial.photo_url && (
+                        <div className="mt-5 aspect-[4/3] w-full overflow-hidden border border-white/10 bg-ink">
+                          <img src={testimonial.photo_url} alt={`${testimonial.name} trading result`} loading="lazy" decoding="async" className="h-full w-full object-contain" />
+                        </div>
+                      )}
+                      <div className="mt-auto border-t border-white/10 pt-4">
+                        <div className="text-sm font-semibold text-white">{testimonial.name}</div>
+                        <div className="mt-1 text-[9px] uppercase tracking-[0.18em] text-electric">{testimonial.role}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-white/10 bg-black p-6 text-sm text-white/45">No member reviews are published yet.</div>
+              )}
             </section>
           </div>
         </div>

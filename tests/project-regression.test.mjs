@@ -173,7 +173,8 @@ test('course details have shareable entry files, member reviews, and Instagram s
 
   assert.match(app, /window\.location\.hash = `course\/\$\{courseSlug\(course\.title\)\}`/);
   assert.match(app, /Members Review/);
-  assert.match(app, /testimonials\.slice\(0, 6\)/);
+  assert.match(app, /testimonials\.map\(\(testimonial\) =>/);
+  assert.match(app, /testimonial\.photo_url/);
   assert.match(app, /Message on Instagram/);
   assert.doesNotMatch(app, /message trading_boy_tamil on Instagram/);
   assert.match(forexEntry, /#course\/forex-mastery/);
