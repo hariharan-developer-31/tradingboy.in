@@ -396,6 +396,15 @@ export default function App() {
   }, [checkoutOpen, joinStep]);
 
   useEffect(() => {
+    if (!courseDetailsOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [courseDetailsOpen]);
+
+  useEffect(() => {
     if (paymentCourseFilter !== 'all' && !adminCourseNames.includes(paymentCourseFilter)) {
       setPaymentCourseFilter('all');
     }
@@ -1053,8 +1062,8 @@ export default function App() {
       {courseDetailsOpen && (
         <div className="fixed inset-0 z-50 bg-ink overflow-y-auto page-enter flex flex-col">
           <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/90 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
-            <button onClick={() => setCourseDetailsOpen(null)} className="flex items-center gap-2 font-inter text-xs font-bold uppercase tracking-widest text-white/70 transition hover:text-white">
-              <ArrowLeft className="h-4 w-4" /> Back to Home
+            <button onClick={() => setCourseDetailsOpen(null)} className="flex h-10 w-10 items-center justify-center text-white/70 transition hover:text-electric" aria-label="Back to home">
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="font-podium text-lg uppercase text-white truncate max-w-[200px] sm:max-w-md">{courseDetailsOpen.title}</div>
             <div className="w-20" /> {/* Spacer for centering */}
@@ -1093,6 +1102,28 @@ export default function App() {
                        <CheckCircle className="w-6 h-6 text-electric shrink-0 mt-0.5" /> 
                        <span className="leading-relaxed text-lg">Developing a disciplined, risk-first trading psychology to overcome emotional trading.</span>
                      </li>
+                   </ul>
+                 </div>
+
+                 <div className="border-t border-white/10 pt-10">
+                   <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Built for focused traders</div>
+                   <h3 className="mb-8 font-podium text-3xl uppercase text-white">Who this course is for</h3>
+                   <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Beginners who want a clear foundation in forex, gold, market structure, and disciplined execution.</span></li>
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Developing traders who struggle with inconsistent entries, overtrading, or unclear risk management.</span></li>
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Serious learners ready to follow a written trading plan, journal their decisions, and build repeatable habits.</span></li>
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Funded-account traders who want a risk-first process built around patience and capital protection.</span></li>
+                   </ul>
+                 </div>
+
+                 <div className="border-t border-white/10 pt-10">
+                   <div className="mb-3 font-inter text-xs uppercase tracking-[0.3em] text-electric">Before you begin</div>
+                   <h3 className="mb-8 font-podium text-3xl uppercase text-white">Requirements</h3>
+                   <ul className="space-y-5 text-base leading-relaxed text-white/75 md:text-lg">
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>No previous trading experience is required; the course begins with the core concepts.</span></li>
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>A phone, tablet, or computer with a stable internet connection for accessing the lessons.</span></li>
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>Access to a charting platform and a demo account for safe, practical chart practice.</span></li>
+                     <li className="flex items-start gap-4"><CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-electric" /><span>A notebook or digital journal, plus the commitment to practise consistently before risking real capital.</span></li>
                    </ul>
                  </div>
                </div>
