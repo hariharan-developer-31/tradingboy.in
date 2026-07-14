@@ -1867,11 +1867,11 @@ export default function App() {
                 <h2 className="mt-3 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Enter Email OTP</h2>
                 <p className="mt-4 font-inter text-sm leading-relaxed text-white/55">Enter the six-digit code sent to the protected admin email. It expires in 10 minutes.</p>
                 <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={adminOtp} onChange={(event) => setAdminOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" className="mt-8 h-16 w-full border border-white/10 bg-ink px-4 text-center font-mono text-2xl tracking-[0.45em] text-white outline-none focus:border-electric" />
+                {adminStatus && <p className="mt-3 border border-white/10 bg-ink p-3 font-inter text-sm text-white/70">{adminStatus}</p>}
                 <button disabled={adminLoading || !/^\d{6}$/.test(adminOtp)} className="mt-4 inline-flex h-14 w-full items-center justify-center gap-2 bg-electric px-6 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-40">
                   {adminLoading && <RefreshCcw className="h-4 w-4 animate-spin" />}{adminLoading ? 'Verifying...' : 'Verify & Continue'}
                 </button>
                 <button type="button" onClick={() => { setAdminAuthStep('passcode'); setAdminOtp(''); setAdminStatus(''); }} className="mt-4 w-full font-inter text-xs text-white/50 transition hover:text-electric">Back to passcode</button>
-                {adminStatus && <p className="mt-4 border border-white/10 bg-ink p-3 font-inter text-sm text-white/70">{adminStatus}</p>}
               </form>
             ) : (
               <form onSubmit={unlockAdmin} className="border border-white/10 bg-black p-6 shadow-glow sm:p-8">

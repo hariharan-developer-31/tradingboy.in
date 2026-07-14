@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { clearAdminOtpCookie, clearAdminSessionCookie, clearLegacyAdminOtpCookie, clearLegacyAdminSessionCookie } from '../api/_security.js';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -162,6 +163,30 @@ test('admin login requires a rate-limited email OTP before creating a session', 
   assert.match(app, /adminRequest\('verifyOtp'/);
   assert.match(app, /await adminRequest\('logout'\)/);
   assert.doesNotMatch(app, /void adminRequest\('logout'\)/);
+});
+
+test('admin logout expires current and legacy session cookies before showing login', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+  const currentSession = clearAdminSessionCookie();
+  const legacySession = clearLegacyAdminSessionCookie();
+  const currentOtp = clearAdminOtpCookie();
+  const legacyOtp = clearLegacyAdminOtpCookie();
+
+  for (const cookie of [currentSession, legacySession, currentOtp, legacyOtp]) {
+    assert.match(cookie, /Max-Age=0/);
+    assert.match(cookie, /Expires=Thu, 01 Jan 1970 00:00:00 GMT/);
+    assert.match(cookie, /HttpOnly; Secure; SameSite=Strict/);
+  }
+  assert.match(currentSession, /Path=\/api;/);
+  assert.match(legacySession, /Path=\/api\/admin;/);
+  assert.match(adminApi, /clearAdminSessionCookie\(\), clearLegacyAdminSessionCookie\(\), clearAdminOtpCookie\(\), clearLegacyAdminOtpCookie\(\)/);
+  const otpInputIndex = app.indexOf('autoComplete="one-time-code"');
+  const otpStatusIndex = app.indexOf('{adminStatus && <p', otpInputIndex);
+  const verifyButtonIndex = app.indexOf("adminLoading ? 'Verifying...'", otpInputIndex);
+  assert.ok(otpInputIndex >= 0);
+  assert.ok(otpStatusIndex > otpInputIndex);
+  assert.ok(verifyButtonIndex > otpStatusIndex);
 });
 
 test('courses have dedicated UPI IDs for QR codes and payment app links', () => {

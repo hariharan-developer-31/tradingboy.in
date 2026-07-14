@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { randomInt, randomUUID, scryptSync } from 'node:crypto';
-import { adminOtpCookie, adminSessionCookie, cleanText, clearAdminOtpCookie, clearAdminSessionCookie, createAdminOtpChallenge, createAdminSession, decodeJpegDataUrl, hasValidAdminSession, isCouponCode, isEmail, isHttpsUrl, isUuid, json, logServerError, rateLimit, readJsonBody, requirePost, requireTrustedOrigin, safeEqual, verifyAdminOtpChallenge } from './_security.js';
+import { adminOtpCookie, adminSessionCookie, cleanText, clearAdminOtpCookie, clearAdminSessionCookie, clearLegacyAdminOtpCookie, clearLegacyAdminSessionCookie, createAdminOtpChallenge, createAdminSession, decodeJpegDataUrl, hasValidAdminSession, isCouponCode, isEmail, isHttpsUrl, isUuid, json, logServerError, rateLimit, readJsonBody, requirePost, requireTrustedOrigin, safeEqual, verifyAdminOtpChallenge } from './_security.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -177,11 +177,11 @@ export default async function handler(req, res) {
       return json(res, 401, { error: verification.token ? 'Invalid verification code.' : 'Verification code expired or too many attempts. Sign in again.' });
     }
     const session = createAdminSession(sessionSecret);
-    res.setHeader('Set-Cookie', [adminSessionCookie(session.token, session.ttlSeconds), clearAdminOtpCookie()]);
+    res.setHeader('Set-Cookie', [adminSessionCookie(session.token, session.ttlSeconds), clearAdminOtpCookie(), clearLegacyAdminSessionCookie(), clearLegacyAdminOtpCookie()]);
     return json(res, 200, { ok: true });
   }
   if (action === 'logout') {
-    res.setHeader('Set-Cookie', [clearAdminSessionCookie(), clearAdminOtpCookie()]);
+    res.setHeader('Set-Cookie', [clearAdminSessionCookie(), clearLegacyAdminSessionCookie(), clearAdminOtpCookie(), clearLegacyAdminOtpCookie()]);
     return json(res, 200, { ok: true });
   }
   if (!hasValidAdminSession(req, sessionSecret)) return json(res, 401, { error: 'Admin session expired. Sign in again.' });

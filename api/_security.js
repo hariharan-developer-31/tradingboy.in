@@ -111,7 +111,9 @@ export const hasValidAdminSession = (req, secret) => {
 };
 
 export const adminSessionCookie = (token, maxAge) => `tb_admin=${token}; Path=/api; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Strict`;
-export const clearAdminSessionCookie = () => 'tb_admin=; Path=/api; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
+const expiredCookie = (name, path) => `${name}=; Path=${path}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict`;
+export const clearAdminSessionCookie = () => expiredCookie('tb_admin', '/api');
+export const clearLegacyAdminSessionCookie = () => expiredCookie('tb_admin', '/api/admin');
 
 const signOtpParts = (secret, parts) => createHmac('sha256', secret).update(parts.join('.')).digest('base64url');
 
@@ -146,7 +148,8 @@ export const verifyAdminOtpChallenge = (req, secret, submittedOtp) => {
 };
 
 export const adminOtpCookie = (token, maxAge) => `tb_admin_otp=${token}; Path=/api; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Strict`;
-export const clearAdminOtpCookie = () => 'tb_admin_otp=; Path=/api; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
+export const clearAdminOtpCookie = () => expiredCookie('tb_admin_otp', '/api');
+export const clearLegacyAdminOtpCookie = () => expiredCookie('tb_admin_otp', '/api/admin');
 
 export const cleanText = (value, maxLength) => String(value || '').trim().slice(0, maxLength);
 export const isEmail = (value) => EMAIL_PATTERN.test(value) && value.length <= 254;
