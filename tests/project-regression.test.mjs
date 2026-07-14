@@ -127,7 +127,7 @@ test('checkout and payment confirmation render as dedicated pages, not popup win
   assert.match(checkout, /Did you complete the payment\?/);
   assert.doesNotMatch(checkout, /items-start justify-center bg-black\/80/);
   assert.match(checkout, /paymentPromptOpen && \(/);
-  assert.match(checkout, /bg-black\/65 px-5 backdrop-blur-md/);
+  assert.match(checkout, /bg-black\/65 px-5 py-6 backdrop-blur-md/);
   assert.match(checkout, /window\.location\.href = getUpiUrl\('generic'\)/);
   assert.match(checkout, /aria-label="Choose an installed UPI payment app"/);
 });
@@ -435,13 +435,34 @@ test('footer exposes accessible social media links', () => {
 
 test('Google Analytics tracks public routes and excludes the admin panel', () => {
   const index = read('index.html');
+  const analytics = read('public/analytics.js');
+  const vercel = read('vercel.json');
 
   assert.match(index, /G-W88F9KGDQM/);
-  assert.match(index, /ga-disable-G-W88F9KGDQM/);
-  assert.match(index, /window\.location\.hash === '#admin'/);
-  assert.match(index, /send_page_view: false/);
-  assert.match(index, /gtag\('event', 'page_view'/);
-  assert.match(index, /addEventListener\('hashchange', trackPublicPage\)/);
+  assert.match(index, /src="\/analytics\.js"/);
+  assert.doesNotMatch(index, /<script>\s*window\['ga-disable/);
+  assert.match(analytics, /ga-disable-/);
+  assert.match(analytics, /window\.location\.hash\.indexOf\('#admin'\) === 0/);
+  assert.match(analytics, /send_page_view: false/);
+  assert.match(analytics, /window\.gtag\('event', 'page_view'/);
+  assert.match(analytics, /addEventListener\('hashchange', trackPublicPage\)/);
+  assert.match(vercel, /script-src 'self' https:\/\/www\.googletagmanager\.com/);
+  assert.match(vercel, /https:\/\/www\.google-analytics\.com/);
+});
+
+test('responsive production shells contain overflow and short-screen dialogs', () => {
+  const app = read('src/App.tsx');
+  const css = read('src/index.css');
+  const envExample = read('.env.example');
+
+  assert.match(css, /body \{[\s\S]*overflow-x: clip/);
+  assert.match(css, /#root \{[\s\S]*overflow-x: clip/);
+  assert.match(app, /min-h-\[100svh\]/);
+  assert.match(app, /min-h-\[calc\(100dvh-88px\)\]/);
+  assert.match(app, /overflow-y-auto overscroll-contain bg-black\/80 px-4 py-6 backdrop-blur-md/);
+  assert.match(app, /max-h-\[calc\(100dvh-3rem\)\]/);
+  assert.match(envExample, /ADMIN_SESSION_SECRET=/);
+  assert.match(envExample, /RESEND_API_KEY=/);
 });
 
 test('course details have shareable entry files, member reviews, and Instagram support CTA', () => {

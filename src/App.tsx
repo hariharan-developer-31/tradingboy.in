@@ -1379,19 +1379,19 @@ export default function App() {
       )}
 
       {!adminOpen && (
-        <div className={`fixed inset-0 z-50 bg-ink transition duration-500 md:hidden ${menuOpen ? 'visible opacity-100' : 'invisible opacity-0'}`}>
+        <div className={`fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-ink transition duration-500 md:hidden ${menuOpen ? 'visible opacity-100' : 'invisible opacity-0'}`}>
         <div className="flex justify-end px-5 py-5">
           <button onClick={() => setMenuOpen(false)} aria-label="Close menu">
             <X className="h-8 w-8" />
           </button>
         </div>
-        <div className="flex h-[calc(100vh-88px)] flex-col items-center justify-center gap-7">
+        <div className="flex min-h-[calc(100dvh-88px)] flex-col items-center justify-center gap-5 py-8 sm:gap-7">
           {headerNavLinks.map((link) => (
-            <a key={link} href={`#${link.toLowerCase()}`} onClick={() => setMenuOpen(false)} className="font-podium text-4xl uppercase text-white">
+            <a key={link} href={`#${link.toLowerCase()}`} onClick={() => setMenuOpen(false)} className="font-podium text-3xl uppercase text-white sm:text-4xl">
               {link}
             </a>
           ))}
-          <button onClick={() => { setMenuOpen(false); setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="font-podium text-4xl uppercase text-white">Support</button>
+          <button onClick={() => { setMenuOpen(false); setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="font-podium text-3xl uppercase text-white sm:text-4xl">Support</button>
           <button onClick={() => { setMenuOpen(false); openCheckout(); }} className="bg-electric px-7 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline">
             Join Now
           </button>
@@ -1401,7 +1401,7 @@ export default function App() {
 
       {!adminOpen && (
         <main id="main-content">
-          <section id="home" className="relative flex min-h-screen items-center overflow-hidden bg-[#070b10] lg:pt-32">
+          <section id="home" className="relative flex min-h-screen min-h-[100svh] items-center overflow-hidden bg-[#070b10] lg:pt-32">
             <div className="pointer-events-none absolute inset-0 bg-grid-pattern opacity-25 animate-grid-pan" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(37,174,244,0.16),rgba(7,11,16,0.58)_38%,#070b10_74%)] animate-soft-drift" />
             <div className="pointer-events-none absolute inset-y-0 left-0 w-[42%] origin-left bg-[linear-gradient(90deg,rgba(37,174,244,0.22),rgba(37,174,244,0.055)_45%,transparent)] blur-[3px] animate-edge-breathe" />
@@ -1892,8 +1892,8 @@ export default function App() {
                 </div>
               </div>
               {paymentPromptOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 px-5 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="payment-check-title">
-                  <section className="w-full max-w-xl border border-electric/25 bg-black p-6 shadow-[0_0_55px_rgba(56,189,248,0.16)] sm:p-8">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/65 px-5 py-6 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="payment-check-title">
+                  <section className="my-auto w-full max-w-xl border border-electric/25 bg-black p-6 shadow-[0_0_55px_rgba(56,189,248,0.16)] sm:p-8">
                     <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Payment Check</div>
                     <h3 id="payment-check-title" className="mt-3 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Did you complete the payment?</h3>
                     <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">Select yes only after paying {money(selectedOfferPrice)} to {selectedUpiId}.</p>
@@ -2027,8 +2027,8 @@ export default function App() {
       )}
 
       {checkoutCancelOpen && checkoutOpen && joinStep !== 'thanks' && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="checkout-cancel-title">
-          <div className="w-full max-w-md border border-electric/30 bg-ink p-6 shadow-[0_0_50px_rgba(56,189,248,0.14)] sm:p-8">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/80 px-5 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="checkout-cancel-title">
+          <div className="my-auto w-full max-w-md border border-electric/30 bg-ink p-6 shadow-[0_0_50px_rgba(56,189,248,0.14)] sm:p-8">
             <div className="font-inter text-[10px] font-bold uppercase tracking-[0.3em] text-electric">Cancel Enrollment</div>
             <h2 id="checkout-cancel-title" className="mt-3 font-podium text-3xl uppercase leading-tight text-white">Are you sure you want to cancel?</h2>
             <p className="mt-4 font-inter text-sm leading-relaxed text-white/60">Your entered details and current payment progress will not be submitted.</p>
@@ -2860,8 +2860,8 @@ export default function App() {
       )}
 
       {emailNoticeOpen && checkoutOpen && joinStep === 'details' && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="email-notice-title" onClick={dismissEmailNotice}>
-          <div className="w-full max-w-md border border-electric/30 bg-ink p-6 shadow-glow sm:p-8" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/80 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="email-notice-title" onClick={dismissEmailNotice}>
+          <div className="my-auto w-full max-w-md border border-electric/30 bg-ink p-6 shadow-glow sm:p-8" onClick={(event) => event.stopPropagation()}>
             <div className="font-inter text-xs font-bold uppercase tracking-[0.3em] text-electric">Important</div>
             <h3 id="email-notice-title" className="mt-3 font-podium text-3xl uppercase leading-none text-white">Enter your correct email address</h3>
             <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">Your course access and payment updates will be sent only to this email address. Please check it carefully before continuing.</p>
@@ -2949,8 +2949,8 @@ export default function App() {
       )}
 
       {promoOpen && !adminOpen && !checkoutOpen && !courseDetailsOpen && !supportOpen && (!window.location.hash || window.location.hash === '#home') && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md" onClick={() => setPromoOpen(false)}>
-          <div className="relative w-full max-w-lg overflow-hidden border border-electric/35 bg-[#07131c] p-6 shadow-[0_0_80px_rgba(37,174,244,0.3)] sm:p-9" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/80 px-4 py-6 backdrop-blur-md" onClick={() => setPromoOpen(false)}>
+          <div className="relative my-auto w-full max-w-lg overflow-hidden border border-electric/35 bg-[#07131c] p-6 shadow-[0_0_80px_rgba(37,174,244,0.3)] sm:p-9" onClick={(event) => event.stopPropagation()}>
             <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-electric/20 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-24 -left-20 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl" />
             <button onClick={() => setPromoOpen(false)} className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center border border-white/10 bg-black/30 text-white/60 transition hover:border-electric hover:text-white" aria-label="Close offer">
@@ -2992,8 +2992,8 @@ export default function App() {
       )}
 
       {termsOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4">
-          <div className="animate-scale-in max-w-xl border border-white/10 bg-ink p-6 shadow-glow">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/80 px-4 py-6">
+          <div className="my-auto max-h-[calc(100dvh-3rem)] max-w-xl overflow-y-auto border border-white/10 bg-ink p-6 shadow-glow animate-scale-in">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Terms</div>
