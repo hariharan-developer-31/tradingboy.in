@@ -299,6 +299,7 @@ export default function App() {
   const [supportOpen, setSupportOpen] = useState(false);
   const [supportForm, setSupportForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [supportSubmitting, setSupportSubmitting] = useState(false);
+  const [supportSubmitted, setSupportSubmitted] = useState(false);
   const [supportStatus, setSupportStatus] = useState('');
   const [promoOpen, setPromoOpen] = useState(false);
   const [promoCopied, setPromoCopied] = useState(false);
@@ -386,6 +387,10 @@ export default function App() {
   const [supportReply, setSupportReply] = useState('');
   const [supportReplyAttachment, setSupportReplyAttachment] = useState<File | null>(null);
   const [sendingSupportReply, setSendingSupportReply] = useState(false);
+  const [supportSearch, setSupportSearch] = useState('');
+  const [supportStatusFilter, setSupportStatusFilter] = useState('all');
+  const [supportDateFilter, setSupportDateFilter] = useState<'all' | 'today' | 'custom'>('all');
+  const [supportCustomDate, setSupportCustomDate] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null);
   const [campaignAttachmentUrl, setCampaignAttachmentUrl] = useState('');
   const [loadingCampaignAttachment, setLoadingCampaignAttachment] = useState(false);
@@ -465,6 +470,19 @@ export default function App() {
       return matchesStatus && matchesCourse && matchesDate && matchesSearch;
     });
   }, [adminOrders, paymentCourseFilter, paymentCustomDate, paymentDateFilter, paymentSearch, paymentStatusFilter]);
+
+  const filteredSupportTickets = useMemo(() => {
+    const query = supportSearch.trim().toLowerCase();
+    const localDateKey = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    const todayKey = localDateKey(new Date());
+    return adminSupportTickets.filter((ticket) => {
+      const ticketDate = localDateKey(new Date(ticket.created_at));
+      const matchesSearch = !query || [ticket.name, ticket.email, ticket.subject, ticket.message].join(' ').toLowerCase().includes(query);
+      const matchesStatus = supportStatusFilter === 'all' || ticket.status === supportStatusFilter;
+      const matchesDate = supportDateFilter === 'all' || (supportDateFilter === 'today' ? ticketDate === todayKey : !supportCustomDate || ticketDate === supportCustomDate);
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [adminSupportTickets, supportCustomDate, supportDateFilter, supportSearch, supportStatusFilter]);
 
   const adminCourseNames = useMemo(
     () => Array.from(new Set(adminCourses.map((course) => course.title).filter(Boolean))),
@@ -762,7 +780,7 @@ export default function App() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not create the support ticket.');
       setSupportForm({ name: '', email: '', subject: '', message: '' });
-      setSupportStatus(`Ticket ${result.ticketId} was created. We will reply by email.`);
+      setSupportSubmitted(true);
     } catch (error) {
       setSupportStatus(error instanceof Error ? error.message : 'Could not create the support ticket.');
     } finally {
@@ -1321,7 +1339,7 @@ export default function App() {
               {link}
             </a>
           ))}
-          <button onClick={() => { setMenuOpen(false); setSupportOpen(true); setSupportStatus(''); }} className="font-podium text-4xl uppercase text-white">Support</button>
+          <button onClick={() => { setMenuOpen(false); setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="font-podium text-4xl uppercase text-white">Support</button>
           <button onClick={() => { setMenuOpen(false); openCheckout(); }} className="bg-electric px-7 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline">
             Join Now
           </button>
@@ -1947,6 +1965,11 @@ export default function App() {
             <div className="font-podium text-lg uppercase text-white">Support</div><div className="w-10" />
           </header>
           <main className="mx-auto grid w-full max-w-5xl flex-1 gap-8 px-6 py-10 lg:grid-cols-[1fr_320px] lg:px-8">
+            {supportSubmitting ? (
+              <div className="col-span-full flex min-h-[60vh] flex-col items-center justify-center text-center"><Loader2 className="h-14 w-14 animate-spin text-electric" /><div className="mt-6 text-xs font-bold uppercase tracking-[0.3em] text-electric">Sending Ticket</div><h2 className="mt-3 font-podium text-4xl uppercase text-white">Please wait...</h2></div>
+            ) : supportSubmitted ? (
+              <div className="col-span-full flex min-h-[60vh] flex-col items-center justify-center text-center"><div className="flex h-20 w-20 items-center justify-center border border-emerald-400/40 bg-emerald-400/10 text-emerald-300 shadow-[0_0_40px_rgba(52,211,153,0.18)]"><CheckCircle className="h-10 w-10" /></div><div className="mt-7 text-xs font-bold uppercase tracking-[0.3em] text-electric">Ticket Sent</div><h2 className="mt-3 max-w-xl font-podium text-4xl uppercase text-white sm:text-5xl">Your ticket has been sent</h2><p className="mt-4 max-w-lg text-sm leading-relaxed text-white/60 sm:text-base">Our support team will get back to you soon.</p><button onClick={() => { setSupportOpen(false); setSupportSubmitted(false); }} className="mt-7 bg-electric px-8 py-4 text-xs font-bold uppercase tracking-widest text-black">Done</button></div>
+            ) : <>
             <form onSubmit={submitSupportTicket} className="space-y-4 border border-white/10 bg-black p-6 sm:p-8">
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-electric">Raise a ticket</div>
               <h2 className="font-podium text-4xl uppercase text-white">How can we help?</h2>
@@ -1962,6 +1985,7 @@ export default function App() {
               <p className="mt-3 text-sm leading-relaxed text-white/55">For quick general questions, message Trading Boy directly on Instagram.</p>
               <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" className="mt-6 inline-flex w-full items-center justify-center gap-2 border border-electric px-4 py-3 text-xs font-bold uppercase tracking-widest text-electric">Open Instagram <ArrowUpRight className="h-4 w-4" /></a>
             </aside>
+            </>}
           </main>
         </div>
       )}
@@ -2596,8 +2620,15 @@ export default function App() {
                   )
                 ) : adminSection === 'support' ? (
                   <div className="space-y-4">
-                    <button onClick={loadAdminSupportTickets} className="inline-flex items-center gap-2 border border-white/15 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white"><RefreshCcw className="h-4 w-4" /> Refresh Tickets</button>
-                    {adminSupportTickets.length === 0 ? <div className="border border-white/10 bg-black p-8 text-sm text-white/50">No support tickets yet.</div> : adminSupportTickets.map((ticket) => (
+                    <div className="grid gap-3 border border-white/10 bg-black p-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_170px_170px_190px_auto]">
+                      <input value={supportSearch} onChange={(event) => setSupportSearch(event.target.value)} placeholder="Search name, email, subject" className="h-12 border border-white/10 bg-ink px-4 text-sm text-white outline-none placeholder:text-white/35 focus:border-electric" />
+                      <select value={supportStatusFilter} onChange={(event) => setSupportStatusFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric"><option value="all">All status</option><option value="open">Open</option><option value="replied">Replied</option><option value="closed">Closed</option></select>
+                      <select value={supportDateFilter} onChange={(event) => setSupportDateFilter(event.target.value as 'all' | 'today' | 'custom')} className="h-12 border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric"><option value="all">All dates</option><option value="today">Today only</option><option value="custom">Choose date</option></select>
+                      {supportDateFilter === 'custom' ? <input type="date" value={supportCustomDate} onChange={(event) => setSupportCustomDate(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric" /> : <div className="hidden xl:block" />}
+                      <button onClick={loadAdminSupportTickets} className="inline-flex h-12 items-center justify-center gap-2 border border-white/15 px-4 text-xs font-bold uppercase tracking-widest text-white"><RefreshCcw className="h-4 w-4" /> Refresh</button>
+                    </div>
+                    <div className="text-xs uppercase tracking-widest text-white/40">Showing {filteredSupportTickets.length} of {adminSupportTickets.length} tickets</div>
+                    {filteredSupportTickets.length === 0 ? <div className="border border-white/10 bg-black p-8 text-sm text-white/50">No support tickets match these filters.</div> : filteredSupportTickets.map((ticket) => (
                       <button key={ticket.id} onClick={() => { setSelectedSupportTicket(ticket); setSupportReply(ticket.admin_reply || ''); setSupportReplyAttachment(null); }} className="block w-full border border-white/10 bg-black p-5 text-left transition hover:border-electric/40">
                         <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-xs uppercase tracking-widest text-electric">{ticket.subject}</div><div className="mt-2 font-bold text-white">{ticket.name} · {ticket.email}</div></div><span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${ticket.status === 'open' ? 'bg-amber-400/15 text-amber-300' : 'bg-emerald-400/15 text-emerald-300'}`}>{ticket.status}</span></div>
                         <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-white/60">{ticket.message}</p><div className="mt-3 text-xs text-white/35">{new Date(ticket.created_at).toLocaleString('en-IN')}</div>

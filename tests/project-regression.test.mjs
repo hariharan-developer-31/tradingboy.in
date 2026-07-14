@@ -142,6 +142,15 @@ test('support tickets can be raised publicly and answered securely by admin', ()
   assert.match(app, /Support Tickets/);
   assert.match(app, /Reply to Ticket/);
   assert.match(app, /Reply attachment \(optional, max 10 MB\)/);
+  assert.match(app, /supportSubmitted \? \(/);
+  assert.match(app, /Your ticket has been sent/);
+  assert.match(app, /Our support team will get back to you soon\./);
+  assert.match(app, /Sending Ticket/);
+  assert.doesNotMatch(app, /Ticket \$\{result\.ticketId\}/);
+  assert.match(app, /supportStatusFilter/);
+  assert.match(app, /supportDateFilter/);
+  assert.match(app, /supportCustomDate/);
+  assert.match(app, /filteredSupportTickets\.map/);
   assert.match(supportApi, /scope: 'support-ticket', limit: 5, windowMs: 60 \* 60_000/);
   assert.match(supportApi, /from\('support_tickets'\)\.insert/);
   assert.match(adminApi, /action === 'supportTickets'/);
