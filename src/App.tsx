@@ -1312,6 +1312,7 @@ export default function App() {
                 {link}
               </a>
             ))}
+            <button onClick={() => { setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="font-inter text-xs uppercase tracking-widest text-white/80 transition hover:text-white">Support</button>
           </div>
           <button onClick={() => openCheckout()} className="group hidden items-center gap-2 bg-electric px-4 py-2.5 font-inter text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline md:flex">
             Join Now
@@ -1550,6 +1551,7 @@ export default function App() {
                     {item}
                   </a>
                 ))}
+                <button onClick={() => { setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55 transition hover:text-electric sm:text-[10px]">Support</button>
               </nav>
             </div>
 

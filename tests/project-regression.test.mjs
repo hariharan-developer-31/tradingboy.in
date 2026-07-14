@@ -135,6 +135,8 @@ test('support tickets can be raised publicly and answered securely by admin', ()
   const packageJson = read('package.json');
 
   assert.match(app, />Support<\/button>/);
+  assert.match(app, /headerNavLinks\.map[\s\S]*font-inter text-xs uppercase tracking-widest text-white\/80[^>]*>Support<\/button>/);
+  assert.match(app, /aria-label="Footer navigation"[\s\S]*hover:text-electric sm:text-\[10px\]">Support<\/button>/);
   assert.match(app, /fetch\('\/api\/support'/);
   assert.match(app, /supportSubmitting \? 'Creating ticket\.\.\.' : 'Raise Ticket'/);
   assert.match(app, /Contact on Instagram/);
