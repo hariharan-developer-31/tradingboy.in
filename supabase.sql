@@ -13,7 +13,10 @@ create table if not exists public.course_orders (
   discount_amount integer not null default 0,
   final_amount integer not null default 7199,
   payment_status text not null default 'pending',
-  payment_screenshot_path text,
+  order_number text,
+  razorpay_order_id text,
+  razorpay_payment_id text,
+  drive_access_status text not null default 'pending',
   source text default 'website',
   created_at timestamptz not null default now()
 );
@@ -24,7 +27,11 @@ alter table public.course_orders add column if not exists original_amount intege
 alter table public.course_orders add column if not exists discount_amount integer not null default 0;
 alter table public.course_orders add column if not exists final_amount integer not null default 7199;
 alter table public.course_orders add column if not exists payment_status text not null default 'pending';
-alter table public.course_orders add column if not exists payment_screenshot_path text;
+alter table public.course_orders add column if not exists order_number text;
+alter table public.course_orders add column if not exists razorpay_order_id text;
+alter table public.course_orders add column if not exists razorpay_payment_id text;
+alter table public.course_orders add column if not exists drive_access_status text not null default 'pending';
+alter table public.course_orders drop column if exists payment_screenshot_path;
 alter table public.course_orders add column if not exists trading_experience text;
 alter table public.course_orders add column if not exists remarks text;
 alter table public.course_orders add column if not exists terms_accepted boolean not null default false;
@@ -69,24 +76,20 @@ create table if not exists public.courses (
   title text not null,
   description text,
   thumbnail_url text,
-  qr_code_url text,
   normal_price integer,
   offer_price integer,
   price integer not null default 7199 check (price > 0),
   drive_url text,
   discord_url text,
-  upi_id text,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
 alter table public.courses enable row level security;
 alter table public.courses add column if not exists thumbnail_url text;
-alter table public.courses add column if not exists qr_code_url text;
 alter table public.courses add column if not exists normal_price integer;
 alter table public.courses add column if not exists offer_price integer;
 alter table public.courses add column if not exists discord_url text;
-alter table public.courses add column if not exists upi_id text;
 
 drop policy if exists "Allow public active course reads" on public.courses;
 
@@ -97,7 +100,7 @@ to anon
 using (active = true);
 
 revoke select on table public.courses from anon;
-grant select (id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, active, created_at)
+grant select (id, title, description, thumbnail_url, normal_price, offer_price, price, active, created_at)
 on table public.courses to anon;
 
 insert into public.courses (title, description, price, drive_url, active)
@@ -133,23 +136,6 @@ set
   normal_price = coalesce(normal_price, 26999),
   offer_price = coalesce(offer_price, 5399)
 where title = 'Blueprint to Become a Funded Trader';
-
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('payment-proofs', 'payment-proofs', false, 102400, array['image/jpeg'])
-on conflict (id) do update
-set
-  public = false,
-  file_size_limit = 102400,
-  allowed_mime_types = array['image/jpeg'];
-
-drop policy if exists "Service role can manage payment proofs" on storage.objects;
-
-create policy "Service role can manage payment proofs"
-on storage.objects
-for all
-to service_role
-using (bucket_id = 'payment-proofs')
-with check (bucket_id = 'payment-proofs');
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('course-thumbnails', 'course-thumbnails', true, 102400, array['image/jpeg'])

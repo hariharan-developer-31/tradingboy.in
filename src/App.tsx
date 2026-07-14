@@ -8,10 +8,8 @@ const logoUrl = '/logo.png';
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
 
-const UPI_ID = 'harishsankar023@okaxis';
 const DEFAULT_COURSE = 'Complete Forex Mastery';
 const PROMO_COUPON_CODE = 'TB1500';
-const PAYMENT_TIME_SECONDS = 6 * 60;
 
 const fallbackCourses = [
   {
@@ -77,6 +75,11 @@ const policyPages: Record<string, { title: string; updated?: string; paragraphs:
       'Users are responsible for protecting their account credentials. Course sharing, copying, redistribution, or resale is prohibited.',
       'Course access is provided after successful payment. Trading involves financial risk, and TradingBoy is not responsible for any trading losses or investment decisions.',
       'These terms may be updated from time to time.',
+      'All payments are non-refundable once submitted for course enrollment.',
+      'The training is for educational purposes only and is not financial advice.',
+      'Trading forex, gold, futures, and funded accounts involves risk. You are responsible for your own decisions.',
+      'Past results, examples, or student outcomes do not guarantee future performance.',
+      'Course access is shared after admin payment approval, usually within 12 hours.',
     ],
   },
   '/refund-policy': {
@@ -135,11 +138,15 @@ type JoinForm = {
   tradingExperience: string;
   courseName: string;
   termsAccepted: boolean;
+  privacyAccepted: boolean;
   remarks: string;
 };
 
 type CourseOrder = {
   id: string;
+  order_number?: string | null;
+  razorpay_order_id?: string | null;
+  razorpay_payment_id?: string | null;
   course_name: string | null;
   full_name: string;
   email: string;
@@ -151,6 +158,7 @@ type CourseOrder = {
   discount_amount: number;
   final_amount: number;
   payment_status: string;
+  drive_access_status?: string | null;
   payment_screenshot_path?: string | null;
   payment_screenshot_url?: string | null;
   remarks?: string | null;
@@ -372,14 +380,14 @@ function MainApp() {
     tradingExperience: '',
     courseName: DEFAULT_COURSE,
     termsAccepted: false,
+    privacyAccepted: false,
     remarks: '',
   });
   const [termsOpen, setTermsOpen] = useState(false);
   const [emailNoticeOpen, setEmailNoticeOpen] = useState(false);
   const [emailNoticeShown, setEmailNoticeShown] = useState(false);
-  const [paymentSeconds, setPaymentSeconds] = useState(PAYMENT_TIME_SECONDS);
+  const [paymentSeconds] = useState(0);
   const [paymentPromptOpen, setPaymentPromptOpen] = useState(false);
-  const [promptedAt, setPromptedAt] = useState<number[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<{ dataUrl: string; name: string } | null>(null);
   const [upiCopied, setUpiCopied] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'error'>('idle');
@@ -479,6 +487,7 @@ function MainApp() {
     () => publicCourses.find((course) => course.title === joinForm.courseName) || publicCourses[0] || fallbackCourses[0],
     [joinForm.courseName, publicCourses],
   );
+  const selectedUpiId = '';
   const selectedNormalPrice = selectedCourse.normal_price || selectedCourse.price;
   let selectedOfferPrice = selectedCourse.offer_price || selectedCourse.price;
 
@@ -489,8 +498,6 @@ function MainApp() {
       selectedOfferPrice = Math.max(0, selectedOfferPrice - appliedCoupon.discount_value);
     }
   }
-
-  const selectedUpiId = selectedCourse.upi_id || UPI_ID;
 
   const filteredOrders = useMemo(() => {
     const query = paymentSearch.trim().toLowerCase();
@@ -633,14 +640,6 @@ function MainApp() {
   }, []);
 
   useEffect(() => {
-    if (!checkoutOpen || joinStep !== 'payment') return undefined;
-    const interval = window.setInterval(() => {
-      setPaymentSeconds((current) => Math.max(0, current - 1));
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [checkoutOpen, joinStep]);
-
-  useEffect(() => {
     if (!checkoutOpen) return;
     const frame = window.requestAnimationFrame(() => {
       checkoutScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' });
@@ -666,22 +665,8 @@ function MainApp() {
     }
   }, [adminCourseNames, paymentCourseFilter]);
 
-  useEffect(() => {
-    if (joinStep !== 'payment') return;
-    const elapsed = PAYMENT_TIME_SECONDS - paymentSeconds;
-    const promptTimes = Array.from({ length: PAYMENT_TIME_SECONDS / 30 }, (_, index) => (index + 1) * 30);
-    if (promptTimes.includes(elapsed) && !promptedAt.includes(elapsed)) {
-      setPromptedAt((current) => [...current, elapsed]);
-      setPaymentPromptOpen(true);
-    }
-  }, [joinStep, paymentSeconds, promptedAt]);
-
   const openCheckout = (courseName = selectedCourse.title) => {
-    setUpiCopied(false);
     setJoinStep('details');
-    setPaymentSeconds(PAYMENT_TIME_SECONDS);
-    setPromptedAt([]);
-    setPaymentPromptOpen(false);
     setSubmitStatus('idle');
     setCreatedOrderId('');
     setCheckoutCancelOpen(false);
@@ -719,7 +704,16 @@ function MainApp() {
     closeHashPage();
   };
 
-  const beginPayment = (event: FormEvent<HTMLFormElement>) => {
+  const loadRazorpay = () => new Promise<boolean>((resolve) => {
+    if ((window as any).Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+
+  const beginPayment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
     const errors: {name?: string; email?: string; phone?: string; tradingExperience?: string} = {};
@@ -740,20 +734,53 @@ function MainApp() {
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    if (!joinForm.termsAccepted) {
-      setTermsOpen(true);
+    if (!joinForm.termsAccepted || !joinForm.privacyAccepted) {
+      setSubmitStatus('error');
+      setSubmitError('Please accept the Terms & Conditions and Privacy Policy.');
       return;
     }
-    
-    if (selectedOfferPrice === 0) {
-      submitPaymentConfirmation();
-      return;
+    setSubmitStatus('sending');
+    setSubmitError('');
+    const checkoutPayload = { name: joinForm.name, email: joinForm.email, phone: joinForm.phone, tradingExperience: joinForm.tradingExperience, courseName: selectedCourse.title, termsAccepted: true, privacyAccepted: true, couponCode: appliedCoupon?.code };
+    try {
+      const loaded = await loadRazorpay();
+      if (!loaded) throw new Error('Could not load Razorpay Checkout. Please check your connection.');
+      const orderResponse = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'createOrder', ...checkoutPayload }) });
+      const gatewayOrder = await orderResponse.json();
+      if (!orderResponse.ok) throw new Error(gatewayOrder.error || 'Could not create payment order.');
+      const razorpay = new (window as any).Razorpay({
+        key: gatewayOrder.keyId,
+        amount: gatewayOrder.amount,
+        currency: gatewayOrder.currency,
+        name: 'TradingBoy',
+        description: gatewayOrder.courseName,
+        image: `${window.location.origin}/logo.png`,
+        order_id: gatewayOrder.razorpayOrderId,
+        prefill: { name: joinForm.name, email: joinForm.email, contact: joinForm.phone },
+        theme: { color: '#25aef4' },
+        modal: { ondismiss: () => setSubmitStatus('idle'), confirm_close: true },
+        handler: async (payment: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          setSubmitStatus('sending');
+          try {
+            const verifyResponse = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verifyPayment', ...checkoutPayload, ...payment }) });
+            const verified = await verifyResponse.json();
+            if (!verifyResponse.ok) throw new Error(verified.error || 'Payment verification failed.');
+            setCreatedOrderId(verified.orderId || '');
+            setSubmitStatus('idle');
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            setJoinStep('thanks');
+          } catch (error) {
+            setSubmitStatus('error');
+            setSubmitError(error instanceof Error ? error.message : 'Payment verification failed. Please contact support with your Razorpay payment ID.');
+          }
+        },
+      });
+      razorpay.on('payment.failed', (response: any) => { setSubmitStatus('error'); setSubmitError(response.error?.description || 'Payment failed. Please try again.'); });
+      razorpay.open();
+    } catch (error) {
+      setSubmitStatus('error');
+      setSubmitError(error instanceof Error ? error.message : 'Could not start payment.');
     }
-
-    setPaymentSeconds(PAYMENT_TIME_SECONDS);
-    setPromptedAt([]);
-    setPaymentPromptOpen(false);
-    setJoinStep('payment');
   };
 
   const validateCouponCode = async () => {
@@ -781,57 +808,12 @@ function MainApp() {
     }
   };
 
-  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await compressImageToDataUrl(file);
-      setPaymentScreenshot({ dataUrl, name: file.name });
-      setSubmitStatus('idle');
-      setSubmitError('');
-    } catch {
-      setPaymentScreenshot(null);
-      setSubmitStatus('error');
-      setSubmitError('Could not prepare this image. Please choose a JPG, PNG, or WEBP screenshot.');
-    }
+  // Legacy proof controls remain unreachable while older deployments transition to Razorpay.
+  const handleScreenshotUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) setPaymentScreenshot({ dataUrl: await compressImageToDataUrl(file), name: file.name });
   };
-
-  const submitPaymentConfirmation = async () => {
-    setSubmitStatus('sending');
-    setSubmitError('');
-    try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: joinForm.name,
-          email: joinForm.email,
-          phone: joinForm.phone,
-          tradingExperience: joinForm.tradingExperience,
-          courseName: selectedCourse.title,
-          termsAccepted: joinForm.termsAccepted,
-          couponCode: appliedCoupon?.code,
-          remarks: joinForm.remarks,
-          paymentScreenshot,
-        }),
-      });
-      const text = await response.text();
-      const result = text ? JSON.parse(text) : {};
-      if (!response.ok) {
-        setSubmitStatus('error');
-        setSubmitError(result.error || 'Could not submit your payment proof. Please try again.');
-        return;
-      }
-      setCreatedOrderId(result.orderId || '');
-      setSubmitStatus('idle');
-      setPaymentPromptOpen(false);
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      setJoinStep('thanks');
-    } catch {
-      setSubmitStatus('error');
-      setSubmitError('Could not connect to checkout. Please check your connection and try again.');
-    }
-  };
+  const submitPaymentConfirmation = () => setSubmitError('Manual payment proof is no longer supported. Please use Razorpay.');
 
   const adminRequest = async <T,>(action: string, payload: Record<string, unknown> = {}): Promise<T> => {
     const response = await fetch('/api/admin', {
@@ -1832,14 +1814,11 @@ function MainApp() {
                 <label className="flex cursor-pointer items-start gap-3 border border-white/10 bg-white/[0.03] p-4 font-inter text-sm text-white/70">
                   <input
                     type="checkbox"
-                    checked={joinForm.termsAccepted}
-                    onChange={(event) => {
-                      if (event.target.checked) setTermsOpen(true);
-                      else setJoinForm({ ...joinForm, termsAccepted: false });
-                    }}
+                    checked={joinForm.termsAccepted && joinForm.privacyAccepted}
+                    onChange={(event) => setJoinForm({ ...joinForm, termsAccepted: event.target.checked, privacyAccepted: event.target.checked })}
                     className="mt-1"
                   />
-                  <span>I accept the terms and conditions for this trading education course.</span>
+                  <span>I accept the <a href="/terms-and-conditions" target="_blank" className="text-electric hover:underline">Terms &amp; Conditions</a> and <a href="/privacy-policy" target="_blank" className="text-electric hover:underline">Privacy Policy</a>.</span>
                 </label>
                 <div className="border border-white/10 bg-ink p-4 font-inter text-sm">
                   <div className="flex justify-between text-white/60">
@@ -1889,7 +1868,7 @@ function MainApp() {
                     </>
                   ) : (
                     <>
-                      Join Course
+                      Pay Now
                       <ArrowUpRight className="ml-2 inline h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                     </>
                   )}
@@ -1897,12 +1876,12 @@ function MainApp() {
               </form>
             )}
 
-            {joinStep === 'payment' && (
+            {false && joinStep === 'payment' && (
               <>
               <div className={`mx-auto w-full max-w-xl transition duration-300 ${paymentPromptOpen ? 'pointer-events-none select-none blur-sm' : ''}`} aria-hidden={paymentPromptOpen}>
                 {selectedCourse.qr_code_url && (
                   <div className="mx-auto h-64 w-64 overflow-hidden border border-white/10 bg-white sm:h-72 sm:w-72">
-                    <img src={selectedCourse.qr_code_url} alt="UPI payment QR code" className="block h-full w-full object-contain" />
+                    <img src={selectedCourse.qr_code_url || undefined} alt="UPI payment QR code" className="block h-full w-full object-contain" />
                   </div>
                 )}
                 <div className="mt-8 font-inter">
@@ -1942,7 +1921,7 @@ function MainApp() {
               </>
             )}
 
-            {joinStep === 'proof' && (
+            {false && joinStep === 'proof' && (
               <div className="animate-scale-in border border-electric/25 bg-[linear-gradient(145deg,#101820,#0b0d0f_55%)] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)] sm:p-6 lg:p-8">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center border border-electric/30 bg-electric/10 text-electric">
@@ -1965,12 +1944,12 @@ function MainApp() {
                     <label className={`group relative block cursor-pointer border border-dashed p-5 transition sm:p-6 ${paymentScreenshot ? 'border-emerald-400/45 bg-emerald-400/[0.05]' : 'border-electric/35 bg-black/40 hover:border-electric hover:bg-electric/[0.06]'}`}>
                       {paymentScreenshot ? (
                         <div className="flex items-center gap-4">
-                          <img src={paymentScreenshot.dataUrl} alt="Payment screenshot preview" className="h-20 w-20 shrink-0 border border-white/10 object-cover sm:h-24 sm:w-28" />
+                          <img src={paymentScreenshot!.dataUrl} alt="Payment screenshot preview" className="h-20 w-20 shrink-0 border border-white/10 object-cover sm:h-24 sm:w-28" />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400">
                               <CheckCircle className="h-4 w-4" /> Ready to submit
                             </div>
-                            <div className="mt-2 truncate text-sm font-semibold text-white">{paymentScreenshot.name}</div>
+                            <div className="mt-2 truncate text-sm font-semibold text-white">{paymentScreenshot!.name}</div>
                             <div className="mt-1 text-xs text-white/40">Tap to choose a different image</div>
                           </div>
                         </div>
@@ -2575,31 +2554,6 @@ function MainApp() {
                                 />
                               </div>
                             </div>
-                            <div className="flex flex-col gap-2">
-                              <label className="font-inter text-xs text-white/50 uppercase tracking-widest">Payment QR Code</label>
-                              <div className="flex items-center gap-4">
-                                {(courseForm.qrCodeDataUrl || courseForm.qrCodeUrl) && (
-                                  <img src={courseForm.qrCodeDataUrl || courseForm.qrCodeUrl} alt="Payment QR preview" className="h-24 w-24 border border-white/10 bg-white object-contain" />
-                                )}
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={async (event) => {
-                                    const file = event.target.files?.[0];
-                                    if (!file) return;
-                                    try {
-                                      const qrCodeDataUrl = await compressImageToDataUrl(file);
-                                      setCourseForm((current) => ({ ...current, qrCodeDataUrl }));
-                                      setAdminStatus('Payment QR compressed below 100 KB.');
-                                    } catch (error) {
-                                      setAdminStatus(error instanceof Error ? error.message : 'Could not compress this QR image.');
-                                    }
-                                  }}
-                                  className="w-full cursor-pointer text-sm text-white/60 file:mr-4 file:border-0 file:bg-white/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/20"
-                                />
-                              </div>
-                              <p className="font-inter text-[10px] uppercase tracking-[0.14em] text-white/35">Automatically converted to JPEG and compressed below 100 KB.</p>
-                            </div>
                             <input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Name of the course" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <textarea value={courseForm.description} onChange={(event) => setCourseForm({ ...courseForm, description: event.target.value })} placeholder="Description" rows={5} className="w-full resize-none border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -2609,11 +2563,6 @@ function MainApp() {
                             <div className="border border-white/10 bg-ink p-4 font-inter text-sm text-white/60">Auto offer: {offerPercent(Number(courseForm.normalPrice), Number(courseForm.offerPrice))}% Off</div>
                             <input value={courseForm.driveUrl} onChange={(event) => setCourseForm({ ...courseForm, driveUrl: event.target.value })} placeholder="Private Google Drive folder URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <input value={courseForm.discordUrl} onChange={(event) => setCourseForm({ ...courseForm, discordUrl: event.target.value })} placeholder="Private Discord invite URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                            <div>
-                              <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Course payment UPI ID</label>
-                              <input required value={courseForm.upiId} onChange={(event) => setCourseForm({ ...courseForm, upiId: event.target.value.trim() })} placeholder="name@bank" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                              <p className="mt-2 font-inter text-[10px] text-white/35">Students can copy this UPI ID from the payment page.</p>
-                            </div>
                             <div className="flex flex-wrap gap-3 pt-2">
                               <button type="submit" className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">{courseForm.id ? 'Update Course' : 'Save Course'}</button>
                               <button type="button" onClick={resetCourseForm} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>
@@ -2841,14 +2790,15 @@ function MainApp() {
                             <th className="w-[260px] px-4 py-4">Course</th>
                             <th className="w-[140px] px-4 py-4">Coupon Code</th>
                             <th className="w-[140px] px-4 py-4">Discount</th>
+                            <th className="w-[130px] px-4 py-4">Original</th>
                             <th className="w-[130px] px-4 py-4">Amount</th>
-                            <th className="w-[150px] px-4 py-4">Proof</th>
+                            <th className="w-[230px] px-4 py-4">Razorpay IDs</th>
                             <th className="w-[190px] px-4 py-4">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/10">
                           {filteredOrders.length === 0 ? (
-                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={11}>No payments found.</td></tr>
+                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={12}>No payments found.</td></tr>
                           ) : (
                             filteredOrders.map((order) => (
                               <tr key={order.id} className="align-top transition hover:bg-white/[0.03]">
@@ -2861,7 +2811,7 @@ function MainApp() {
                                 </td>
                                 <td className="px-4 py-5">
                                   <div className="truncate font-semibold text-white" title={order.full_name}>{order.full_name}</div>
-                                  <div className="mt-1 truncate text-xs text-white/40" title={order.id}>{order.id}</div>
+                                  <div className="mt-1 truncate text-xs text-white/40" title={order.order_number || order.id}>{order.order_number || order.id}</div>
                                 </td>
                                 <td className="px-4 py-5 text-white/70">
                                   <div className="truncate" title={order.email}>{order.email}</div>
@@ -2873,19 +2823,12 @@ function MainApp() {
                                   {order.coupon_code ? <span className="inline-flex border border-electric/30 bg-electric/10 px-2 py-1 font-mono text-xs font-bold text-electric">{order.coupon_code}</span> : <span className="text-white/30">—</span>}
                                 </td>
                                 <td className="px-4 py-5 font-semibold text-emerald-300">{order.discount_amount > 0 ? `-${money(order.discount_amount)}` : '—'}</td>
+                                <td className="px-4 py-5 text-white/70">{money(order.original_amount)}</td>
                                 <td className="px-4 py-5 font-bold text-white">{money(order.final_amount)}</td>
                                 <td className="px-4 py-5">
-                                  {order.payment_screenshot_url ? (
-                                    <a 
-                                      href={order.payment_screenshot_url}
-                                      target="_blank" 
-                                      rel="noopener noreferrer" 
-                                      className="text-electric hover:underline text-xs font-bold uppercase tracking-widest inline-block mb-1"
-                                    >
-                                      View Image
-                                    </a>
-                                  ) : <div className="text-xs text-white/30 uppercase tracking-widest mb-1">{order.payment_screenshot_path ? 'Proof Unavailable' : 'No Image'}</div>}
-                                  {order.remarks && <div className="max-w-[130px] truncate text-xs text-white/70" title={order.remarks}>Note: {order.remarks}</div>}
+                                  <div className="truncate font-mono text-xs text-electric" title={order.razorpay_order_id || ''}>{order.razorpay_order_id || '—'}</div>
+                                  <div className="mt-2 truncate font-mono text-xs text-white/60" title={order.razorpay_payment_id || ''}>{order.razorpay_payment_id || '—'}</div>
+                                  <div className="mt-2 text-[10px] uppercase tracking-widest text-white/40">Drive: {order.drive_access_status || 'pending'}</div>
                                 </td>
                                 <td className="px-4 py-5">
                                   <div className="relative">
@@ -3047,7 +2990,7 @@ function MainApp() {
         </div>
       )}
 
-      {termsOpen && (
+      {false && termsOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/80 px-4 py-6">
           <div className="my-auto max-h-[calc(100dvh-3rem)] max-w-xl overflow-y-auto border border-white/10 bg-ink p-6 shadow-glow animate-scale-in">
             <div className="flex items-start justify-between gap-4">

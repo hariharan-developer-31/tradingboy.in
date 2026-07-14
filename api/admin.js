@@ -194,7 +194,7 @@ export default async function handler(req, res) {
     const { data, error } = await admin
       .from('course_orders')
       .select(
-        'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, payment_screenshot_path, remarks, created_at',
+        'id, order_number, razorpay_order_id, razorpay_payment_id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, drive_access_status, created_at',
       )
       .order('created_at', { ascending: false })
       .limit(1000);
@@ -204,14 +204,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const ordersWithProofUrls = await Promise.all((data || []).map(async (order) => {
-      if (!order.payment_screenshot_path) return { ...order, payment_screenshot_url: null };
-      const { data: signedProof, error: signedProofError } = await admin.storage
-        .from('payment-proofs')
-        .createSignedUrl(order.payment_screenshot_path, 10 * 60);
-      return { ...order, payment_screenshot_url: signedProofError ? null : signedProof?.signedUrl || null };
-    }));
-    json(res, 200, { data: ordersWithProofUrls });
+    json(res, 200, { data: data || [] });
     return;
   }
 
@@ -265,9 +258,9 @@ export default async function handler(req, res) {
       return;
     }
 
-    let proofQuery = admin.from('course_orders').select('id, payment_screenshot_path');
-    if (!deleteAll) proofQuery = proofQuery.in('id', orderIds);
-    const { data: records, error: recordsError } = await proofQuery;
+    let recordsQuery = admin.from('course_orders').select('id');
+    if (!deleteAll) recordsQuery = recordsQuery.in('id', orderIds);
+    const { data: records, error: recordsError } = await recordsQuery;
     if (recordsError) {
       json(res, 500, { error: recordsError.message });
       return;
@@ -281,8 +274,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    const proofPaths = (records || []).map((record) => record.payment_screenshot_path).filter(Boolean);
-    if (proofPaths.length > 0) await admin.storage.from('payment-proofs').remove(proofPaths);
     json(res, 200, { ok: true, deleted: records?.length || 0 });
     return;
   }
@@ -343,11 +334,11 @@ export default async function handler(req, res) {
   if (action === 'courses') {
     let { data, error } = await admin
       .from('courses')
-      .select('id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at')
+      .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at')
       .order('created_at', { ascending: false });
     if (error?.code === '42703') {
-      const legacy = await admin.from('courses').select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at').order('created_at', { ascending: false });
-      data = (legacy.data || []).map((course) => ({ ...course, qr_code_url: null }));
+      const legacy = await admin.from('courses').select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at').order('created_at', { ascending: false });
+      data = legacy.data || [];
       error = legacy.error;
     }
 
@@ -364,10 +355,8 @@ export default async function handler(req, res) {
     const title = cleanText(body.title, 160);
     const normalPrice = Number(body.normalPrice);
     const offerPrice = Number(body.offerPrice);
-    const upiId = cleanText(body.upiId, 320);
-
-    if (!title || Number.isNaN(normalPrice) || normalPrice <= 0 || Number.isNaN(offerPrice) || offerPrice <= 0 || !/^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/.test(upiId)) {
-      json(res, 400, { error: 'Valid title, prices, and course UPI ID are required.' });
+    if (!title || Number.isNaN(normalPrice) || normalPrice <= 0 || Number.isNaN(offerPrice) || offerPrice <= 0) {
+      json(res, 400, { error: 'Valid title and prices are required.' });
       return;
     }
 
@@ -379,7 +368,6 @@ export default async function handler(req, res) {
       price: offerPrice,
       drive_url: cleanText(body.driveUrl, 1000) || null,
       discord_url: cleanText(body.discordUrl, 1000) || null,
-      upi_id: upiId,
     };
     if (!isHttpsUrl(payload.drive_url) || !isHttpsUrl(payload.discord_url)) return json(res, 400, { error: 'Course and Discord links must use HTTPS.' });
     if (body.id && !isUuid(body.id)) return json(res, 400, { error: 'Invalid course ID.' });
@@ -404,18 +392,6 @@ export default async function handler(req, res) {
     } else if (body.thumbnailUrl !== undefined) {
       payload.thumbnail_url = cleanText(body.thumbnailUrl, 1000) || null;
       if (!isHttpsUrl(payload.thumbnail_url)) return json(res, 400, { error: 'Thumbnail link must use HTTPS.' });
-    }
-    if (body.qrCodeDataUrl) {
-      const buffer = decodeJpegDataUrl(body.qrCodeDataUrl);
-      if (buffer.byteLength > 100 * 1024) return json(res, 400, { error: 'Payment QR image must be below 100KB after compression.' });
-      const imagePath = `qr-${randomUUID()}.jpg`;
-      const { error: uploadError } = await admin.storage.from('course-thumbnails').upload(imagePath, buffer, { contentType: 'image/jpeg', upsert: true });
-      if (uploadError) return json(res, 500, { error: uploadError.message });
-      const { data: publicUrlData } = admin.storage.from('course-thumbnails').getPublicUrl(imagePath);
-      payload.qr_code_url = publicUrlData.publicUrl;
-    } else if (body.qrCodeUrl !== undefined) {
-      payload.qr_code_url = cleanText(body.qrCodeUrl, 1000) || null;
-      if (!isHttpsUrl(payload.qr_code_url)) return json(res, 400, { error: 'Payment QR link must use HTTPS.' });
     }
     const query = body.id
       ? admin.from('courses').update(payload).eq('id', body.id)

@@ -1,3 +1,4 @@
+// @ts-nocheck -- Development middleware delegates checkout to the production JS handler.
 import { createClient } from '@supabase/supabase-js';
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
@@ -25,7 +26,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         const admin = createClient(supabaseUrl, serviceRoleKey);
         const { data, error } = await admin
           .from('courses')
-          .select('id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, upi_id, active, created_at')
+          .select('id, title, description, thumbnail_url, normal_price, offer_price, price, active, created_at')
           .eq('active', true)
           .order('created_at', { ascending: true });
         sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data: data || [] });
@@ -62,6 +63,11 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
     });
 
     server.middlewares.use('/api/checkout', async (req, res) => {
+      Object.assign(process.env, env);
+      const { default: checkoutHandler } = await import('./api/checkout.js');
+      await checkoutHandler(req, res);
+      return;
+      /* Legacy local handler retained below only for migration history. */
       if ((req as any).method !== 'POST') {
         sendJson(res, 405, { error: 'Method not allowed' });
         return;
@@ -357,7 +363,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           const { data, error } = await admin
             .from('course_orders')
             .select(
-              'id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, payment_screenshot_path, remarks, created_at',
+              'id, order_number, razorpay_order_id, razorpay_payment_id, course_name, full_name, email, phone, trading_experience, terms_accepted, coupon_code, original_amount, discount_amount, final_amount, payment_status, drive_access_status, created_at',
             )
             .order('created_at', { ascending: false });
 
@@ -365,14 +371,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             sendJson(res, 500, { error: error.message });
             return;
           }
-          const ordersWithProofUrls = await Promise.all((data || []).map(async (order: any) => {
-            if (!order.payment_screenshot_path) return { ...order, payment_screenshot_url: null };
-            const { data: signedProof, error: signedProofError } = await admin.storage
-              .from('payment-proofs')
-              .createSignedUrl(order.payment_screenshot_path, 10 * 60);
-            return { ...order, payment_screenshot_url: signedProofError ? null : signedProof?.signedUrl || null };
-          }));
-          sendJson(res, 200, { data: ordersWithProofUrls });
+          sendJson(res, 200, { data: data || [] });
           return;
         }
 
@@ -504,7 +503,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (body.action === 'courses') {
           const { data, error } = await admin
             .from('courses')
-            .select('id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at')
+            .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at')
             .order('created_at', { ascending: false });
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
@@ -529,9 +528,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             price: offerPrice,
             drive_url: String(body.driveUrl || '').trim() || null,
             discord_url: String(body.discordUrl || '').trim() || null,
-            upi_id: String(body.upiId || '').trim(),
             thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
-            qr_code_url: String(body.qrCodeUrl || '').trim() || null,
           };
 
           if (body.thumbnailDataUrl) {

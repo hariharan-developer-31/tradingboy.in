@@ -48,7 +48,7 @@ test('checkout loads live public courses and resolves legacy course names', () =
   const viteConfig = read('vite.config.ts');
 
   assert.match(app, /fetch\('\/api\/courses'\)/);
-  assert.match(app, /setSubmitError\(result\.error/);
+  assert.match(app, /setSubmitError\(error instanceof Error/);
   assert.match(checkout, /courseKind\(course\.title\) === requestedKind/);
   assert.match(checkout, /context: 'checkout\.receipt'/);
   assert.match(courses, /\.eq\('active', true\)/);
@@ -74,28 +74,28 @@ test('checkout emails both the student and admin with a secure payment verificat
   assert.match(app, /window\.location\.hash === '#admin\/payments' \? 'payments' : 'home'/);
 });
 
-test('local dev admin API returns payment proof and coupon metadata', () => {
+test('local dev admin API returns Razorpay and coupon metadata', () => {
   const viteConfig = read('vite.config.ts');
 
-  assert.match(viteConfig, /payment_screenshot_path, remarks, created_at/);
+  assert.match(viteConfig, /order_number, razorpay_order_id, razorpay_payment_id/);
   assert.match(viteConfig, /course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses, created_at/);
   assert.match(viteConfig, /body\.action === 'deleteCoupon'/);
-  assert.match(viteConfig, /createSignedUrl\(order\.payment_screenshot_path, 10 \* 60\)/);
+  assert.match(viteConfig, /drive_access_status/);
 });
 
-test('admin tables keep empty-state cells aligned with visible columns', () => {
+test('admin tables keep empty-state cells aligned and show Razorpay metadata', () => {
   const app = read('src/App.tsx');
 
   assert.match(app, /<td colSpan=\{6\}[^>]*>\s*No coupons found\./);
-  assert.match(app, /colSpan=\{11\}>No payments found\./);
-  assert.match(app, /order\.payment_screenshot_url \?/);
+  assert.match(app, /colSpan=\{12\}>No payments found\./);
+  assert.match(app, /order\.razorpay_payment_id/);
   assert.match(app, />Coupon Code<\/th>/);
   assert.match(app, />Discount<\/th>/);
   assert.match(app, /order\.coupon_code/);
   assert.match(app, /order\.discount_amount > 0 \? `-\$\{money\(order\.discount_amount\)\}`/);
 });
 
-test('checkout resets to the top between steps and exposes stored proofs securely', () => {
+test('checkout resets to the top and uses verified Razorpay payments', () => {
   const app = read('src/App.tsx');
   const adminApi = read('api/admin.js');
   const checkoutApi = read('api/checkout.js');
@@ -103,12 +103,10 @@ test('checkout resets to the top between steps and exposes stored proofs securel
   assert.match(app, /checkoutScrollRef\.current\?\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/);
   assert.match(app, /\[checkoutOpen, joinStep\]/);
   assert.match(app, /validatingCoupon \? <><Loader2[^>]*animate-spin/);
-  assert.match(app, /selectedCourse\.qr_code_url/);
-  assert.match(app, /navigator\.clipboard\.writeText\(selectedUpiId\)/);
-  assert.match(app, /href=\{order\.payment_screenshot_url\}/);
-  assert.doesNotMatch(app, /getPublicUrl\(order\.payment_screenshot_path\)/);
-  assert.match(adminApi, /createSignedUrl\(order\.payment_screenshot_path, 10 \* 60\)/);
-  assert.match(checkoutApi, /p_payment_screenshot_path: paymentScreenshotPath/);
+  assert.match(app, /checkout\.razorpay\.com\/v1\/checkout\.js/);
+  assert.match(app, /action: 'verifyPayment'/);
+  assert.doesNotMatch(adminApi, /createSignedUrl\(order\.payment_screenshot_path/);
+  assert.match(checkoutApi, /createHmac\('sha256'/);
 });
 
 test('checkout and payment confirmation render as dedicated pages, not popup windows', () => {
@@ -152,16 +150,12 @@ test('checkout back actions confirm cancellation and success has a centered webs
   assert.match(app, />\s*Back to Website\s*</);
 });
 
-test('payment page uses a six-minute timer, centered QR, and no duplicate final-step headings', () => {
+test('payment uses Razorpay Checkout without manual timers or proof steps', () => {
   const app = read('src/App.tsx');
 
-  assert.match(app, /const PAYMENT_TIME_SECONDS = 6 \* 60/);
-  assert.match(app, /useState\(PAYMENT_TIME_SECONDS\)/);
-  assert.match(app, /PAYMENT_TIME_SECONDS - paymentSeconds/);
-  assert.match(app, /PAYMENT_TIME_SECONDS \/ 30/);
-  assert.match(app, /\(index \+ 1\) \* 30/);
-  assert.match(app, /mx-auto h-64 w-64 overflow-hidden border border-white\/10 bg-white sm:h-72 sm:w-72/);
-  assert.match(app, /block h-full w-full object-contain/);
+  assert.match(app, /new \(window as any\)\.Razorpay/);
+  assert.match(app, />\s*Pay Now\s*/);
+  assert.doesNotMatch(app, /const PAYMENT_TIME_SECONDS/);
   assert.match(app, /joinStep !== 'proof' && joinStep !== 'thanks'/);
   assert.doesNotMatch(app, /joinStep === 'proof' \? 'Upload Payment Proof'/);
   assert.doesNotMatch(app, /joinStep === 'thanks' \? 'Payment Submitted'/);
@@ -231,7 +225,7 @@ test('payment admin supports safe bulk deletion, date filters, and confirmed sta
   assert.match(app, /window\.confirm\(`Change/);
   assert.match(app, /updatingOrderId === order\.id/);
   assert.match(adminApi, /action === 'deleteOrders'/);
-  assert.match(adminApi, /storage\.from\('payment-proofs'\)\.remove/);
+  assert.doesNotMatch(adminApi, /storage\.from\('payment-proofs'\)\.remove/);
   assert.match(viteConfig, /body\.action === 'deleteOrders'/);
 });
 
@@ -357,20 +351,16 @@ test('admin logout expires current and legacy session cookies before showing log
   assert.ok(verifyButtonIndex > otpStatusIndex);
 });
 
-test('courses have dedicated UPI IDs and admin-uploaded payment QR images', () => {
+test('manual UPI and QR fields are removed by the Razorpay migration', () => {
   const app = read('src/App.tsx');
   const adminApi = read('api/admin.js');
   const coursesApi = read('api/courses.js');
-  const migration = read('migrations/20260714_admin_otp_campaign_history_upi.sql');
-
-  assert.match(app, /selectedCourse\.upi_id \|\| UPI_ID/);
-  assert.match(app, /Payment QR Code/);
-  assert.match(app, /qrCodeDataUrl/);
-  assert.match(app, /Course payment UPI ID/);
-  assert.match(adminApi, /upi_id: upiId/);
-  assert.match(coursesApi, /qr_code_url[\s\S]*price, upi_id, active/);
-  assert.match(migration, /courses add column if not exists upi_id/);
-  assert.match(migration, /email_campaigns add column if not exists attachment_path/);
+  const migration = read('migrations/20260714_razorpay_checkout.sql');
+  assert.doesNotMatch(app, /Course payment UPI ID/);
+  assert.doesNotMatch(adminApi, /upi_id: upiId/);
+  assert.doesNotMatch(coursesApi, /qr_code_url[\s\S]*upi_id/);
+  assert.match(migration, /drop column if exists upi_id/);
+  assert.match(migration, /drop column if exists qr_code_url/);
 });
 
 test('coupon management supports editing and course scoping', () => {
@@ -405,7 +395,7 @@ test('all image uploads share the compressor and testimonials stay below 100KB',
   const adminApi = read('api/admin.js');
 
   assert.match(app, /const compressImageToDataUrl =/);
-  assert.equal((app.match(/await compressImageToDataUrl\(file\)/g) || []).length, 4);
+  assert.equal((app.match(/await compressImageToDataUrl\(file\)/g) || []).length, 3);
   assert.match(app, /Images are automatically converted to JPEG and compressed below 100 KB\./);
   assert.match(adminApi, /body\.photoDataUrl[\s\S]*buffer\.byteLength > 100 \* 1024/);
   assert.match(adminApi, /Testimonial image must be below 100KB after compression\./);
@@ -526,7 +516,7 @@ test('production APIs share request hardening and use an HttpOnly admin session'
   assert.match(app, /aria-label=\{showAdminPasscode \? 'Hide admin passcode' : 'Show admin passcode'\}/);
   assert.match(app, /showAdminPasscode \? <EyeOff/);
   assert.match(checkoutApi, /requireTrustedOrigin/);
-  assert.match(checkoutApi, /decodeJpegDataUrl/);
+  assert.match(checkoutApi, /createHmac/);
   assert.match(couponApi, /rateLimit/);
 });
 

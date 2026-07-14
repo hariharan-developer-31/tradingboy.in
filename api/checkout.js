@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { randomUUID } from 'node:crypto';
-import { cleanText, decodeJpegDataUrl, escapeHtml, handleApiError, isCouponCode, isEmail, isHttpsUrl, json, rateLimit, readJsonBody, requirePost, requireTrustedOrigin } from './_security.js';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { cleanText, escapeHtml, handleApiError, isCouponCode, isEmail, isHttpsUrl, json, rateLimit, readJsonBody, requirePost, requireTrustedOrigin } from './_security.js';
 
 const COURSE_NAME = 'Complete Forex Mastery';
 const COURSE_PRICE = 7199;
@@ -80,7 +80,7 @@ const adminPaymentHtml = (order) => darkEmail(`
       <img src="https://tradingboy.in/logo.png" alt="Trading Boy Academy" style="height:52px;width:auto;margin:0 0 24px;display:block" />
       <div style="color:#25aef4;font-size:12px;font-weight:bold;letter-spacing:3px;text-transform:uppercase">New Payment Submitted</div>
       <h2 style="margin:12px 0 18px;color:#ffffff">A new student completed the payment</h2>
-      <p style="color:#cbd5e1;line-height:1.7">The student uploaded payment proof. Review the screenshot and verify the payment from the secure admin panel.</p>
+      <p style="color:#cbd5e1;line-height:1.7">Razorpay verified this payment successfully. Review the order and manage course access from the secure admin panel.</p>
       <table style="width:100%;border-collapse:collapse;margin:24px 0;color:#ffffff">
         <tr><td style="padding:10px 0;color:#9ca3af;border-bottom:1px solid #1f2933">Student</td><td style="padding:10px 0;text-align:right;border-bottom:1px solid #1f2933">${order.full_name}</td></tr>
         <tr><td style="padding:10px 0;color:#9ca3af;border-bottom:1px solid #1f2933">Email</td><td style="padding:10px 0;text-align:right;border-bottom:1px solid #1f2933">${order.email}</td></tr>
@@ -133,6 +133,60 @@ const paidAccessHtml = (order) => darkEmail(`
   </div>
 `);
 
+const razorpayRequest = async (path, options = {}) => {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keyId || !keySecret) throw Object.assign(new Error('Razorpay is not configured.'), { status: 503 });
+  const response = await fetch(`https://api.razorpay.com/v1${path}`, {
+    ...options,
+    headers: { Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`, 'Content-Type': 'application/json', ...(options.headers || {}) },
+    signal: AbortSignal.timeout(12_000),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error(data.error?.description || 'Payment gateway request failed.'), { status: 502 });
+  return data;
+};
+
+const getCheckout = async (admin, body) => {
+  const fullName = cleanText(body.name, 100);
+  const email = cleanText(body.email, 254).toLowerCase();
+  const phone = cleanText(body.phone, 25);
+  const tradingExperience = cleanText(body.tradingExperience, 80);
+  const requestedCourseName = cleanText(body.courseName || COURSE_NAME, 160);
+  const couponCode = cleanText(body.couponCode, 40).toUpperCase();
+  if (fullName.length < 2 || !isEmail(email) || !/^[+0-9 ()-]{7,25}$/.test(phone) || !tradingExperience || body.termsAccepted !== true || body.privacyAccepted !== true) {
+    throw Object.assign(new Error('Name, email, phone, trading experience, terms and privacy acceptance are required.'), { status: 400 });
+  }
+  if (couponCode && !isCouponCode(couponCode)) throw Object.assign(new Error('Coupon code format is invalid.'), { status: 400 });
+  const { data: activeCourses, error } = await admin.from('courses').select('title, price, offer_price, drive_url, discord_url, active').eq('active', true);
+  if (error) throw error;
+  const requestedKind = courseKind(requestedCourseName);
+  const courseData = (activeCourses || []).find((course) => course.title === requestedCourseName) || (activeCourses || []).find((course) => courseKind(course.title) === requestedKind);
+  const fallbackCourse = COURSES.find((course) => courseKind(course.name) === requestedKind);
+  if (!courseData && !fallbackCourse) throw Object.assign(new Error('The selected course is unavailable.'), { status: 404 });
+  const course = courseData ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price), drive_url: courseData.drive_url, discord_url: courseData.discord_url } : fallbackCourse;
+  let coupon = null;
+  let discount = 0;
+  if (couponCode) {
+    const { data } = await admin.from('coupons').select('id, code, course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses').eq('code', couponCode).eq('active', true).maybeSingle();
+    if (!data) throw Object.assign(new Error('Coupon is invalid or inactive.'), { status: 400 });
+    if (data.expires_at && new Date(data.expires_at) < new Date()) throw Object.assign(new Error('Coupon has expired.'), { status: 400 });
+    if (data.max_uses !== null && data.current_uses >= data.max_uses) throw Object.assign(new Error('Coupon usage limit reached.'), { status: 400 });
+    if (data.course_name && data.course_name !== course.name) throw Object.assign(new Error(`Coupon is only valid for ${data.course_name}.`), { status: 400 });
+    coupon = data;
+    discount = data.discount_type === 'percent' ? Math.min(Math.round(course.price * data.discount_value / 100), course.price) : Math.min(Number(data.discount_value), course.price);
+  }
+  return { fullName, email, phone, tradingExperience, course, coupon, discount, finalAmount: course.price - discount };
+};
+
+const safeEqual = (left, right) => {
+  const a = Buffer.from(String(left));
+  const b = Buffer.from(String(right));
+  return a.length === b.length && timingSafeEqual(a, b);
+};
+
+const businessOrderNumber = () => `TB${new Date().toISOString().slice(0, 10).replaceAll('-', '')}${String(Date.now()).slice(-6)}`;
+
 export default async function handler(req, res) {
   if (!requirePost(req, res) || !requireTrustedOrigin(req, res)) return;
   if (!rateLimit(req, res, { scope: 'checkout', limit: 8, windowMs: 10 * 60_000 })) return;
@@ -143,155 +197,43 @@ export default async function handler(req, res) {
   }
 
   try {
-  const body = await readJsonBody(req, 180 * 1024);
-  const fullName = cleanText(body.name, 100);
-  const email = cleanText(body.email, 254).toLowerCase();
-  const phone = cleanText(body.phone, 25);
-  const tradingExperience = cleanText(body.tradingExperience, 80);
-  const requestedCourseName = cleanText(body.courseName || COURSE_NAME, 160);
-  const couponCode = cleanText(body.couponCode, 40).toUpperCase();
-  const paymentScreenshot = body.paymentScreenshot;
-  const termsAccepted = body.termsAccepted === true;
-
-  const remarks = cleanText(body.remarks, 500);
-
-  if (fullName.length < 2 || !isEmail(email) || !/^[+0-9 ()-]{7,25}$/.test(phone) || !tradingExperience || !termsAccepted) {
-    json(res, 400, { error: 'Name, email, phone, trading experience, and terms acceptance are required.' });
-    return;
-  }
-  if (couponCode && !isCouponCode(couponCode)) return json(res, 400, { error: 'Coupon code format is invalid.' });
-
+  const body = await readJsonBody(req, 32 * 1024);
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data: activeCourses, error: coursesError } = await admin
-    .from('courses')
-    .select('title, price, offer_price, drive_url, discord_url, active')
-    .eq('active', true);
-  if (coursesError) throw coursesError;
-  const requestedKind = courseKind(requestedCourseName);
-  const courseData = (activeCourses || []).find((course) => course.title === requestedCourseName)
-    || (activeCourses || []).find((course) => courseKind(course.title) === requestedKind);
-  const fallbackCourse = COURSES.find((course) => courseKind(course.name) === requestedKind);
-  if (!courseData && !fallbackCourse) return json(res, 404, { error: 'The selected course is unavailable.' });
-  const selectedCourse = courseData
-    ? { name: courseData.title, price: Number(courseData.offer_price || courseData.price), drive_url: courseData.drive_url, discord_url: courseData.discord_url }
-    : fallbackCourse;
-  let discountAmount = 0;
-  let appliedCoupon = null;
-
-  if (couponCode) {
-    const { data } = await admin
-      .from('coupons')
-      .select('id, code, course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses')
-      .eq('code', couponCode)
-      .eq('active', true)
-      .maybeSingle();
-
-    if (data) {
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        json(res, 400, { error: 'Coupon has expired.' });
-        return;
-      }
-      if (data.max_uses !== null && data.current_uses >= data.max_uses) {
-        json(res, 400, { error: 'Coupon usage limit reached.' });
-        return;
-      }
-      if (data.course_name && data.course_name !== selectedCourse.name) {
-        json(res, 400, { error: `Coupon is only valid for ${data.course_name}.` });
-        return;
-      }
-
-      appliedCoupon = data;
-      discountAmount =
-        data.discount_type === 'percent'
-          ? Math.min(Math.round((selectedCourse.price * data.discount_value) / 100), selectedCourse.price)
-          : Math.min(data.discount_value, selectedCourse.price);
-    }
+  const checkout = await getCheckout(admin, body);
+  if (body.action === 'createOrder') {
+    if (checkout.finalAmount < 1) return json(res, 400, { error: 'A zero-value checkout is not supported. Contact support.' });
+    const gatewayOrder = await razorpayRequest('/orders', { method: 'POST', body: JSON.stringify({ amount: checkout.finalAmount * 100, currency: 'INR', receipt: businessOrderNumber(), payment_capture: 1, notes: { course: checkout.course.name, email: checkout.email, phone: checkout.phone, coupon: checkout.coupon?.code || '' } }) });
+    return json(res, 200, { keyId: process.env.RAZORPAY_KEY_ID, razorpayOrderId: gatewayOrder.id, amount: gatewayOrder.amount, currency: gatewayOrder.currency, courseName: checkout.course.name });
   }
-
-  const finalAmount = selectedCourse.price - discountAmount;
-  const orderId = randomUUID();
-  let paymentScreenshotPath = null;
-
-  if (finalAmount > 0 && !paymentScreenshot?.dataUrl) return json(res, 400, { error: 'A payment screenshot is required.' });
-  if (paymentScreenshot?.dataUrl) {
-    const buffer = decodeJpegDataUrl(paymentScreenshot.dataUrl);
-
-    paymentScreenshotPath = `${orderId}.jpg`;
-    const { error: uploadError } = await admin.storage
-      .from('payment-proofs')
-      .upload(paymentScreenshotPath, buffer, {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
-
-    if (uploadError) {
-      throw uploadError;
-    }
-  }
-
-  const pendingOrder = {
-    id: orderId,
-    course_name: selectedCourse.name,
-    full_name: fullName,
-    email,
-    phone,
-    trading_experience: tradingExperience,
-    terms_accepted: true,
-    terms_accepted_at: new Date().toISOString(),
-    plan: selectedCourse.name,
-    coupon_code: appliedCoupon ? appliedCoupon.code : null,
-    original_amount: selectedCourse.price,
-    discount_amount: discountAmount,
-    final_amount: finalAmount,
-    payment_status: finalAmount === 0 ? 'paid' : 'pending',
-    payment_screenshot_path: paymentScreenshotPath,
-    remarks,
-    source: 'website',
-  };
-
-  const { data: atomicOrder, error: atomicError } = await admin.rpc('create_course_order', {
-    p_id: orderId,
-    p_course_name: selectedCourse.name,
-    p_full_name: fullName,
-    p_email: email,
-    p_phone: phone,
-    p_trading_experience: tradingExperience,
-    p_coupon_code: appliedCoupon?.code || null,
-    p_payment_screenshot_path: paymentScreenshotPath,
-    p_remarks: remarks,
-    p_source: 'website',
-  });
-  const atomicRow = Array.isArray(atomicOrder) ? atomicOrder[0] : atomicOrder;
-  let order = atomicRow || pendingOrder;
-  if (atomicError) {
-    // Backward-compatible deployment path while the production migration is applied.
-    if (!['PGRST202', '42883'].includes(atomicError.code)) {
-      if (paymentScreenshotPath) await admin.storage.from('payment-proofs').remove([paymentScreenshotPath]);
-      throw atomicError;
-    }
-    const { error: insertError } = await admin.from('course_orders').insert(pendingOrder);
-    if (insertError) {
-      if (paymentScreenshotPath) await admin.storage.from('payment-proofs').remove([paymentScreenshotPath]);
-      throw insertError;
-    }
-    if (appliedCoupon) await admin.from('coupons').update({ current_uses: appliedCoupon.current_uses + 1 }).eq('id', appliedCoupon.id);
-  }
-
-  const payableAmount = Number(order.final_amount);
-
-  const safeOrder = Object.fromEntries(Object.entries(order).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value]));
+  if (body.action !== 'verifyPayment') return json(res, 400, { error: 'Invalid checkout action.' });
+  const razorpayOrderId = cleanText(body.razorpay_order_id, 100);
+  const razorpayPaymentId = cleanText(body.razorpay_payment_id, 100);
+  const signature = cleanText(body.razorpay_signature, 256);
+  if (!/^order_[A-Za-z0-9]+$/.test(razorpayOrderId) || !/^pay_[A-Za-z0-9]+$/.test(razorpayPaymentId) || !/^[a-f0-9]{64}$/i.test(signature)) return json(res, 400, { error: 'Invalid payment confirmation.' });
+  if (!process.env.RAZORPAY_KEY_SECRET) return json(res, 503, { error: 'Razorpay is not configured.' });
+  const expected = createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(`${razorpayOrderId}|${razorpayPaymentId}`).digest('hex');
+  if (!safeEqual(expected, signature)) return json(res, 400, { error: 'Payment signature verification failed.' });
+  const [gatewayOrder, gatewayPayment] = await Promise.all([razorpayRequest(`/orders/${razorpayOrderId}`), razorpayRequest(`/payments/${razorpayPaymentId}`)]);
+  if (gatewayOrder.amount !== checkout.finalAmount * 100 || gatewayOrder.currency !== 'INR' || gatewayOrder.notes?.course !== checkout.course.name || gatewayOrder.notes?.email !== checkout.email || gatewayPayment.order_id !== razorpayOrderId || gatewayPayment.amount !== gatewayOrder.amount || gatewayPayment.status !== 'captured') return json(res, 400, { error: 'Payment amount or status verification failed.' });
+  const { data: existingOrder } = await admin.from('course_orders').select('order_number, id').eq('razorpay_payment_id', razorpayPaymentId).maybeSingle();
+  if (existingOrder) return json(res, 200, { orderId: existingOrder.order_number || existingOrder.id, paymentStatus: 'paid', duplicate: true });
+  const internalId = randomUUID();
+  const orderNumber = businessOrderNumber();
+  const { data: atomicOrder, error: atomicError } = await admin.rpc('create_course_order', { p_id: internalId, p_course_name: checkout.course.name, p_full_name: checkout.fullName, p_email: checkout.email, p_phone: checkout.phone, p_trading_experience: checkout.tradingExperience, p_coupon_code: checkout.coupon?.code || null, p_payment_screenshot_path: null, p_remarks: null, p_source: 'razorpay' });
+  if (atomicError) throw atomicError;
+  const created = Array.isArray(atomicOrder) ? atomicOrder[0] : atomicOrder;
+  const { data: order, error: updateError } = await admin.from('course_orders').update({ order_number: orderNumber, razorpay_order_id: razorpayOrderId, razorpay_payment_id: razorpayPaymentId, payment_status: 'paid', drive_access_status: 'pending' }).eq('id', created.id || internalId).select('*').single();
+  if (updateError) throw updateError;
+  const safeOrder = Object.fromEntries(Object.entries({ ...order, id: order.order_number || order.id }).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value]));
   const [emailSent, adminEmailSent] = await Promise.all([
     sendEmail({
-      to: email,
-      subject: payableAmount === 0 ? 'Trading Boy course access approved' : `Trading Boy receipt - ${selectedCourse.name}`,
-      html: payableAmount === 0 ? paidAccessHtml({ ...safeOrder, drive_url: isHttpsUrl(selectedCourse.drive_url) ? escapeHtml(selectedCourse.drive_url) : null, discord_url: isHttpsUrl(selectedCourse.discord_url) ? escapeHtml(selectedCourse.discord_url) : null }) : receiptHtml(safeOrder),
+      to: checkout.email,
+      subject: `Trading Boy receipt - ${checkout.course.name}`,
+      html: receiptHtml(safeOrder),
     }),
-    payableAmount > 0
-      ? sendEmail({ to: ADMIN_EMAIL, subject: `New payment submitted - ${selectedCourse.name}`, html: adminPaymentHtml(safeOrder) })
-      : Promise.resolve(false),
+    sendEmail({ to: ADMIN_EMAIL, subject: `New payment submitted - ${checkout.course.name}`, html: adminPaymentHtml(safeOrder) }),
   ]);
-
-  return json(res, 200, { orderId: order.id, payableAmount, emailSent: Boolean(emailSent), adminEmailSent: Boolean(adminEmailSent) });
+  return json(res, 200, { orderId: order.order_number || order.id, paymentStatus: 'paid', emailSent: Boolean(emailSent), adminEmailSent: Boolean(adminEmailSent) });
   } catch (error) {
     return handleApiError(res, error, 'checkout.create');
   }
