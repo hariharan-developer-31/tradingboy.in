@@ -1851,7 +1851,7 @@ export default function App() {
               <div className={`mx-auto w-full max-w-xl transition duration-300 ${paymentPromptOpen ? 'pointer-events-none select-none blur-sm' : ''}`} aria-hidden={paymentPromptOpen}>
                 {selectedCourse.qr_code_url && (
                   <div className="mx-auto h-64 w-64 overflow-hidden border border-white/10 bg-white sm:h-72 sm:w-72">
-                    <img src={selectedCourse.qr_code_url} alt="UPI payment QR code" className="block h-full w-full scale-[1.12] object-cover" />
+                    <img src={selectedCourse.qr_code_url} alt="UPI payment QR code" className="block h-full w-full scale-[1.05] object-cover" />
                   </div>
                 )}
                 <div className="mt-8 font-inter">
