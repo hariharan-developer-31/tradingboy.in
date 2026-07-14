@@ -1101,7 +1101,7 @@ export default function App() {
       ];
   const courseAccessPoints = [
     'Lifetime support throughout your learning journey.',
-    '8 hours of structured recorded video lessons.',
+    isFundedCourse ? 'Approximately 3 hours of structured recorded video lessons.' : '8 hours of structured recorded video lessons.',
     'Every Sunday live meet for guidance and market review.',
     'Daily chart updates to support consistent practice.',
     'Live support when you need help with the lessons.',
@@ -2545,7 +2545,7 @@ export default function App() {
                 Save <span className="text-electric">₹1,000</span> on your course
               </h2>
               <p className="mt-5 max-w-md font-inter text-sm leading-relaxed text-white/65 sm:text-base">
-                Start learning market structure, risk control, and disciplined execution for less. Apply the code below during enrollment.
+                Use this coupon on either of our two courses. Choose your course below, then apply the code during enrollment to save ₹1,000.
               </p>
 
               <div className="mt-7 flex items-stretch border border-dashed border-electric/50 bg-black/40">
@@ -2561,8 +2561,8 @@ export default function App() {
                 </button>
               </div>
 
-              <button onClick={() => { setPromoOpen(false); setCouponInput(PROMO_COUPON_CODE); setAppliedCoupon(null); setCouponError(''); openCheckout(); }} className="group mt-5 flex w-full items-center justify-center bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.18em] text-black shadow-glow transition hover:bg-skyline sm:py-5">
-                Claim ₹1,000 Off
+              <button onClick={() => { setPromoOpen(false); setCouponInput(PROMO_COUPON_CODE); setAppliedCoupon(null); setCouponError(''); window.location.hash = 'course'; }} className="group mt-5 flex w-full items-center justify-center bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.18em] text-black shadow-glow transition hover:bg-skyline sm:py-5">
+                View Courses &amp; Claim ₹1,000 Off
                 <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </button>
               <p className="mt-3 text-center font-inter text-[10px] uppercase tracking-wider text-white/35">Enter the code at checkout · Course terms apply</p>

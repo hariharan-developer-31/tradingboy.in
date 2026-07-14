@@ -223,6 +223,16 @@ test('course details have shareable entry files, member reviews, and Instagram s
   assert.match(fundedEntry, /#course\/funded-trader-blueprint/);
 });
 
+test('course offer leads to course selection and Blueprint shows its shorter duration', () => {
+  const app = read('src/App.tsx');
+
+  assert.match(app, /Use this coupon on either of our two courses\./);
+  assert.match(app, /window\.location\.hash = 'course'/);
+  assert.doesNotMatch(app, /setCouponError\(''\); openCheckout\(\)/);
+  assert.match(app, /isFundedCourse \? 'Approximately 3 hours of structured recorded video lessons\.'/);
+  assert.match(app, /: '8 hours of structured recorded video lessons\.'/);
+});
+
 test('production APIs share request hardening and use an HttpOnly admin session', () => {
   const app = read('src/App.tsx');
   const security = read('api/_security.js');
