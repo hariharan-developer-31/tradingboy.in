@@ -18,7 +18,7 @@ const isValidAdminPasscode = (submittedPasscode) => {
 
 const formatAmount = (amount) => `Rs. ${Number(amount).toLocaleString('en-IN')}`;
 
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, attachments }) => {
   if (!process.env.RESEND_API_KEY) {
     return { ok: false, error: 'RESEND_API_KEY is missing in environment variables' };
   }
@@ -35,6 +35,7 @@ const sendEmail = async ({ to, subject, html }) => {
         to,
         subject,
         html,
+        ...(attachments?.length ? { attachments } : {}),
       }),
       signal: AbortSignal.timeout(10_000),
     });
@@ -166,6 +167,8 @@ export default async function handler(req, res) {
   }
   if (!hasValidAdminSession(req, sessionSecret)) return json(res, 401, { error: 'Admin session expired. Sign in again.' });
 
+  if (action === 'session') return json(res, 200, { ok: true, emailConfigured: Boolean(process.env.RESEND_API_KEY) });
+
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
   if (action === 'orders') {
@@ -258,54 +261,14 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (action === 'sendCampaign') {
-    const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
-    const courseName = String(body.courseName || 'all').trim();
-    const manualEmails = String(body.manualEmails || body.additionalEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter(isEmail).slice(0, 500);
-    const subject = String(body.subject || '').trim().slice(0, 150);
-    const message = String(body.message || '').trim().slice(0, 5000);
-    if (!subject || !message) {
-      json(res, 400, { error: 'Email subject and message are required.' });
-      return;
-    }
-
-    let rows = [];
-    if (audience !== 'manual') {
-      let recipientQuery = admin.from('course_orders').select('email, full_name, course_name, payment_status').not('email', 'is', null);
-      if (audience === 'paid') recipientQuery = recipientQuery.eq('payment_status', 'paid');
-      if (courseName && courseName !== 'all' && courseName.toLowerCase() !== 'all courses') recipientQuery = recipientQuery.eq('course_name', courseName);
-      recipientQuery = recipientQuery.limit(500);
-      const { data, error: recipientError } = await recipientQuery;
-      if (recipientError) {
-        json(res, 500, { error: recipientError.message });
-        return;
-      }
-      rows = data || [];
-    }
-
-    const recipientMap = new Map(rows.filter((row) => row.email).map((row) => [row.email.trim().toLowerCase(), row]));
-    manualEmails.forEach((email) => {
-      if (!recipientMap.has(email)) recipientMap.set(email, { email, full_name: 'Trader' });
-    });
-    const recipients = Array.from(recipientMap.values()).slice(0, 500);
-    if (recipients.length === 0) {
-      json(res, 400, { error: 'No recipients match this audience.' });
-      return;
-    }
-
-    let sent = 0;
-    let failed = 0;
-    for (let index = 0; index < recipients.length; index += 5) {
-      const results = await Promise.all(recipients.slice(index, index + 5).map((recipient) => sendEmail({
-        to: recipient.email,
-        subject,
-        html: campaignHtml({ name: recipient.full_name, message }),
-      })));
-      sent += results.filter((result) => result.ok).length;
-      failed += results.filter((result) => !result.ok).length;
-    }
-    json(res, 200, { ok: true, sent, failed, recipients: recipients.length });
-    return;
+  if (action === 'prepareCampaignAttachment') {
+    const size = Number(body.size);
+    const originalName = cleanText(body.name, 180).replace(/[^a-zA-Z0-9._ -]/g, '_');
+    if (!originalName || !Number.isSafeInteger(size) || size < 1 || size > 10 * 1024 * 1024) return json(res, 400, { error: 'Attachment must be 10 MB or smaller.' });
+    const path = `${crypto.randomUUID()}-${originalName}`;
+    const { data, error } = await admin.storage.from('mail-attachments').createSignedUploadUrl(path);
+    if (error) return json(res, 500, { error: error.message });
+    return json(res, 200, { path, token: data.token });
   }
 
   if (action === 'coupons') {
@@ -582,6 +545,14 @@ export default async function handler(req, res) {
     const manualEmails = String(body.manualEmails || body.additionalEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter(isEmail).slice(0, 500);
     const subject = String(body.subject || '').trim().slice(0, 150);
     const message = String(body.message || '').trim().slice(0, 5000);
+    const attachmentPath = cleanText(body.attachmentPath, 300);
+    const attachmentName = cleanText(body.attachmentName, 180);
+    let attachments = [];
+    if (attachmentPath && attachmentName) {
+      const { data: attachment, error: attachmentError } = await admin.storage.from('mail-attachments').download(attachmentPath);
+      if (attachmentError || !attachment || attachment.size > 10 * 1024 * 1024) return json(res, 400, { error: 'Could not read the attachment, or it exceeds 10 MB.' });
+      attachments = [{ filename: attachmentName, content: Buffer.from(await attachment.arrayBuffer()).toString('base64') }];
+    }
     if (!subject || !message) {
       json(res, 400, { error: 'Email subject and message are required.' });
       return;
@@ -618,6 +589,7 @@ export default async function handler(req, res) {
         to: recipient.email,
         subject,
         html: campaignHtml({ name: recipient.full_name, message }),
+        attachments,
       })));
       sent += results.filter((result) => result.ok).length;
       failed += results.filter((result) => !result.ok).length;
@@ -636,6 +608,8 @@ export default async function handler(req, res) {
         logServerError('campaigns.insert', dbError);
       }
     }
+
+    if (attachmentPath) await admin.storage.from('mail-attachments').remove([attachmentPath]);
 
     json(res, 200, { ok: true, sent, failed, recipients: recipients.length });
     return;

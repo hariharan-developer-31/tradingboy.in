@@ -110,8 +110,8 @@ export const hasValidAdminSession = (req, secret) => {
   return safeEqual(signature, expected);
 };
 
-export const adminSessionCookie = (token, maxAge) => `tb_admin=${token}; Path=/api/admin; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Strict`;
-export const clearAdminSessionCookie = () => 'tb_admin=; Path=/api/admin; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
+export const adminSessionCookie = (token, maxAge) => `tb_admin=${token}; Path=/api; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Strict`;
+export const clearAdminSessionCookie = () => 'tb_admin=; Path=/api; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
 
 export const cleanText = (value, maxLength) => String(value || '').trim().slice(0, maxLength);
 export const isEmail = (value) => EMAIL_PATTERN.test(value) && value.length <= 254;

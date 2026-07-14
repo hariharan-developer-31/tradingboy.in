@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Eye, EyeOff, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Eye, EyeOff, History, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import aboutImageUrl from './assets/About us.webp';
 import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
@@ -331,6 +331,8 @@ export default function App() {
   const [campaignMessage, setCampaignMessage] = useState('');
   const [sendingCampaign, setSendingCampaign] = useState(false);
   const [adminCampaigns, setAdminCampaigns] = useState<any[]>([]);
+  const [emailView, setEmailView] = useState<'menu' | 'compose' | 'mailbox'>('menu');
+  const [campaignAttachment, setCampaignAttachment] = useState<File | null>(null);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
@@ -673,6 +675,26 @@ export default function App() {
     return result as T;
   };
 
+  useEffect(() => {
+    if (!adminOpen || adminUnlocked || import.meta.env.DEV) return;
+    let cancelled = false;
+    const restoreAdminSession = async () => {
+      setAdminLoading(true);
+      try {
+        await adminRequest('session');
+        if (cancelled) return;
+        await Promise.all([loadAdminCourses(), loadAdminOrders(), loadAdminCoupons(), loadAdminTestimonials(), loadAdminCampaigns()]);
+        if (!cancelled) setAdminUnlocked(true);
+      } catch {
+        // No valid cookie: show the normal passcode form.
+      } finally {
+        if (!cancelled) setAdminLoading(false);
+      }
+    };
+    void restoreAdminSession();
+    return () => { cancelled = true; };
+  }, [adminOpen]);
+
   const loadAdminCourses = async () => {
     const result = await adminRequest<{ data: PublicCourse[] }>('courses');
     setAdminCourses(result.data || []);
@@ -974,18 +996,28 @@ export default function App() {
     try {
       setSendingCampaign(true);
       setAdminStatus(`Sending campaign to ${campaignRecipientCount} recipients...`);
+      let attachmentPayload: Record<string, string> = {};
+      if (campaignAttachment) {
+        if (!supabase) throw new Error('Attachment storage is not configured.');
+        const upload = await adminRequest<{ path: string; token: string }>('prepareCampaignAttachment', { name: campaignAttachment.name, size: campaignAttachment.size });
+        const { error: uploadError } = await supabase.storage.from('mail-attachments').uploadToSignedUrl(upload.path, upload.token, campaignAttachment, { contentType: campaignAttachment.type || 'application/octet-stream' });
+        if (uploadError) throw new Error(`Could not upload attachment: ${uploadError.message}`);
+        attachmentPayload = { attachmentPath: upload.path, attachmentName: campaignAttachment.name };
+      }
       const result = await adminRequest<{ sent: number }>('sendCampaign', {
         audience: campaignAudience,
         courseName: campaignCourse,
         additionalEmails: campaignManualEmails,
         subject,
         message,
+        ...attachmentPayload,
       });
       setAdminStatus(`Campaign complete: ${result.sent} sent.`);
       if (result.sent > 0) {
         setCampaignSubject('');
         setCampaignMessage('');
         setCampaignManualEmails('');
+        setCampaignAttachment(null);
         await loadAdminCampaigns();
       }
     } catch (error) {
@@ -1854,7 +1886,7 @@ export default function App() {
                       </div>
                     </button>
 
-                    <button onClick={() => setAdminSection('emails')} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40 hover:shadow-[0_16px_45px_rgba(37,174,244,0.12)]">
+                    <button onClick={() => { setAdminSection('emails'); setEmailView('menu'); }} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40 hover:shadow-[0_16px_45px_rgba(37,174,244,0.12)]">
                       <div className="absolute inset-0 bg-electric/0 transition-colors duration-300 group-hover:bg-electric/5" />
                       <div className="relative mb-8 flex w-full justify-between">
                         <div className="flex h-12 w-12 items-center justify-center border border-white/10 bg-black text-white transition-all duration-300 group-hover:border-electric/50 group-hover:text-electric">
@@ -1876,9 +1908,9 @@ export default function App() {
                 ) : (
                   <div>
                     <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 border-b border-white/10 pb-6">
-                      <button onClick={() => setAdminSection('home')} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-electric shrink-0" aria-label="Back to dashboard">
+                      <button onClick={() => { if (adminSection === 'emails' && emailView !== 'menu') setEmailView('menu'); else setAdminSection('home'); }} className="flex items-center gap-2 font-inter text-sm text-white/70 transition hover:text-electric shrink-0" aria-label="Back">
                         <ArrowLeft className="h-4 w-4" />
-                        Back to Dashboard
+                        {adminSection === 'emails' && emailView !== 'menu' ? 'Back to Email' : 'Back to Dashboard'}
                       </button>
                       <div className="hidden sm:block h-6 w-px bg-white/20 shrink-0"></div>
                       <div className="font-podium text-xl tracking-wider uppercase text-white break-words">
@@ -2188,8 +2220,24 @@ export default function App() {
                   </div>
                 </div>
                 ) : adminSection === 'emails' ? (
-                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-                    <form onSubmit={sendEmailCampaign} className="space-y-5 border border-white/10 bg-black p-5 sm:p-7">
+                  emailView === 'menu' ? (
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <button onClick={() => setEmailView('compose')} className="group min-h-[360px] border border-white/10 border-t-electric/60 bg-[#090b0d] p-8 text-left transition hover:-translate-y-1 hover:border-electric/50">
+                        <div className="flex h-14 w-14 items-center justify-center border border-white/10 bg-black text-white group-hover:text-electric"><Send className="h-7 w-7" /></div>
+                        <div className="mt-12 font-inter text-xs font-bold uppercase tracking-[0.22em] text-electric">Communication</div>
+                        <h3 className="mt-4 font-podium text-3xl font-semibold text-white">Send Mail</h3>
+                        <p className="mt-5 max-w-md font-inter text-sm leading-relaxed text-white/60">Compose an email for course joiners and include one attachment up to 10 MB.</p>
+                      </button>
+                      <button onClick={() => setEmailView('mailbox')} className="group min-h-[360px] border border-white/10 border-t-electric/60 bg-[#090b0d] p-8 text-left transition hover:-translate-y-1 hover:border-electric/50">
+                        <div className="flex items-start justify-between"><div className="flex h-14 w-14 items-center justify-center border border-white/10 bg-black text-white group-hover:text-electric"><History className="h-7 w-7" /></div><span className="border border-electric/25 bg-electric/10 px-4 py-3 font-inter text-sm font-bold text-electric">{adminCampaigns.length}</span></div>
+                        <div className="mt-12 font-inter text-xs font-bold uppercase tracking-[0.22em] text-electric">Mailbox</div>
+                        <h3 className="mt-4 font-podium text-3xl font-semibold text-white">Mail History</h3>
+                        <p className="mt-5 max-w-md font-inter text-sm leading-relaxed text-white/60">Review previously sent messages, audiences, dates, and recipient totals.</p>
+                      </button>
+                    </div>
+                  ) : (
+                  <div className={`grid gap-6 ${emailView === 'compose' ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : ''}`}>
+                    <form onSubmit={sendEmailCampaign} className={`${emailView === 'mailbox' ? 'hidden' : ''} space-y-5 border border-white/10 bg-black p-5 sm:p-7`}>
                       <div>
                         <div className="font-inter text-xs font-bold uppercase tracking-[0.25em] text-electric">Compose campaign</div>
                         <h3 className="mt-3 font-podium text-3xl uppercase text-white">Send an update</h3>
@@ -2226,13 +2274,21 @@ export default function App() {
                         <textarea required maxLength={5000} rows={10} value={campaignMessage} onChange={(event) => setCampaignMessage(event.target.value)} placeholder="Write your announcement or course update..." className="w-full resize-y border border-white/10 bg-ink px-4 py-4 font-inter text-sm leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-electric" />
                         <div className="mt-2 text-right font-inter text-[10px] text-white/30">{campaignMessage.length}/5000</div>
                       </div>
+                      <div>
+                        <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Attachment (optional)</label>
+                        <label className="flex min-h-20 cursor-pointer items-center gap-3 border border-dashed border-white/20 bg-ink px-4 py-3 font-inter text-sm text-white/60 transition hover:border-electric hover:text-white">
+                          <Paperclip className="h-5 w-5 text-electric" />
+                          <span className="min-w-0 flex-1 truncate">{campaignAttachment ? campaignAttachment.name : 'Choose a file — maximum 10 MB'}</span>
+                          <input type="file" className="sr-only" onChange={(event) => { const file = event.target.files?.[0] || null; if (file && file.size > 10 * 1024 * 1024) { setCampaignAttachment(null); setAdminStatus('Attachment must be 10 MB or smaller.'); event.target.value = ''; } else { setCampaignAttachment(file); setAdminStatus(''); } }} />
+                        </label>
+                      </div>
                       <button type="submit" disabled={sendingCampaign || campaignRecipientCount === 0 || !campaignSubject.trim() || !campaignMessage.trim()} className="inline-flex w-full items-center justify-center gap-2 bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.16em] text-black shadow-glow transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-35">
                         {sendingCampaign ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         {sendingCampaign ? 'Sending campaign...' : `Send to ${campaignRecipientCount} recipient${campaignRecipientCount === 1 ? '' : 's'}`}
                       </button>
                     </form>
                     <aside className="space-y-6">
-                      <div className="h-fit border border-electric/25 bg-electric/[0.05] p-5 sm:p-6">
+                      <div className={`${emailView === 'mailbox' ? 'hidden' : ''} h-fit border border-electric/25 bg-electric/[0.05] p-5 sm:p-6`}>
                         <Mail className="h-7 w-7 text-electric" />
                         <div className="mt-5 font-inter text-xs font-bold uppercase tracking-widest text-white/45">Unique recipients</div>
                         <div className="mt-2 font-podium text-5xl font-bold text-white">{campaignRecipientCount}</div>
@@ -2242,7 +2298,7 @@ export default function App() {
                           <p>You will be asked to confirm the final recipient count before sending.</p>
                         </div>
                       </div>
-                      <div className="border border-white/10 bg-black p-5 sm:p-6">
+                      <div className={`border border-white/10 bg-black p-5 sm:p-6 ${emailView === 'mailbox' ? 'mx-auto w-full max-w-4xl' : ''}`}>
                         <h3 className="mb-4 font-podium text-xl uppercase tracking-widest text-white">Campaign History</h3>
                         <div className="space-y-4">
                           {adminCampaigns.length === 0 ? (
@@ -2265,6 +2321,7 @@ export default function App() {
                       </div>
                     </aside>
                   </div>
+                  )
                 ) : (
                   <div className="space-y-5">
                     <div className="grid gap-3 sm:grid-cols-3">

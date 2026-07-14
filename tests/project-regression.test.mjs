@@ -105,6 +105,26 @@ test('admin can send deduplicated course email campaigns through production and 
   assert.match(viteConfig, /campaignHtml/);
 });
 
+test('admin session restores on refresh and email tools expose compose, attachments, and mailbox history', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+  const security = read('api/_security.js');
+  const migration = read('migrations/20260714_add_mail_attachments.sql');
+
+  assert.match(app, /adminRequest\('session'\)/);
+  assert.match(app, /Send Mail/);
+  assert.match(app, /Mail History/);
+  assert.match(app, /maximum 10 MB/);
+  assert.match(app, /uploadToSignedUrl/);
+  assert.match(adminApi, /action === 'session'/);
+  assert.match(adminApi, /action === 'prepareCampaignAttachment'/);
+  assert.match(adminApi, /size > 10 \* 1024 \* 1024/);
+  assert.match(adminApi, /attachments/);
+  assert.match(security, /Path=\/api;/);
+  assert.match(migration, /mail-attachments/);
+  assert.match(migration, /10485760/);
+});
+
 test('coupon management supports editing and course scoping', () => {
   const app = read('src/App.tsx');
   const schema = read('supabase.sql');
