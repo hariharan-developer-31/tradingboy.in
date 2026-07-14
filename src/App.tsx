@@ -3092,17 +3092,17 @@ function PublicPage({ path }: { path: string }) {
   return (
     <div className="min-h-screen bg-ink text-white">
       <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 sm:px-10 lg:px-16">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between" aria-label="Page navigation">
+        <nav className="mx-auto flex max-w-7xl items-center" aria-label="Page navigation">
           <a href="/" aria-label="TradingBoy home"><img src={logoUrl} alt="TradingBoy" className="h-12 w-auto sm:h-14" /></a>
-          <a href="/" className="inline-flex items-center gap-2 font-inter text-[10px] font-bold uppercase tracking-[0.18em] text-white/70 transition hover:text-electric">
-            <ArrowLeft className="h-4 w-4" /> Back to Home
-          </a>
         </nav>
       </header>
 
       <main className="relative overflow-hidden px-6 py-16 sm:px-10 sm:py-20 lg:px-16 lg:py-28">
         <div className="pointer-events-none absolute left-1/2 top-0 h-80 w-[80%] -translate-x-1/2 bg-electric/10 blur-[120px]" />
         <div className="relative mx-auto max-w-4xl">
+          <a href="/" className="mb-8 inline-flex items-center gap-2 font-inter text-[10px] font-bold uppercase tracking-[0.18em] text-white/65 transition hover:text-electric sm:mb-10">
+            <ArrowLeft className="h-4 w-4" /> Back to Home
+          </a>
           <div className="font-inter text-[10px] font-bold uppercase tracking-[0.3em] text-electric">TradingBoy</div>
           <h1 className="mt-4 font-podium text-5xl uppercase leading-none text-white sm:text-7xl">{title}</h1>
           {page?.updated && <p className="mt-5 font-inter text-xs uppercase tracking-[0.18em] text-white/40">{page.updated}</p>}
