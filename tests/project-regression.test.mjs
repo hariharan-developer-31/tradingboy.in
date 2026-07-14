@@ -160,8 +160,8 @@ test('payment page uses a six-minute timer, centered QR, and no duplicate final-
   assert.match(app, /PAYMENT_TIME_SECONDS - paymentSeconds/);
   assert.match(app, /PAYMENT_TIME_SECONDS \/ 30/);
   assert.match(app, /\(index \+ 1\) \* 30/);
-  assert.match(app, /mx-auto w-fit border border-white\/10 bg-white p-5 sm:p-6/);
-  assert.match(app, /block h-44 w-44 object-contain sm:h-52 sm:w-52/);
+  assert.match(app, /mx-auto h-64 w-64 overflow-hidden border border-white\/10 bg-white sm:h-72 sm:w-72/);
+  assert.match(app, /block h-full w-full scale-\[1\.12\] object-cover/);
   assert.match(app, /joinStep !== 'proof' && joinStep !== 'thanks'/);
   assert.doesNotMatch(app, /joinStep === 'proof' \? 'Upload Payment Proof'/);
   assert.doesNotMatch(app, /joinStep === 'thanks' \? 'Payment Submitted'/);

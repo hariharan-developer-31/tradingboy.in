@@ -1850,8 +1850,8 @@ export default function App() {
               <>
               <div className={`mx-auto w-full max-w-xl transition duration-300 ${paymentPromptOpen ? 'pointer-events-none select-none blur-sm' : ''}`} aria-hidden={paymentPromptOpen}>
                 {selectedCourse.qr_code_url && (
-                  <div className="mx-auto w-fit border border-white/10 bg-white p-5 sm:p-6">
-                    <img src={selectedCourse.qr_code_url} alt="UPI payment QR code" className="block h-44 w-44 object-contain sm:h-52 sm:w-52" />
+                  <div className="mx-auto h-64 w-64 overflow-hidden border border-white/10 bg-white sm:h-72 sm:w-72">
+                    <img src={selectedCourse.qr_code_url} alt="UPI payment QR code" className="block h-full w-full scale-[1.12] object-cover" />
                   </div>
                 )}
                 <div className="mt-8 font-inter">
@@ -1860,7 +1860,7 @@ export default function App() {
                   <div className="mt-4 flex items-center justify-between gap-4 border border-white/10 bg-ink p-4 text-sm text-white/70">
                     <div className="min-w-0">
                       <div className="text-white/45">UPI ID</div>
-                      <div className="mt-1 break-all text-base font-bold text-white sm:text-lg">{selectedUpiId}</div>
+                      <div className="mt-1 break-all text-sm font-bold leading-snug text-white sm:text-base">{selectedUpiId}</div>
                     </div>
                     <button type="button" onClick={async () => { await navigator.clipboard.writeText(selectedUpiId); setUpiCopied(true); window.setTimeout(() => setUpiCopied(false), 1800); }} className="flex shrink-0 items-center gap-2 border border-electric/35 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-electric transition hover:bg-electric hover:text-black">
                       <Copy className="h-4 w-4" /> {upiCopied ? 'Copied' : 'Copy'}
