@@ -15,8 +15,9 @@ alter table public.course_orders drop column if exists payment_screenshot_path;
 alter table public.courses drop column if exists qr_code_url;
 alter table public.courses drop column if exists upi_id;
 
-delete from storage.objects where bucket_id = 'payment-proofs';
-delete from storage.buckets where id = 'payment-proofs';
+-- Supabase protects storage.objects from direct SQL deletion. The legacy
+-- payment-proofs bucket can be emptied/deleted later through Storage UI/API.
+drop policy if exists "Service role can manage payment proofs" on storage.objects;
 
 create or replace function public.create_course_order(
   p_id uuid, p_course_name text, p_full_name text, p_email text, p_phone text,
@@ -56,3 +57,6 @@ begin
   return v_order;
 end;
 $$;
+
+revoke all on function public.create_course_order(uuid,text,text,text,text,text,text,text,text,text) from public, anon, authenticated;
+grant execute on function public.create_course_order(uuid,text,text,text,text,text,text,text,text,text) to service_role;

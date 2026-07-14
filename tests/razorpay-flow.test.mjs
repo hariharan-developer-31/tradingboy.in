@@ -35,4 +35,6 @@ test('Razorpay migration records gateway IDs and removes manual payment storage'
   assert.match(migration, /drop column if exists payment_screenshot_path/);
   assert.match(migration, /drop column if exists qr_code_url/);
   assert.match(migration, /drop column if exists upi_id/);
+  assert.doesNotMatch(migration, /delete from storage\.(objects|buckets)/);
+  assert.match(migration, /drop policy if exists "Service role can manage payment proofs"/);
 });
