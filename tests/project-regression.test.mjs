@@ -140,8 +140,10 @@ test('checkout back actions confirm cancellation and success has a centered webs
   assert.match(app, /Your payment is paid successfully\./);
   assert.match(app, /It is pending for admin verification\./);
   assert.match(app, /If you do not receive your course access email within 12 hours, contact us on Instagram\./);
-  assert.match(app, /border border-white\/10 bg-black\/20 px-4 py-5 leading-relaxed/);
-  assert.match(app, /textAlign: 'justify', textAlignLast: 'center'/);
+  assert.match(app, /max-w-md border border-white\/10 border-l-2 border-l-electric bg-black\/25/);
+  assert.match(app, /Verification in progress/);
+  assert.doesNotMatch(app, /textAlign: 'justify'/);
+  assert.match(app, /window\.history\.replaceState\(null, '', window\.location\.pathname \+ window\.location\.search\);\s*setJoinStep\('thanks'\)/);
   assert.match(app, /mt-5 text-xs leading-relaxed text-white\/60/);
   assert.match(app, /<Instagram className="h-4 w-4" \/>\s*Contact\s*<ArrowUpRight/);
   assert.doesNotMatch(app, /Order ID: \{createdOrderId\}/);

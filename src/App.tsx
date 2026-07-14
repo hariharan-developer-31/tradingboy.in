@@ -788,6 +788,7 @@ export default function App() {
       setCreatedOrderId(result.orderId || '');
       setSubmitStatus('idle');
       setPaymentPromptOpen(false);
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
       setJoinStep('thanks');
     } catch {
       setSubmitStatus('error');
@@ -1993,9 +1994,12 @@ export default function App() {
                     <CheckCircle className="h-9 w-9" />
                   </div>
                   <h3 className="mt-6 text-2xl font-bold leading-tight text-white sm:text-3xl">Your payment is paid successfully.</h3>
-                  <p className="mt-5 border border-white/10 bg-black/20 px-4 py-5 leading-relaxed text-white/70 sm:px-5" style={{ textAlign: 'justify', textAlignLast: 'center' }}>
-                    <strong className="font-bold text-white">It is pending for admin verification.</strong> Once verified, your course access and payment confirmation will be sent to your registered email address within 12 hours. Please also check your spam folder.
-                  </p>
+                  <div className="mx-auto mt-5 max-w-md border border-white/10 border-l-2 border-l-electric bg-black/25 px-5 py-5 text-left">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-electric">Verification in progress</div>
+                    <p className="mt-2 text-sm leading-relaxed text-white/70">
+                      <strong className="font-bold text-white">It is pending for admin verification.</strong> Once verified, your course access and payment confirmation will be sent to your registered email address within 12 hours. Please also check your spam folder.
+                    </p>
+                  </div>
                   <p className="mt-5 text-xs leading-relaxed text-white/60">If you do not receive your course access email within 12 hours, contact us on Instagram.</p>
                   <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-electric px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline sm:w-auto sm:min-w-64">
                     <Instagram className="h-4 w-4" />
