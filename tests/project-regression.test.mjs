@@ -154,11 +154,14 @@ test('admin login requires a rate-limited email OTP before creating a session', 
   assert.match(adminApi, /scope: 'admin-login', limit: 5/);
   assert.match(adminApi, /scope: 'admin-otp', limit: 8/);
   assert.match(security, /tb_admin_otp/);
+  assert.match(security, /createAdminSession = \(secret, ttlSeconds = 60 \* 60\)/);
   assert.match(security, /HttpOnly; Secure; SameSite=Strict/);
   assert.match(security, /attempts - 1/);
   assert.match(app, /Two-step verification/);
   assert.match(app, /autoComplete="one-time-code"/);
   assert.match(app, /adminRequest\('verifyOtp'/);
+  assert.match(app, /await adminRequest\('logout'\)/);
+  assert.doesNotMatch(app, /void adminRequest\('logout'\)/);
 });
 
 test('courses have dedicated UPI IDs for QR codes and payment app links', () => {

@@ -96,7 +96,7 @@ export const safeEqual = (left, right) => {
 
 const cookieValue = (req, name) => String(req.headers?.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1) || '';
 
-export const createAdminSession = (secret, ttlSeconds = 8 * 60 * 60) => {
+export const createAdminSession = (secret, ttlSeconds = 60 * 60) => {
   const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
   const signature = createHmac('sha256', secret).update(String(expires)).digest('base64url');
   return { token: `${expires}.${signature}`, ttlSeconds };

@@ -810,25 +810,35 @@ export default function App() {
     }
   };
 
-  const logoutAdmin = () => {
-    void adminRequest('logout').catch(() => undefined);
-    setAdminUnlocked(false);
-    setAdminPasscode('');
-    setAdminOtp('');
-    setAdminAuthStep('passcode');
-    setShowAdminPasscode(false);
-    setAdminSection('home');
-    setAdminStatus('');
-    setAdminCourses([]);
-    setAdminOrders([]);
-    setAdminCoupons([]);
-    setAdminTestimonials([]);
-    setPaymentSearch('');
-    setPaymentStatusFilter('all');
-    setPaymentCourseFilter('all');
-    setPaymentDateFilter('all');
-    setPaymentCustomDate('');
-    setSelectedOrderIds([]);
+  const logoutAdmin = async () => {
+    if (adminLoading) return;
+    try {
+      setAdminLoading(true);
+      setAdminStatus('Logging out securely...');
+      await adminRequest('logout');
+      setAdminUnlocked(false);
+      setAdminPasscode('');
+      setAdminOtp('');
+      setAdminAuthStep('passcode');
+      setShowAdminPasscode(false);
+      setAdminSection('home');
+      setAdminStatus('');
+      setAdminCourses([]);
+      setAdminOrders([]);
+      setAdminCoupons([]);
+      setAdminTestimonials([]);
+      setAdminCampaigns([]);
+      setPaymentSearch('');
+      setPaymentStatusFilter('all');
+      setPaymentCourseFilter('all');
+      setPaymentDateFilter('all');
+      setPaymentCustomDate('');
+      setSelectedOrderIds([]);
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not log out securely. Please try again.');
+    } finally {
+      setAdminLoading(false);
+    }
   };
 
   const resetCourseForm = () => {
@@ -1916,9 +1926,9 @@ export default function App() {
                     <button onClick={() => setAdminSection('home')} className={`border px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest transition ${adminSection === 'home' ? 'border-electric bg-electric text-black' : 'border-white/10 bg-black text-white/65 hover:border-electric hover:text-white'}`}>
                       Dashboard
                     </button>
-                    <button onClick={logoutAdmin} className="inline-flex items-center gap-2 border border-red-400/30 bg-red-950/20 px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest text-red-200 transition hover:bg-red-950/40">
-                      <LogOut className="h-4 w-4" />
-                      Logout
+                    <button onClick={() => void logoutAdmin()} disabled={adminLoading} className="inline-flex items-center gap-2 border border-red-400/30 bg-red-950/20 px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest text-red-200 transition hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-40">
+                      {adminLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                      {adminLoading ? 'Logging out...' : 'Logout'}
                     </button>
                   </div>
                 </div>
