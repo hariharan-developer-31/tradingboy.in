@@ -23,7 +23,7 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const formatAmount = (amount) => `Rs. ${Number(amount).toLocaleString('en-IN')}`;
 
-const sendEmail = async ({ to, subject, html }) => {
+export const sendEmail = async ({ to, subject, html }) => {
   if (!process.env.RESEND_API_KEY) {
     return false;
   }
@@ -53,7 +53,7 @@ const sendEmail = async ({ to, subject, html }) => {
 
 const darkEmail = (content) => `<!doctype html><html><head><meta name="color-scheme" content="dark only"><meta name="supported-color-schemes" content="dark only"><style>:root{color-scheme:dark only;supported-color-schemes:dark only}html,body{margin:0!important;padding:0!important;background:#000000!important;color:#ffffff!important}a{color:#25aef4}</style></head><body bgcolor="#000000" style="margin:0;padding:0;background:#000000;color:#ffffff;">${content}</body></html>`;
 
-const receiptHtml = (order) => darkEmail(`
+export const receiptHtml = (order) => darkEmail(`
   <div style="font-family:Arial,sans-serif;background:#0f1113;color:#ffffff;padding:28px">
     <div style="max-width:620px;margin:0 auto;border:1px solid #1f2933;padding:28px">
       <img src="https://tradingboy.in/logo.png" alt="Trading Boy Academy" style="height:48px;width:auto;margin:0 0 16px;display:block;" />
@@ -74,7 +74,7 @@ const receiptHtml = (order) => darkEmail(`
   </div>
 `);
 
-const adminPaymentHtml = (order) => darkEmail(`
+export const adminPaymentHtml = (order) => darkEmail(`
   <div style="font-family:Arial,sans-serif;background:#000000;color:#ffffff;padding:32px 16px">
     <div style="max-width:620px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;padding:32px">
       <img src="https://tradingboy.in/logo.png" alt="Trading Boy Academy" style="height:52px;width:auto;margin:0 0 24px;display:block" />
@@ -133,7 +133,7 @@ const paidAccessHtml = (order) => darkEmail(`
   </div>
 `);
 
-const razorpayRequest = async (path, options = {}) => {
+export const razorpayRequest = async (path, options = {}) => {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) throw new HttpError(503, 'Razorpay is not configured on the server. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Vercel.');
@@ -147,7 +147,7 @@ const razorpayRequest = async (path, options = {}) => {
   return data;
 };
 
-const getCheckout = async (admin, body) => {
+export const getCheckout = async (admin, body) => {
   const fullName = cleanText(body.name, 100);
   const email = cleanText(body.email, 254).toLowerCase();
   const phone = cleanText(body.phone, 25);
@@ -187,6 +187,38 @@ const safeEqual = (left, right) => {
 
 const businessOrderNumber = () => `TB${new Date().toISOString().slice(0, 10).replaceAll('-', '')}${String(Date.now()).slice(-6)}`;
 
+export const recordVerifiedPayment = async (admin, checkout, razorpayOrderId, razorpayPaymentId) => {
+  const { data: existingOrder, error: existingError } = await admin.from('course_orders').select('*').eq('razorpay_payment_id', razorpayPaymentId).maybeSingle();
+  if (existingError) throw existingError;
+  if (existingOrder) return { order: existingOrder, duplicate: true };
+  const { data, error } = await admin.rpc('record_razorpay_payment', {
+    p_id: randomUUID(), p_order_number: businessOrderNumber(),
+    p_razorpay_order_id: razorpayOrderId, p_razorpay_payment_id: razorpayPaymentId,
+    p_course_name: checkout.course.name, p_full_name: checkout.fullName,
+    p_email: checkout.email, p_phone: checkout.phone,
+    p_trading_experience: checkout.tradingExperience,
+    p_coupon_code: checkout.coupon?.code || null, p_paid_amount: checkout.finalAmount,
+  });
+  if (error) throw error;
+  return { order: Array.isArray(data) ? data[0] : data, duplicate: false };
+};
+
+export const sendPaymentEmails = async (admin, order) => {
+  const safeOrder = Object.fromEntries(Object.entries({ ...order, id: order.order_number || order.id }).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value]));
+  const [emailSent, adminEmailSent] = await Promise.all([
+    order.receipt_email_sent_at ? false : sendEmail({ to: order.email, subject: `Trading Boy receipt - ${order.course_name}`, html: receiptHtml(safeOrder) }),
+    order.admin_email_sent_at ? false : sendEmail({ to: ADMIN_EMAIL, subject: `New payment submitted - ${order.course_name}`, html: adminPaymentHtml(safeOrder) }),
+  ]);
+  const updates = {};
+  if (emailSent) updates.receipt_email_sent_at = new Date().toISOString();
+  if (adminEmailSent) updates.admin_email_sent_at = new Date().toISOString();
+  if (Object.keys(updates).length) {
+    const { error } = await admin.from('course_orders').update(updates).eq('id', order.id);
+    if (error) console.error(JSON.stringify({ level: 'error', context: 'checkout.email-status', message: error.message.slice(0, 300) }));
+  }
+  return { emailSent: Boolean(emailSent || order.receipt_email_sent_at), adminEmailSent: Boolean(adminEmailSent || order.admin_email_sent_at) };
+};
+
 export default async function handler(req, res) {
   if (!requirePost(req, res) || !requireTrustedOrigin(req, res)) return;
   if (!rateLimit(req, res, { scope: 'checkout', limit: 8, windowMs: 10 * 60_000 })) return;
@@ -202,7 +234,7 @@ export default async function handler(req, res) {
   const checkout = await getCheckout(admin, body);
   if (body.action === 'createOrder') {
     if (checkout.finalAmount < 1) return json(res, 400, { error: 'A zero-value checkout is not supported. Contact support.' });
-    const gatewayOrder = await razorpayRequest('/orders', { method: 'POST', body: JSON.stringify({ amount: checkout.finalAmount * 100, currency: 'INR', receipt: businessOrderNumber(), payment_capture: 1, notes: { course: checkout.course.name, email: checkout.email, phone: checkout.phone, coupon: checkout.coupon?.code || '' } }) });
+    const gatewayOrder = await razorpayRequest('/orders', { method: 'POST', body: JSON.stringify({ amount: checkout.finalAmount * 100, currency: 'INR', receipt: businessOrderNumber(), payment_capture: 1, notes: { course: checkout.course.name, full_name: checkout.fullName, email: checkout.email, phone: checkout.phone, trading_experience: checkout.tradingExperience, coupon: checkout.coupon?.code || '' } }) });
     return json(res, 200, { keyId: process.env.RAZORPAY_KEY_ID, razorpayOrderId: gatewayOrder.id, amount: gatewayOrder.amount, currency: gatewayOrder.currency, courseName: checkout.course.name });
   }
   if (body.action !== 'verifyPayment') return json(res, 400, { error: 'Invalid checkout action.' });
@@ -215,25 +247,9 @@ export default async function handler(req, res) {
   if (!safeEqual(expected, signature)) return json(res, 400, { error: 'Payment signature verification failed.' });
   const [gatewayOrder, gatewayPayment] = await Promise.all([razorpayRequest(`/orders/${razorpayOrderId}`), razorpayRequest(`/payments/${razorpayPaymentId}`)]);
   if (gatewayOrder.amount !== checkout.finalAmount * 100 || gatewayOrder.currency !== 'INR' || gatewayOrder.notes?.course !== checkout.course.name || gatewayOrder.notes?.email !== checkout.email || gatewayPayment.order_id !== razorpayOrderId || gatewayPayment.amount !== gatewayOrder.amount || gatewayPayment.status !== 'captured') return json(res, 400, { error: 'Payment amount or status verification failed.' });
-  const { data: existingOrder } = await admin.from('course_orders').select('order_number, id').eq('razorpay_payment_id', razorpayPaymentId).maybeSingle();
-  if (existingOrder) return json(res, 200, { orderId: existingOrder.order_number || existingOrder.id, paymentStatus: 'paid', duplicate: true });
-  const internalId = randomUUID();
-  const orderNumber = businessOrderNumber();
-  const { data: atomicOrder, error: atomicError } = await admin.rpc('create_course_order', { p_id: internalId, p_course_name: checkout.course.name, p_full_name: checkout.fullName, p_email: checkout.email, p_phone: checkout.phone, p_trading_experience: checkout.tradingExperience, p_coupon_code: checkout.coupon?.code || null, p_payment_screenshot_path: null, p_remarks: null, p_source: 'razorpay' });
-  if (atomicError) throw atomicError;
-  const created = Array.isArray(atomicOrder) ? atomicOrder[0] : atomicOrder;
-  const { data: order, error: updateError } = await admin.from('course_orders').update({ order_number: orderNumber, razorpay_order_id: razorpayOrderId, razorpay_payment_id: razorpayPaymentId, payment_status: 'paid', drive_access_status: 'pending' }).eq('id', created.id || internalId).select('*').single();
-  if (updateError) throw updateError;
-  const safeOrder = Object.fromEntries(Object.entries({ ...order, id: order.order_number || order.id }).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value]));
-  const [emailSent, adminEmailSent] = await Promise.all([
-    sendEmail({
-      to: checkout.email,
-      subject: `Trading Boy receipt - ${checkout.course.name}`,
-      html: receiptHtml(safeOrder),
-    }),
-    sendEmail({ to: ADMIN_EMAIL, subject: `New payment submitted - ${checkout.course.name}`, html: adminPaymentHtml(safeOrder) }),
-  ]);
-  return json(res, 200, { orderId: order.order_number || order.id, paymentStatus: 'paid', emailSent: Boolean(emailSent), adminEmailSent: Boolean(adminEmailSent) });
+  const { order, duplicate } = await recordVerifiedPayment(admin, checkout, razorpayOrderId, razorpayPaymentId);
+  const delivery = await sendPaymentEmails(admin, order);
+  return json(res, 200, { orderId: order.order_number || order.id, paymentStatus: 'paid', duplicate, ...delivery });
   } catch (error) {
     return handleApiError(res, error, 'checkout.create');
   }

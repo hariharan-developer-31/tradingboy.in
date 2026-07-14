@@ -67,7 +67,7 @@ test('checkout emails both the student and admin with a secure payment verificat
   assert.match(checkout, /A new student completed the payment/);
   assert.match(checkout, /View &amp; Verify Payment/);
   assert.match(checkout, /https:\/\/tradingboy\.in\/#admin\/payments/);
-  assert.match(checkout, /adminEmailSent: Boolean\(adminEmailSent\)/);
+  assert.match(checkout, /adminEmailSent: Boolean\(adminEmailSent \|\| order\.admin_email_sent_at\)/);
   assert.match(vite, /to: 'hari\.entrepreneur1@gmail\.com'/);
   assert.match(vite, /html: adminPaymentHtml\(order\)/);
   assert.match(app, /window\.location\.hash\.startsWith\('#admin'\)/);

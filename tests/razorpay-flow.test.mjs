@@ -57,3 +57,20 @@ test('admin grants Drive access separately and sends the existing course-access 
   assert.match(app, /updateDriveAccess\(order\.id, event\.target\.value\)/);
   assert.match(app, /Drive access granted and course email sent\./);
 });
+
+test('Razorpay webhook records captured payments, emails both parties, and leaves Drive approval pending', () => {
+  const webhook = read('api/razorpay-webhook.js');
+  const checkout = read('api/checkout.js');
+  const migration = read('migrations/20260714_razorpay_webhook.sql');
+  const env = read('.env.example');
+  assert.match(webhook, /x-razorpay-signature/);
+  assert.match(webhook, /event\.event !== 'payment\.captured'/);
+  assert.match(webhook, /razorpayRequest\(`\/payments\/\$\{razorpayPaymentId\}`\)/);
+  assert.match(webhook, /recordVerifiedPayment/);
+  assert.match(webhook, /sendPaymentEmails/);
+  assert.match(checkout, /full_name: checkout\.fullName/);
+  assert.match(migration, /payment_status, drive_access_status/);
+  assert.match(migration, /'paid', 'pending', 'razorpay'/);
+  assert.match(migration, /pg_advisory_xact_lock/);
+  assert.match(env, /RAZORPAY_WEBHOOK_SECRET=/);
+});
