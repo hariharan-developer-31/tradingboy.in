@@ -1752,7 +1752,7 @@ export default function App() {
         <main className={`page-enter min-h-screen bg-ink ${adminUnlocked ? 'p-4 sm:p-6 lg:p-8' : 'flex items-center justify-center p-5'}`}>
           <div className={adminUnlocked ? 'mx-auto w-full max-w-[1440px]' : 'w-full max-w-md'}>
             {!adminUnlocked ? adminSessionChecking ? (
-              <div className="flex min-h-[280px] flex-col items-center justify-center border border-white/10 bg-black p-8 shadow-glow" role="status" aria-live="polite">
+              <div className="flex flex-col items-center justify-center py-8" role="status" aria-live="polite">
                 <Loader2 className="h-9 w-9 animate-spin text-electric" />
                 <div className="mt-6 font-inter text-xs font-bold uppercase tracking-[0.25em] text-white/70">Loading Admin</div>
                 <p className="mt-3 font-inter text-sm text-white/40">Checking your secure session...</p>
