@@ -188,6 +188,17 @@ test('footer exposes accessible social media links', () => {
   assert.equal((app.match(/target="_blank" rel="noreferrer" aria-label=/g) || []).length >= 3, true);
 });
 
+test('Google Analytics tracks public routes and excludes the admin panel', () => {
+  const index = read('index.html');
+
+  assert.match(index, /G-W88F9KGDQM/);
+  assert.match(index, /ga-disable-G-W88F9KGDQM/);
+  assert.match(index, /window\.location\.hash === '#admin'/);
+  assert.match(index, /send_page_view: false/);
+  assert.match(index, /gtag\('event', 'page_view'/);
+  assert.match(index, /addEventListener\('hashchange', trackPublicPage\)/);
+});
+
 test('course details have shareable entry files, member reviews, and Instagram support CTA', () => {
   const app = read('src/App.tsx');
   const forexEntry = read('public/courses/forex-mastery.html');
