@@ -1884,9 +1884,9 @@ export default function App() {
                       <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-5 object-contain" />
                     </a>
 
-                    <a href={getUpiUrl('generic')} className="flex h-12 w-full items-center justify-center rounded-lg border border-white/20 bg-transparent transition-all hover:bg-white/5 hover:scale-[1.02]">
+                    <button type="button" onClick={() => { window.location.href = getUpiUrl('generic'); }} className="flex h-12 w-full items-center justify-center rounded-lg border border-white/20 bg-transparent transition-all hover:bg-white/5 hover:scale-[1.02]" aria-label="Choose an installed UPI payment app">
                       <span className="font-inter font-bold text-white">Other UPI Apps</span>
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1993,10 +1993,10 @@ export default function App() {
                     <CheckCircle className="h-9 w-9" />
                   </div>
                   <h3 className="mt-6 text-2xl font-bold leading-tight text-white sm:text-3xl">Your payment is paid successfully.</h3>
-                  <p className="mt-5 border border-white/10 bg-black/20 px-4 py-5 leading-relaxed text-white/70 sm:px-5">
+                  <p className="mt-5 border border-white/10 bg-black/20 px-4 py-5 leading-relaxed text-white/70 sm:px-5" style={{ textAlign: 'justify', textAlignLast: 'center' }}>
                     <strong className="font-bold text-white">It is pending for admin verification.</strong> Once verified, your course access and payment confirmation will be sent to your registered email address within 12 hours. Please also check your spam folder.
                   </p>
-                  <p className="mt-5 text-sm leading-relaxed text-white/65">If you do not receive your course access email within 12 hours, contact us on Instagram.</p>
+                  <p className="mt-5 text-xs leading-relaxed text-white/60">If you do not receive your course access email within 12 hours, contact us on Instagram.</p>
                   <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-electric px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline sm:w-auto sm:min-w-64">
                     <Instagram className="h-4 w-4" />
                     Contact

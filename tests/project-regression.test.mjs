@@ -128,6 +128,8 @@ test('checkout and payment confirmation render as dedicated pages, not popup win
   assert.doesNotMatch(checkout, /items-start justify-center bg-black\/80/);
   assert.match(checkout, /paymentPromptOpen && \(/);
   assert.match(checkout, /bg-black\/65 px-5 backdrop-blur-md/);
+  assert.match(checkout, /window\.location\.href = getUpiUrl\('generic'\)/);
+  assert.match(checkout, /aria-label="Choose an installed UPI payment app"/);
 });
 
 test('checkout back actions confirm cancellation and success has a centered website exit', () => {
@@ -139,6 +141,8 @@ test('checkout back actions confirm cancellation and success has a centered webs
   assert.match(app, /It is pending for admin verification\./);
   assert.match(app, /If you do not receive your course access email within 12 hours, contact us on Instagram\./);
   assert.match(app, /border border-white\/10 bg-black\/20 px-4 py-5 leading-relaxed/);
+  assert.match(app, /textAlign: 'justify', textAlignLast: 'center'/);
+  assert.match(app, /mt-5 text-xs leading-relaxed text-white\/60/);
   assert.match(app, /<Instagram className="h-4 w-4" \/>\s*Contact\s*<ArrowUpRight/);
   assert.doesNotMatch(app, /Order ID: \{createdOrderId\}/);
   assert.match(app, /min-h-\[calc\(100vh-9rem\)\] items-center justify-center/);
