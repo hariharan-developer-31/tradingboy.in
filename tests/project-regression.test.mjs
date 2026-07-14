@@ -99,6 +99,20 @@ test('checkout and payment confirmation render as dedicated pages, not popup win
   assert.doesNotMatch(app, /paymentPromptOpen && \(\s*<div className="fixed inset-0/);
 });
 
+test('payment page uses a six-minute timer, centered QR, and no duplicate final-step headings', () => {
+  const app = read('src/App.tsx');
+
+  assert.match(app, /const PAYMENT_TIME_SECONDS = 6 \* 60/);
+  assert.match(app, /useState\(PAYMENT_TIME_SECONDS\)/);
+  assert.match(app, /PAYMENT_TIME_SECONDS - paymentSeconds/);
+  assert.match(app, /promptTimes = \[60, 120, 180, 240, 300, 360\]/);
+  assert.match(app, /mx-auto w-fit border border-white\/10 bg-white p-5 sm:p-6/);
+  assert.match(app, /block h-44 w-44 sm:h-52 sm:w-52/);
+  assert.match(app, /joinStep !== 'proof' && joinStep !== 'thanks'/);
+  assert.doesNotMatch(app, /joinStep === 'proof' \? 'Upload Payment Proof'/);
+  assert.doesNotMatch(app, /joinStep === 'thanks' \? 'Payment Submitted'/);
+});
+
 test('checkout warns students to verify their email before enrollment', () => {
   const app = read('src/App.tsx');
 

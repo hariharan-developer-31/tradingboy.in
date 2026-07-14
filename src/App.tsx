@@ -12,6 +12,7 @@ import AutoScroll from 'embla-carousel-auto-scroll';
 const UPI_ID = 'harishsankar023@okaxis';
 const DEFAULT_COURSE = 'Complete Forex Mastery';
 const PROMO_COUPON_CODE = 'TB1500';
+const PAYMENT_TIME_SECONDS = 6 * 60;
 
 const fallbackCourses = [
   {
@@ -304,7 +305,7 @@ export default function App() {
   });
   const [termsOpen, setTermsOpen] = useState(false);
   const [emailNoticeOpen, setEmailNoticeOpen] = useState(false);
-  const [paymentSeconds, setPaymentSeconds] = useState(180);
+  const [paymentSeconds, setPaymentSeconds] = useState(PAYMENT_TIME_SECONDS);
   const [paymentPromptOpen, setPaymentPromptOpen] = useState(false);
   const [promptedAt, setPromptedAt] = useState<number[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<{ dataUrl: string; name: string } | null>(null);
@@ -568,8 +569,8 @@ export default function App() {
 
   useEffect(() => {
     if (joinStep !== 'payment') return;
-    const elapsed = 180 - paymentSeconds;
-    const promptTimes = [30, 60, 90, 120, 150, 180];
+    const elapsed = PAYMENT_TIME_SECONDS - paymentSeconds;
+    const promptTimes = [60, 120, 180, 240, 300, 360];
     if (promptTimes.includes(elapsed) && !promptedAt.includes(elapsed)) {
       setPromptedAt((current) => [...current, elapsed]);
       setPaymentPromptOpen(true);
@@ -578,7 +579,7 @@ export default function App() {
 
   const openCheckout = (courseName = selectedCourse.title) => {
     setJoinStep('details');
-    setPaymentSeconds(180);
+    setPaymentSeconds(PAYMENT_TIME_SECONDS);
     setPromptedAt([]);
     setPaymentPromptOpen(false);
     setSubmitStatus('idle');
@@ -634,7 +635,7 @@ export default function App() {
       return;
     }
 
-    setPaymentSeconds(180);
+    setPaymentSeconds(PAYMENT_TIME_SECONDS);
     setPromptedAt([]);
     setPaymentPromptOpen(false);
     setJoinStep('payment');
@@ -1597,12 +1598,12 @@ export default function App() {
             <div className="w-10" />
           </header>
           <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 lg:px-8">
-            <div className="mb-8 border-b border-white/10 pb-7">
+            {joinStep !== 'proof' && joinStep !== 'thanks' && <div className="mb-8 border-b border-white/10 pb-7">
               <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Secure Enrollment</div>
               <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-5xl">
-                {joinStep === 'payment' ? 'Complete UPI Payment' : joinStep === 'proof' ? 'Upload Payment Proof' : joinStep === 'thanks' ? 'Payment Submitted' : joinStep === 'failed' ? 'Payment Failed' : 'Enter Your Details'}
+                {joinStep === 'payment' ? 'Complete UPI Payment' : joinStep === 'failed' ? 'Payment Failed' : 'Enter Your Details'}
               </h2>
-            </div>
+            </div>}
 
             {joinStep === 'details' && (
               <form onSubmit={beginPayment} className="space-y-4" noValidate>
@@ -1715,11 +1716,11 @@ export default function App() {
                 </div>
               </section>
             ) : (
-              <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-                <div className="border border-white/10 bg-white p-4">
-                  <img src={qrCodeUrl} alt="UPI payment QR code" className="mx-auto h-44 w-44 sm:h-52 sm:w-52" />
+              <div className="mx-auto w-full max-w-xl">
+                <div className="mx-auto w-fit border border-white/10 bg-white p-5 sm:p-6">
+                  <img src={qrCodeUrl} alt="UPI payment QR code" className="block h-44 w-44 sm:h-52 sm:w-52" />
                 </div>
-                <div className="font-inter">
+                <div className="mt-8 font-inter">
                   <div className="text-xs uppercase tracking-[0.3em] text-electric">Pay exactly</div>
                   <div className="mt-3 text-4xl font-bold text-white">{money(selectedOfferPrice)}</div>
                   <div className="mt-4 border border-white/10 bg-ink p-4 text-sm text-white/70">
