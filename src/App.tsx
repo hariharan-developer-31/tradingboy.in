@@ -101,6 +101,13 @@ type CourseOrder = {
   created_at: string;
 };
 
+type CampaignRecipient = {
+  email: string;
+  fullName: string;
+  courseName: string | null;
+  paymentStatus: string | null;
+};
+
 type Testimonial = {
   id: string;
   quote: string;
@@ -335,6 +342,7 @@ export default function App() {
   const [adminCampaigns, setAdminCampaigns] = useState<any[]>([]);
   const [emailView, setEmailView] = useState<'menu' | 'compose' | 'mailbox'>('menu');
   const [campaignAttachment, setCampaignAttachment] = useState<File | null>(null);
+  const [showCampaignRecipients, setShowCampaignRecipients] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
@@ -409,23 +417,28 @@ export default function App() {
     [adminCourses],
   );
 
-  const campaignRecipientCount = useMemo(() => {
-    const emails = new Set<string>();
+  const campaignRecipients = useMemo(() => {
+    const recipients = new Map<string, CampaignRecipient>();
     if (campaignAudience !== 'manual') {
       adminOrders
         .filter((order) => campaignAudience === 'all' || order.payment_status === 'paid')
         .filter((order) => campaignCourse === 'all' || campaignCourse === 'All courses' || order.course_name === campaignCourse)
-        .map((order) => order.email?.trim().toLowerCase())
-        .filter(Boolean)
-        .forEach((email) => emails.add(email as string));
+        .forEach((order) => {
+          const email = order.email?.trim().toLowerCase();
+          if (email && !recipients.has(email)) recipients.set(email, { email, fullName: order.full_name || 'Trader', courseName: order.course_name, paymentStatus: order.payment_status });
+        });
     }
     campaignManualEmails
       .split(/[\s,;]+/)
       .map((email) => email.trim().toLowerCase())
       .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      .forEach((email) => emails.add(email));
-    return emails.size;
+      .forEach((email) => {
+        if (!recipients.has(email)) recipients.set(email, { email, fullName: 'Manual recipient', courseName: null, paymentStatus: null });
+      });
+    return Array.from(recipients.values());
   }, [adminOrders, campaignAudience, campaignCourse, campaignManualEmails]);
+
+  const campaignRecipientCount = campaignRecipients.length;
 
   useEffect(() => {
     const handleScroll = () => setHasScrolled(window.scrollY > 24);
@@ -2296,7 +2309,7 @@ export default function App() {
                       </button>
                     </form>
                     <aside className="space-y-6">
-                      <div className={`${emailView === 'mailbox' ? 'hidden' : ''} h-fit border border-electric/25 bg-electric/[0.05] p-5 sm:p-6`}>
+                      <button type="button" onClick={() => setShowCampaignRecipients(true)} className={`${emailView === 'mailbox' ? 'hidden' : ''} h-fit w-full border border-electric/25 bg-electric/[0.05] p-5 text-left transition hover:border-electric hover:bg-electric/[0.09] sm:p-6`} aria-label={`View ${campaignRecipientCount} unique recipients`}>
                         <Mail className="h-7 w-7 text-electric" />
                         <div className="mt-5 font-inter text-xs font-bold uppercase tracking-widest text-white/45">Unique recipients</div>
                         <div className="mt-2 font-podium text-5xl font-bold text-white">{campaignRecipientCount}</div>
@@ -2304,8 +2317,9 @@ export default function App() {
                           <p>Duplicate email addresses are automatically removed.</p>
                           <p>Paid students are selected by default to keep messages relevant.</p>
                           <p>You will be asked to confirm the final recipient count before sending.</p>
+                          <p className="font-bold text-electric">Click to view recipients.</p>
                         </div>
-                      </div>
+                      </button>
                       <div className={`border border-white/10 bg-black p-5 sm:p-6 ${emailView === 'mailbox' ? 'mx-auto w-full max-w-4xl' : ''}`}>
                         <h3 className="mb-4 font-podium text-xl uppercase tracking-widest text-white">Campaign History</h3>
                         <div className="space-y-4">
@@ -2462,6 +2476,41 @@ export default function App() {
             )}
           </div>
         </main>
+      )}
+
+      {showCampaignRecipients && adminOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm" onClick={() => setShowCampaignRecipients(false)}>
+          <section className="flex max-h-[82vh] w-full max-w-3xl flex-col border border-electric/30 bg-[#090b0d] shadow-glow" role="dialog" aria-modal="true" aria-labelledby="recipient-list-title" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between border-b border-white/10 p-5 sm:p-7">
+              <div>
+                <div className="font-inter text-xs font-bold uppercase tracking-[0.24em] text-electric">Selected Audience</div>
+                <h2 id="recipient-list-title" className="mt-2 font-podium text-3xl uppercase text-white">Unique Recipients ({campaignRecipientCount})</h2>
+              </div>
+              <button onClick={() => setShowCampaignRecipients(false)} className="flex h-10 w-10 shrink-0 items-center justify-center border border-white/10 text-white/60 transition hover:border-electric hover:text-white" aria-label="Close recipient list"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-4 sm:p-6">
+              {campaignRecipients.length === 0 ? (
+                <p className="py-10 text-center font-inter text-sm text-white/50">No recipients match the selected audience.</p>
+              ) : (
+                <div className="space-y-3">
+                  {campaignRecipients.map((recipient, index) => (
+                    <article key={recipient.email} className="grid gap-3 border border-white/10 bg-black p-4 sm:grid-cols-[40px_minmax(0,1fr)_minmax(140px,0.7fr)] sm:items-center">
+                      <div className="flex h-9 w-9 items-center justify-center border border-electric/25 bg-electric/10 font-inter text-xs font-bold text-electric">{index + 1}</div>
+                      <div className="min-w-0">
+                        <div className="truncate font-inter text-sm font-semibold text-white">{recipient.fullName}</div>
+                        <div className="mt-1 truncate font-inter text-xs text-white/50" title={recipient.email}>{recipient.email}</div>
+                      </div>
+                      <div className="sm:text-right">
+                        <div className="truncate font-inter text-xs text-white/65">{recipient.courseName || 'Manually added'}</div>
+                        <div className="mt-1 font-inter text-[10px] font-bold uppercase tracking-widest text-electric">{recipient.paymentStatus || 'Manual'}</div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
       )}
 
       {promoOpen && !adminOpen && !checkoutOpen && !courseDetailsOpen && (!window.location.hash || window.location.hash === '#home') && (

@@ -116,6 +116,9 @@ test('admin session restores on refresh and email tools expose compose, attachme
   assert.match(app, /Loading Admin/);
   assert.match(app, /Send Mail/);
   assert.match(app, /Mail History/);
+  assert.match(app, /showCampaignRecipients/);
+  assert.match(app, /Unique Recipients \(\{campaignRecipientCount\}\)/);
+  assert.match(app, /Click to view recipients\./);
   assert.match(app, /maximum 10 MB/);
   assert.match(app, /uploadToSignedUrl/);
   assert.match(adminApi, /action === 'session'/);
