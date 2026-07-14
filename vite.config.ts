@@ -373,7 +373,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
           const courseName = String(body.courseName || 'all').trim();
           const manualEmails = String(body.manualEmails || body.additionalEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500);
-          const excludedEmails = new Set((Array.isArray(body.excludedEmails) ? body.excludedEmails : []).map((email) => String(email).trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500));
+          const excludedEmails = new Set((Array.isArray(body.excludedEmails) ? body.excludedEmails : []).map((email: unknown) => String(email).trim().toLowerCase()).filter((email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500));
           const subject = String(body.subject || '').trim().slice(0, 150);
           const message = String(body.message || '').trim().slice(0, 5000);
           if (!subject || !message) {
