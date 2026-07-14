@@ -229,6 +229,10 @@ test('course details have shareable entry files, member reviews, and Instagram s
 test('course offer leads to course selection and Blueprint shows its shorter duration', () => {
   const app = read('src/App.tsx');
 
+  assert.match(app, /const PROMO_COUPON_CODE = 'TB1500'/);
+  assert.match(app, /Save <span className="text-electric">₹1,500<\/span>/);
+  assert.match(app, /placeholder="Coupon code \(optional\)"/);
+  assert.doesNotMatch(app, /SAVE1000|₹1,000|Promo code \(optional\)/);
   assert.match(app, /Use this coupon on either of our two courses\./);
   assert.match(app, /window\.location\.hash = 'course'/);
   assert.doesNotMatch(app, /setCouponError\(''\); openCheckout\(\)/);

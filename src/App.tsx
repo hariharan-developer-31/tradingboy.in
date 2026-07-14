@@ -11,7 +11,7 @@ import AutoScroll from 'embla-carousel-auto-scroll';
 
 const UPI_ID = 'harishsankar023@okaxis';
 const DEFAULT_COURSE = 'Complete Forex Mastery';
-const PROMO_COUPON_CODE = 'SAVE1000';
+const PROMO_COUPON_CODE = 'TB1500';
 
 const fallbackCourses = [
   {
@@ -1584,7 +1584,7 @@ export default function App() {
 
                 {!appliedCoupon && (
                   <div className="flex gap-2">
-                    <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} placeholder="Promo code (optional)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
+                    <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} placeholder="Coupon code (optional)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
                     <button type="button" onClick={validateCouponCode} disabled={validatingCoupon || !couponInput} className="bg-white/5 border border-white/10 px-6 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-white/10 disabled:opacity-50">
                       Apply
                     </button>
@@ -2547,10 +2547,10 @@ export default function App() {
               </div>
               <div className="mt-7 font-inter text-xs font-bold uppercase tracking-[0.3em] text-electric">Unlock your trading journey</div>
               <h2 className="mt-3 max-w-md font-podium text-4xl font-bold uppercase leading-[0.95] text-white sm:text-5xl">
-                Save <span className="text-electric">₹1,000</span> on your course
+                Save <span className="text-electric">₹1,500</span> on your course
               </h2>
               <p className="mt-5 max-w-md font-inter text-sm leading-relaxed text-white/65 sm:text-base">
-                Use this coupon on either of our two courses. Choose your course below, then apply the code during enrollment to save ₹1,000.
+                Use this coupon on either of our two courses. Choose your course below, then apply the code during enrollment to save ₹1,500.
               </p>
 
               <div className="mt-7 flex items-stretch border border-dashed border-electric/50 bg-black/40">
@@ -2567,7 +2567,7 @@ export default function App() {
               </div>
 
               <button onClick={() => { setPromoOpen(false); setCouponInput(PROMO_COUPON_CODE); setAppliedCoupon(null); setCouponError(''); window.location.hash = 'course'; }} className="group mt-5 flex w-full items-center justify-center bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.18em] text-black shadow-glow transition hover:bg-skyline sm:py-5">
-                View Courses &amp; Claim ₹1,000 Off
+                View Courses &amp; Claim ₹1,500 Off
                 <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </button>
               <p className="mt-3 text-center font-inter text-[10px] uppercase tracking-wider text-white/35">Enter the code at checkout · Course terms apply</p>
