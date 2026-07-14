@@ -108,6 +108,17 @@ test('checkout and payment confirmation render as dedicated pages, not popup win
   assert.doesNotMatch(app, /paymentPromptOpen && \(\s*<div className="fixed inset-0/);
 });
 
+test('checkout back actions confirm cancellation and success has a centered website exit', () => {
+  const app = read('src/App.tsx');
+  assert.match(app, /if \(checkoutOpenRef\.current && !wantsCheckout/);
+  assert.match(app, /onClick=\{requestCheckoutExit\}/);
+  assert.match(app, /Are you sure you want to cancel\?/);
+  assert.match(app, /Your payment is paid successfully\./);
+  assert.match(app, /It is pending for admin verification\./);
+  assert.match(app, /min-h-\[calc\(100vh-9rem\)\] items-center justify-center/);
+  assert.match(app, />\s*Back to Website\s*</);
+});
+
 test('payment page uses a six-minute timer, centered QR, and no duplicate final-step headings', () => {
   const app = read('src/App.tsx');
 
@@ -397,7 +408,7 @@ test('course details have shareable entry files, member reviews, and Instagram s
   assert.match(app, /Members Review/);
   assert.match(app, /testimonials\.map\(\(testimonial\) =>/);
   assert.match(app, /testimonial\.photo_url/);
-  assert.match(app, /Message on Instagram/);
+  assert.match(app, /Follow Trading Boy on Instagram/);
   assert.match(app, /Swipe to see more reviews/);
   assert.match(app, /snap-x snap-mandatory/);
   assert.match(app, /w-\[82vw\][^\"]*snap-center/);

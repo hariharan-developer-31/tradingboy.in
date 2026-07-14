@@ -304,6 +304,7 @@ export default function App() {
   const [promoOpen, setPromoOpen] = useState(false);
   const [promoCopied, setPromoCopied] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutCancelOpen, setCheckoutCancelOpen] = useState(false);
   const [courseDetailsOpen, setCourseDetailsOpen] = useState<PublicCourse | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -403,6 +404,9 @@ export default function App() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const checkoutScrollRef = useRef<HTMLDivElement>(null);
   const enrollmentEmailRef = useRef<HTMLInputElement>(null);
+  const checkoutOpenRef = useRef(false);
+  const joinStepRef = useRef(joinStep);
+  const allowCheckoutExitRef = useRef(false);
   const [courseForm, setCourseForm] = useState<AdminCourseForm>({
     id: null,
     title: '',
@@ -526,9 +530,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    checkoutOpenRef.current = checkoutOpen;
+    joinStepRef.current = joinStep;
+  }, [checkoutOpen, joinStep]);
+
+  useEffect(() => {
     const syncHashPage = () => {
+      const wantsCheckout = window.location.hash === '#checkout';
+      if (checkoutOpenRef.current && !wantsCheckout && !allowCheckoutExitRef.current && joinStepRef.current !== 'thanks') {
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#checkout`);
+        setCheckoutCancelOpen(true);
+        return;
+      }
+      allowCheckoutExitRef.current = false;
       setAdminOpen(window.location.hash === '#admin');
-      setCheckoutOpen(window.location.hash === '#checkout');
+      setCheckoutOpen(wantsCheckout);
     };
     syncHashPage();
     window.addEventListener('hashchange', syncHashPage);
@@ -625,6 +641,7 @@ export default function App() {
     setPaymentPromptOpen(false);
     setSubmitStatus('idle');
     setCreatedOrderId('');
+    setCheckoutCancelOpen(false);
     setJoinForm((current) => ({ ...current, courseName }));
     window.location.hash = 'checkout';
   };
@@ -640,9 +657,23 @@ export default function App() {
   };
 
   const closeHashPage = () => {
+    allowCheckoutExitRef.current = true;
     history.pushState(null, '', window.location.pathname + window.location.search);
     setAdminOpen(false);
     setCheckoutOpen(false);
+  };
+
+  const requestCheckoutExit = () => {
+    if (joinStep === 'thanks') {
+      closeHashPage();
+      return;
+    }
+    setCheckoutCancelOpen(true);
+  };
+
+  const confirmCheckoutExit = () => {
+    setCheckoutCancelOpen(false);
+    closeHashPage();
   };
 
   const beginPayment = (event: FormEvent<HTMLFormElement>) => {
@@ -1693,7 +1724,7 @@ export default function App() {
       {checkoutOpen && (
         <div ref={checkoutScrollRef} className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ink page-enter">
           <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-ink/90 px-6 py-4 backdrop-blur-xl">
-            <button onClick={() => joinStep === 'proof' ? setJoinStep('payment') : joinStep === 'payment' ? setJoinStep('details') : closeHashPage()} className="flex h-10 w-10 items-center justify-center text-electric transition hover:text-skyline" aria-label="Back">
+            <button onClick={requestCheckoutExit} className="flex h-10 w-10 items-center justify-center text-electric transition hover:text-skyline" aria-label="Back">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="font-podium text-lg uppercase text-white">Join Course</div>
@@ -1932,18 +1963,20 @@ export default function App() {
             )}
 
             {joinStep === 'thanks' && (
-              <div className="border border-electric/30 bg-electric/10 p-6 font-inter">
-                <CheckCircle className="h-9 w-9 text-electric" />
-                <h3 className="mt-4 text-2xl font-bold text-white">Thank you for joining {selectedCourse.title}.</h3>
-                <p className="mt-3 leading-relaxed text-white/70">
-                  Your payment is waiting for admin approval. You will get course access via email within 12 hours. If you need help, contact us on Instagram.
-                </p>
-                <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 border border-electric bg-electric px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline">
-                  <Instagram className="h-4 w-4" />
-                  Message on Instagram
-                  <ArrowUpRight className="h-4 w-4" />
-                </a>
-                {createdOrderId && <p className="mt-4 text-xs text-white/45">Order ID: {createdOrderId}</p>}
+              <div className="flex min-h-[calc(100vh-9rem)] items-center justify-center py-8 font-inter">
+                <div className="w-full max-w-xl border border-electric/30 bg-electric/[0.08] p-7 text-center shadow-[0_0_55px_rgba(56,189,248,0.12)] sm:p-10">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center border border-emerald-400/40 bg-emerald-400/10 text-emerald-300">
+                    <CheckCircle className="h-9 w-9" />
+                  </div>
+                  <h3 className="mt-6 text-2xl font-bold leading-tight text-white sm:text-3xl">Your payment is paid successfully.</h3>
+                  <p className="mt-4 leading-relaxed text-white/70">
+                    <strong className="font-bold text-white">It is pending for admin verification.</strong> Once verified, your course access and payment confirmation will be sent to your registered email address within 12 hours. Please also check your spam folder.
+                  </p>
+                  {createdOrderId && <p className="mt-4 text-xs text-white/45">Order ID: {createdOrderId}</p>}
+                  <button onClick={closeHashPage} className="mt-7 inline-flex min-h-12 w-full items-center justify-center bg-electric px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline sm:w-auto sm:min-w-56">
+                    Back to Website
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1957,6 +1990,20 @@ export default function App() {
               </div>
             )}
           </main>
+        </div>
+      )}
+
+      {checkoutCancelOpen && checkoutOpen && joinStep !== 'thanks' && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="checkout-cancel-title">
+          <div className="w-full max-w-md border border-electric/30 bg-ink p-6 shadow-[0_0_50px_rgba(56,189,248,0.14)] sm:p-8">
+            <div className="font-inter text-[10px] font-bold uppercase tracking-[0.3em] text-electric">Cancel Enrollment</div>
+            <h2 id="checkout-cancel-title" className="mt-3 font-podium text-3xl uppercase leading-tight text-white">Are you sure you want to cancel?</h2>
+            <p className="mt-4 font-inter text-sm leading-relaxed text-white/60">Your entered details and current payment progress will not be submitted.</p>
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setCheckoutCancelOpen(false)} className="border border-white/15 px-4 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Continue</button>
+              <button type="button" onClick={confirmCheckoutExit} className="bg-electric px-4 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">Yes, Cancel</button>
+            </div>
+          </div>
         </div>
       )}
 
