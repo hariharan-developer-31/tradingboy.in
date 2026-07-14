@@ -99,7 +99,10 @@ test('checkout and payment confirmation render as dedicated pages, not popup win
   const checkoutEnd = app.indexOf('{selectedTestimonial && (', checkoutStart);
   const checkout = app.slice(checkoutStart, checkoutEnd);
 
-  assert.match(checkout, /fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ink/);
+  assert.match(checkout, /fixed inset-0 z-50 flex flex-col overflow-y-auto overscroll-contain bg-ink/);
+  assert.match(app, /document\.body\.style\.overflow = 'hidden'/);
+  assert.match(app, /document\.documentElement\.style\.overflow = 'hidden'/);
+  assert.match(app, /\[checkoutOpen, courseDetailsOpen\]/);
   assert.match(checkout, /sticky top-0[\s\S]*Join Course/);
   assert.match(checkout, /<main className="mx-auto w-full max-w-4xl/);
   assert.match(checkout, /paymentPromptOpen && \(/);
@@ -117,7 +120,8 @@ test('checkout back actions confirm cancellation and success has a centered webs
   assert.match(app, /Your payment is paid successfully\./);
   assert.match(app, /It is pending for admin verification\./);
   assert.match(app, /If you do not receive your course access email within 12 hours, contact us on Instagram\./);
-  assert.match(app, />\s*Contact on Instagram\s*</);
+  assert.match(app, /border border-white\/10 bg-black\/20 px-4 py-5 leading-relaxed/);
+  assert.match(app, /<Instagram className="h-4 w-4" \/>\s*Contact\s*<ArrowUpRight/);
   assert.doesNotMatch(app, /Order ID: \{createdOrderId\}/);
   assert.match(app, /min-h-\[calc\(100vh-9rem\)\] items-center justify-center/);
   assert.match(app, /mx-auto mt-5 block font-inter text-xs/);

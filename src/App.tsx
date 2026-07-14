@@ -611,13 +611,16 @@ export default function App() {
   }, [checkoutOpen, joinStep]);
 
   useEffect(() => {
-    if (!courseDetailsOpen) return undefined;
-    const previousOverflow = document.body.style.overflow;
+    if (!checkoutOpen && !courseDetailsOpen) return undefined;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousRootOverflow;
     };
-  }, [courseDetailsOpen]);
+  }, [checkoutOpen, courseDetailsOpen]);
 
   useEffect(() => {
     if (paymentCourseFilter !== 'all' && !adminCourseNames.includes(paymentCourseFilter)) {
@@ -1736,7 +1739,7 @@ export default function App() {
       )}
 
       {checkoutOpen && (
-        <div ref={checkoutScrollRef} className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ink page-enter">
+        <div ref={checkoutScrollRef} className="fixed inset-0 z-50 flex flex-col overflow-y-auto overscroll-contain bg-ink page-enter">
           <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-ink/90 px-6 py-4 backdrop-blur-xl">
             <button onClick={requestCheckoutExit} className="flex h-10 w-10 items-center justify-center text-electric transition hover:text-skyline" aria-label="Back">
               <ArrowLeft className="h-5 w-5" />
@@ -1988,13 +1991,13 @@ export default function App() {
                     <CheckCircle className="h-9 w-9" />
                   </div>
                   <h3 className="mt-6 text-2xl font-bold leading-tight text-white sm:text-3xl">Your payment is paid successfully.</h3>
-                  <p className="mt-4 leading-relaxed text-white/70">
+                  <p className="mt-5 border border-white/10 bg-black/20 px-4 py-5 leading-relaxed text-white/70 sm:px-5">
                     <strong className="font-bold text-white">It is pending for admin verification.</strong> Once verified, your course access and payment confirmation will be sent to your registered email address within 12 hours. Please also check your spam folder.
                   </p>
                   <p className="mt-5 text-sm leading-relaxed text-white/65">If you do not receive your course access email within 12 hours, contact us on Instagram.</p>
                   <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-electric px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline sm:w-auto sm:min-w-64">
                     <Instagram className="h-4 w-4" />
-                    Contact on Instagram
+                    Contact
                     <ArrowUpRight className="h-4 w-4" />
                   </a>
                   <button onClick={closeHashPage} className="mx-auto mt-5 block font-inter text-xs font-bold uppercase tracking-[0.16em] text-white/60 transition hover:text-electric">
