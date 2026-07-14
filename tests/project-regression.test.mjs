@@ -13,6 +13,15 @@ test('Vite scripts use runner config loader to avoid node_modules temp writes', 
   assert.match(packageJson.scripts.preview, /--configLoader runner/);
 });
 
+test('mobile pages disable pinch and form-focus zoom, including checkout', () => {
+  const viewport = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+  for (const file of ['index.html', 'public/courses/forex-mastery.html', 'public/courses/funded-trader-blueprint.html']) {
+    assert.match(read(file), new RegExp(viewport.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  const css = read('src/index.css');
+  assert.match(css, /@media \(max-width: 767px\)[\s\S]*input,[\s\S]*select,[\s\S]*textarea[\s\S]*font-size: 16px !important/);
+});
+
 test('TypeScript build info is written outside node_modules', () => {
   const appTsconfig = JSON.parse(read('tsconfig.app.json'));
   const nodeTsconfig = JSON.parse(read('tsconfig.node.json'));

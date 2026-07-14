@@ -45,6 +45,14 @@
   }
 }
 
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 @layer utilities {
   .font-podium {
     font-family: 'Montserrat', sans-serif;
