@@ -1569,6 +1569,9 @@ export default function App() {
                         <span>Coupon applied ({appliedCoupon.code})</span>
                         <span>-{appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : money(appliedCoupon.discount_value)}</span>
                       </div>
+                      <button type="button" onClick={() => { setAppliedCoupon(null); setCouponInput(''); setCouponError(''); }} className="mt-3 inline-flex items-center gap-2 border border-red-500/30 px-3 py-2 font-inter text-[10px] font-bold uppercase tracking-widest text-red-300 transition hover:bg-red-950/30" aria-label={`Remove coupon ${appliedCoupon.code}`}>
+                        <X className="h-3.5 w-3.5" /> Remove coupon
+                      </button>
                       <div className="mt-4 flex justify-between text-white border-t border-white/10 pt-4">
                         <span>Final price</span>
                         <span className="font-bold text-lg">{money(selectedOfferPrice)}</span>

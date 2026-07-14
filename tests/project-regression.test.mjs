@@ -232,6 +232,8 @@ test('course offer leads to course selection and Blueprint shows its shorter dur
   assert.match(app, /const PROMO_COUPON_CODE = 'TB1500'/);
   assert.match(app, /Save <span className="text-electric">₹1,500<\/span>/);
   assert.match(app, /placeholder="Coupon code \(optional\)"/);
+  assert.match(app, /Remove coupon/);
+  assert.match(app, /setAppliedCoupon\(null\); setCouponInput\(''\); setCouponError\(''\)/);
   assert.doesNotMatch(app, /SAVE1000|₹1,000|Promo code \(optional\)/);
   assert.match(app, /Use this coupon on either of our two courses\./);
   assert.match(app, /window\.location\.hash = 'course'/);
