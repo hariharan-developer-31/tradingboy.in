@@ -99,6 +99,16 @@ test('checkout and payment confirmation render as dedicated pages, not popup win
   assert.doesNotMatch(app, /paymentPromptOpen && \(\s*<div className="fixed inset-0/);
 });
 
+test('checkout warns students to verify their email before enrollment', () => {
+  const app = read('src/App.tsx');
+
+  assert.match(app, /type="email"[^>]*onFocus=\{\(\) => setEmailNoticeOpen\(true\)\}/);
+  assert.match(app, /emailNoticeOpen && checkoutOpen && joinStep === 'details'/);
+  assert.match(app, /role="dialog" aria-modal="true" aria-labelledby="email-notice-title"/);
+  assert.match(app, /Your course access and payment updates will be sent only to this email address\./);
+  assert.match(app, />I Understand<\/button>/);
+});
+
 test('payment admin supports safe bulk deletion, date filters, and confirmed status changes', () => {
   const app = read('src/App.tsx');
   const adminApi = read('api/admin.js');

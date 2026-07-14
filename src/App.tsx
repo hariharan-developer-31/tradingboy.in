@@ -303,6 +303,7 @@ export default function App() {
     remarks: '',
   });
   const [termsOpen, setTermsOpen] = useState(false);
+  const [emailNoticeOpen, setEmailNoticeOpen] = useState(false);
   const [paymentSeconds, setPaymentSeconds] = useState(180);
   const [paymentPromptOpen, setPaymentPromptOpen] = useState(false);
   const [promptedAt, setPromptedAt] = useState<number[]>([]);
@@ -1613,7 +1614,7 @@ export default function App() {
                   {formErrors.name && <p className="mt-1 font-inter text-[11px] font-medium text-red-500">{formErrors.name}</p>}
                 </div>
                 <div>
-                  <input required type="email" value={joinForm.email} onChange={(event) => { setJoinForm({ ...joinForm, email: event.target.value }); setFormErrors({...formErrors, email: ''}); }} placeholder="Email address" className={`w-full border ${formErrors.email ? 'border-red-500' : 'border-white/10'} bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric`} />
+                  <input required type="email" value={joinForm.email} onFocus={() => setEmailNoticeOpen(true)} onChange={(event) => { setJoinForm({ ...joinForm, email: event.target.value }); setFormErrors({...formErrors, email: ''}); }} placeholder="Email address" className={`w-full border ${formErrors.email ? 'border-red-500' : 'border-white/10'} bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric`} />
                   {formErrors.email && <p className="mt-1 font-inter text-[11px] font-medium text-red-500">{formErrors.email}</p>}
                 </div>
                 <div>
@@ -2618,6 +2619,17 @@ export default function App() {
             )}
           </div>
         </main>
+      )}
+
+      {emailNoticeOpen && checkoutOpen && joinStep === 'details' && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="email-notice-title" onClick={() => setEmailNoticeOpen(false)}>
+          <div className="w-full max-w-md border border-electric/30 bg-ink p-6 shadow-glow sm:p-8" onClick={(event) => event.stopPropagation()}>
+            <div className="font-inter text-xs font-bold uppercase tracking-[0.3em] text-electric">Important</div>
+            <h3 id="email-notice-title" className="mt-3 font-podium text-3xl uppercase leading-none text-white">Enter your correct email address</h3>
+            <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">Your course access and payment updates will be sent only to this email address. Please check it carefully before continuing.</p>
+            <button type="button" onClick={() => setEmailNoticeOpen(false)} autoFocus className="mt-6 w-full bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">I Understand</button>
+          </div>
+        </div>
       )}
 
       {selectedCampaign && adminOpen && (
