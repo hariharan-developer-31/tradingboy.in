@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://tradingboy.in/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://tradingboy.in/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://tradingboy.in/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://tradingboy.in/privacy-policy</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://tradingboy.in/terms-and-conditions</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://tradingboy.in/refund-policy</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://tradingboy.in/disclaimer</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
   <url><loc>https://tradingboy.in/courses/forex-mastery.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://tradingboy.in/courses/funded-trader-blueprint.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>

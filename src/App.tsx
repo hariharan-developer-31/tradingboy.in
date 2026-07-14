@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useRef } from 'react';
-import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Eye, EyeOff, History, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Clock, Copy, CreditCard, Edit3, Eye, EyeOff, Globe, History, Instagram, Loader2, LogOut, Mail, MapPin, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Ticket, Trash2, Upload, X } from 'lucide-react';
 import aboutImageUrl from './assets/About us.webp';
 import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
 import fundedTraderThumbnail from './assets/course-funded-trader.webp';
@@ -49,6 +49,54 @@ const fallbackCourses = [
 
 const navLinks = ['Home', 'About', 'Course', 'Results', 'FAQ'];
 const headerNavLinks = navLinks.filter((link) => link !== 'FAQ');
+const footerPageLinks = [
+  ['About Us', '/about'],
+  ['Contact Us', '/contact'],
+  ['Privacy Policy', '/privacy-policy'],
+  ['Terms & Conditions', '/terms-and-conditions'],
+  ['Refund Policy', '/refund-policy'],
+  ['Disclaimer', '/disclaimer'],
+];
+
+const policyPages: Record<string, { title: string; updated?: string; paragraphs: string[] }> = {
+  '/privacy-policy': {
+    title: 'Privacy Policy',
+    updated: 'Last Updated: July 14, 2026',
+    paragraphs: [
+      'TradingBoy values your privacy. We may collect your name, email, phone number, billing information, purchase history, IP address, and website analytics.',
+      'Your information is used to process payments, provide course access, improve our services, and offer customer support.',
+      'Payments are processed securely through trusted payment gateways. TradingBoy does not store your complete card or banking information.',
+      'We use cookies to improve user experience. We implement reasonable security measures to protect your data.',
+      'For privacy-related queries: support@tradingboy.in',
+    ],
+  },
+  '/terms-and-conditions': {
+    title: 'Terms & Conditions',
+    paragraphs: [
+      'TradingBoy provides educational content only and does not provide investment or financial advice.',
+      'Users are responsible for protecting their account credentials. Course sharing, copying, redistribution, or resale is prohibited.',
+      'Course access is provided after successful payment. Trading involves financial risk, and TradingBoy is not responsible for any trading losses or investment decisions.',
+      'These terms may be updated from time to time.',
+    ],
+  },
+  '/refund-policy': {
+    title: 'Refund Policy',
+    paragraphs: [
+      'TradingBoy sells digital educational products. All sales are generally final.',
+      'Refunds may be considered only for duplicate payments or verified technical issues preventing course access.',
+      'Refunds are not provided for change of mind, dissatisfaction after course access, failure to complete the course, or lack of trading results.',
+      'For refund assistance: admin@tradingboy.in',
+    ],
+  },
+  '/disclaimer': {
+    title: 'Disclaimer',
+    paragraphs: [
+      'TradingBoy is an educational platform only. We are not SEBI-registered investment advisors and do not provide investment, financial, or trading advice.',
+      'Trading in Forex, Gold, Stocks, Crypto, and other financial markets involves substantial risk. Past performance does not guarantee future results.',
+      'Users are solely responsible for their trading decisions and any resulting profits or losses.',
+    ],
+  },
+};
 
 const faqs = [
   ['Is this course beginner friendly?', 'Yes. It starts with foundations, then moves into execution, risk, and live market application.'],
@@ -299,7 +347,7 @@ function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: 
   );
 }
 
-export default function App() {
+function MainApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [supportForm, setSupportForm] = useState({ name: '', email: '', subject: '', message: '' });
@@ -1450,6 +1498,9 @@ export default function App() {
                 <p className="mt-6 font-inter leading-relaxed text-white/65">
                   TradingBoy was founded over 5 years ago with a mission to help aspiring traders master the markets through practical education, disciplined risk management, and proven trading strategies. Our goal is to build confident, consistent traders who are ready to succeed in funded trading.
                 </p>
+                <p className="mt-4 font-inter leading-relaxed text-white/65">
+                  Our mission is to simplify trading concepts into practical, easy-to-understand lessons that help traders improve with discipline and consistency.
+                </p>
               </div>
             </div>
           </section>
@@ -1589,9 +1640,9 @@ export default function App() {
               </div>
 
               <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-5 gap-y-3 sm:justify-end lg:gap-x-7">
-                {navLinks.map((item) => (
-                  <a key={item} href={`#${item.toLowerCase()}`} className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55 transition hover:text-electric sm:text-[10px]">
-                    {item}
+                {footerPageLinks.map(([label, href]) => (
+                  <a key={href} href={href} className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55 transition hover:text-electric sm:text-[10px]">
+                    {label}
                   </a>
                 ))}
                 <button onClick={() => { setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55 transition hover:text-electric sm:text-[10px]">Support</button>
@@ -3025,4 +3076,94 @@ export default function App() {
 
     </div>
   );
+}
+
+function PublicPage({ path }: { path: string }) {
+  const page = policyPages[path];
+  const isAbout = path === '/about';
+  const isContact = path === '/contact';
+  const title = isAbout ? 'About Us' : isContact ? 'Contact Us' : page.title;
+
+  useEffect(() => {
+    document.title = `${title} | TradingBoy`;
+    window.scrollTo(0, 0);
+  }, [title]);
+
+  return (
+    <div className="min-h-screen bg-ink text-white">
+      <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 sm:px-10 lg:px-16">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between" aria-label="Page navigation">
+          <a href="/" aria-label="TradingBoy home"><img src={logoUrl} alt="TradingBoy" className="h-12 w-auto sm:h-14" /></a>
+          <a href="/" className="inline-flex items-center gap-2 font-inter text-[10px] font-bold uppercase tracking-[0.18em] text-white/70 transition hover:text-electric">
+            <ArrowLeft className="h-4 w-4" /> Back to Home
+          </a>
+        </nav>
+      </header>
+
+      <main className="relative overflow-hidden px-6 py-16 sm:px-10 sm:py-20 lg:px-16 lg:py-28">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-80 w-[80%] -translate-x-1/2 bg-electric/10 blur-[120px]" />
+        <div className="relative mx-auto max-w-4xl">
+          <div className="font-inter text-[10px] font-bold uppercase tracking-[0.3em] text-electric">TradingBoy</div>
+          <h1 className="mt-4 font-podium text-5xl uppercase leading-none text-white sm:text-7xl">{title}</h1>
+          {page?.updated && <p className="mt-5 font-inter text-xs uppercase tracking-[0.18em] text-white/40">{page.updated}</p>}
+
+          {isAbout && (
+            <div className="mt-10 border border-white/10 bg-black/30 p-6 font-inter text-base leading-8 text-white/70 sm:p-10 sm:text-lg">
+              <p>TradingBoy was founded over 5 years ago to help aspiring traders master the markets through practical education, disciplined risk management, and proven trading strategies.</p>
+              <p className="mt-6">Our mission is to simplify trading concepts into practical, easy-to-understand lessons that help traders improve with discipline and consistency.</p>
+            </div>
+          )}
+
+          {isContact && (
+            <div className="mt-10">
+              <h2 className="font-podium text-3xl uppercase text-white sm:text-4xl">We're Here to Help</h2>
+              <div className="mt-5 max-w-3xl space-y-4 font-inter leading-relaxed text-white/65">
+                <p>Have questions about our courses, payments, or your TradingBoy account? Our team is here to assist you.</p>
+                <p>Whether you're a beginner starting your trading journey or an experienced trader looking for support, we're happy to help.</p>
+              </div>
+              <h2 className="mt-12 font-podium text-3xl uppercase text-white">Contact Information</h2>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <a href="mailto:support@tradingboy.in" className="group border border-white/10 bg-black/30 p-6 transition hover:border-electric/50">
+                  <Mail className="h-6 w-6 text-electric" /><div className="mt-4 font-inter text-[10px] font-bold uppercase tracking-widest text-white/40">Email</div><div className="mt-2 font-inter text-sm text-white group-hover:text-electric">support@tradingboy.in</div>
+                </a>
+                <a href="https://tradingboy.in" className="group border border-white/10 bg-black/30 p-6 transition hover:border-electric/50">
+                  <Globe className="h-6 w-6 text-electric" /><div className="mt-4 font-inter text-[10px] font-bold uppercase tracking-widest text-white/40">Website</div><div className="mt-2 font-inter text-sm text-white group-hover:text-electric">https://tradingboy.in</div>
+                </a>
+                <div className="border border-white/10 bg-black/30 p-6">
+                  <Clock className="h-6 w-6 text-electric" /><div className="mt-4 font-inter text-[10px] font-bold uppercase tracking-widest text-white/40">Support Hours</div><div className="mt-2 font-inter text-sm leading-relaxed text-white">Monday – Saturday<br />10:00 AM – 8:00 PM (IST)</div>
+                </div>
+                <div className="border border-white/10 bg-black/30 p-6">
+                  <MapPin className="h-6 w-6 text-electric" /><div className="mt-4 font-inter text-[10px] font-bold uppercase tracking-widest text-white/40">Location</div><div className="mt-2 font-inter text-sm text-white">Tamil Nadu, India</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {page && (
+            <article className="mt-10 border border-white/10 bg-black/30 p-6 font-inter text-base leading-8 text-white/70 sm:p-10 sm:text-lg">
+              {page.paragraphs.map((paragraph) => {
+                const email = paragraph.match(/[\w.-]+@[\w.-]+\.\w+/)?.[0];
+                return <p key={paragraph} className="mb-6 last:mb-0">{email ? <>{paragraph.slice(0, paragraph.indexOf(email))}<a href={`mailto:${email}`} className="text-electric hover:underline">{email}</a></> : paragraph}</p>;
+              })}
+            </article>
+          )}
+        </div>
+      </main>
+
+      <footer className="border-t border-white/10 bg-[#080d12] px-6 py-8 sm:px-10 lg:px-16">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <span className="font-inter text-[9px] uppercase tracking-[0.2em] text-white/30">© 2026 Trading Boy</span>
+          <nav className="flex flex-wrap gap-x-5 gap-y-3" aria-label="Legal navigation">
+            {footerPageLinks.map(([label, href]) => <a key={href} href={href} className={`font-inter text-[9px] font-semibold uppercase tracking-[0.16em] transition hover:text-electric ${href === path ? 'text-electric' : 'text-white/50'}`}>{label}</a>)}
+          </nav>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export default function App() {
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  if (path === '/about' || path === '/contact' || policyPages[path]) return <PublicPage path={path} />;
+  return <MainApp />;
 }
