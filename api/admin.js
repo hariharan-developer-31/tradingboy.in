@@ -343,11 +343,11 @@ export default async function handler(req, res) {
   if (action === 'courses') {
     let { data, error } = await admin
       .from('courses')
-      .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at')
+      .select('id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at')
       .order('created_at', { ascending: false });
     if (error?.code === '42703') {
-      const legacy = await admin.from('courses').select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at').order('created_at', { ascending: false });
-      data = (legacy.data || []).map((course) => ({ ...course, upi_id: null }));
+      const legacy = await admin.from('courses').select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at').order('created_at', { ascending: false });
+      data = (legacy.data || []).map((course) => ({ ...course, qr_code_url: null }));
       error = legacy.error;
     }
 
@@ -404,6 +404,18 @@ export default async function handler(req, res) {
     } else if (body.thumbnailUrl !== undefined) {
       payload.thumbnail_url = cleanText(body.thumbnailUrl, 1000) || null;
       if (!isHttpsUrl(payload.thumbnail_url)) return json(res, 400, { error: 'Thumbnail link must use HTTPS.' });
+    }
+    if (body.qrCodeDataUrl) {
+      const buffer = decodeJpegDataUrl(body.qrCodeDataUrl);
+      if (buffer.byteLength > 100 * 1024) return json(res, 400, { error: 'Payment QR image must be below 100KB after compression.' });
+      const imagePath = `qr-${randomUUID()}.jpg`;
+      const { error: uploadError } = await admin.storage.from('course-thumbnails').upload(imagePath, buffer, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) return json(res, 500, { error: uploadError.message });
+      const { data: publicUrlData } = admin.storage.from('course-thumbnails').getPublicUrl(imagePath);
+      payload.qr_code_url = publicUrlData.publicUrl;
+    } else if (body.qrCodeUrl !== undefined) {
+      payload.qr_code_url = cleanText(body.qrCodeUrl, 1000) || null;
+      if (!isHttpsUrl(payload.qr_code_url)) return json(res, 400, { error: 'Payment QR link must use HTTPS.' });
     }
     const query = body.id
       ? admin.from('courses').update(payload).eq('id', body.id)

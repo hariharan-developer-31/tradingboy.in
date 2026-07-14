@@ -103,8 +103,8 @@ test('checkout resets to the top between steps and exposes stored proofs securel
   assert.match(app, /checkoutScrollRef\.current\?\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/);
   assert.match(app, /\[checkoutOpen, joinStep\]/);
   assert.match(app, /validatingCoupon \? <><Loader2[^>]*animate-spin/);
-  assert.match(app, /h-44 w-44 sm:h-52 sm:w-52/);
-  assert.match(app, /className="flex h-12 w-full/);
+  assert.match(app, /selectedCourse\.qr_code_url/);
+  assert.match(app, /navigator\.clipboard\.writeText\(selectedUpiId\)/);
   assert.match(app, /href=\{order\.payment_screenshot_url\}/);
   assert.doesNotMatch(app, /getPublicUrl\(order\.payment_screenshot_path\)/);
   assert.match(adminApi, /createSignedUrl\(order\.payment_screenshot_path, 10 \* 60\)/);
@@ -128,8 +128,8 @@ test('checkout and payment confirmation render as dedicated pages, not popup win
   assert.doesNotMatch(checkout, /items-start justify-center bg-black\/80/);
   assert.match(checkout, /paymentPromptOpen && \(/);
   assert.match(checkout, /bg-black\/65 px-5 py-6 backdrop-blur-md/);
-  assert.match(checkout, /window\.location\.href = getUpiUrl\('generic'\)/);
-  assert.match(checkout, /aria-label="Choose an installed UPI payment app"/);
+  assert.doesNotMatch(checkout, /getUpiUrl/);
+  assert.doesNotMatch(checkout, /Choose an installed UPI payment app/);
 });
 
 test('checkout back actions confirm cancellation and success has a centered website exit', () => {
@@ -161,7 +161,7 @@ test('payment page uses a six-minute timer, centered QR, and no duplicate final-
   assert.match(app, /PAYMENT_TIME_SECONDS \/ 30/);
   assert.match(app, /\(index \+ 1\) \* 30/);
   assert.match(app, /mx-auto w-fit border border-white\/10 bg-white p-5 sm:p-6/);
-  assert.match(app, /block h-44 w-44 sm:h-52 sm:w-52/);
+  assert.match(app, /block h-44 w-44 object-contain sm:h-52 sm:w-52/);
   assert.match(app, /joinStep !== 'proof' && joinStep !== 'thanks'/);
   assert.doesNotMatch(app, /joinStep === 'proof' \? 'Upload Payment Proof'/);
   assert.doesNotMatch(app, /joinStep === 'thanks' \? 'Payment Submitted'/);
@@ -357,17 +357,18 @@ test('admin logout expires current and legacy session cookies before showing log
   assert.ok(verifyButtonIndex > otpStatusIndex);
 });
 
-test('courses have dedicated UPI IDs for QR codes and payment app links', () => {
+test('courses have dedicated UPI IDs and admin-uploaded payment QR images', () => {
   const app = read('src/App.tsx');
   const adminApi = read('api/admin.js');
   const coursesApi = read('api/courses.js');
   const migration = read('migrations/20260714_admin_otp_campaign_history_upi.sql');
 
   assert.match(app, /selectedCourse\.upi_id \|\| UPI_ID/);
-  assert.match(app, /pa: courseUpiId/);
+  assert.match(app, /Payment QR Code/);
+  assert.match(app, /qrCodeDataUrl/);
   assert.match(app, /Course payment UPI ID/);
   assert.match(adminApi, /upi_id: upiId/);
-  assert.match(coursesApi, /price, upi_id, active/);
+  assert.match(coursesApi, /qr_code_url[\s\S]*price, upi_id, active/);
   assert.match(migration, /courses add column if not exists upi_id/);
   assert.match(migration, /email_campaigns add column if not exists attachment_path/);
 });
@@ -404,7 +405,7 @@ test('all image uploads share the compressor and testimonials stay below 100KB',
   const adminApi = read('api/admin.js');
 
   assert.match(app, /const compressImageToDataUrl =/);
-  assert.equal((app.match(/await compressImageToDataUrl\(file\)/g) || []).length, 3);
+  assert.equal((app.match(/await compressImageToDataUrl\(file\)/g) || []).length, 4);
   assert.match(app, /Images are automatically converted to JPEG and compressed below 100 KB\./);
   assert.match(adminApi, /body\.photoDataUrl[\s\S]*buffer\.byteLength > 100 \* 1024/);
   assert.match(adminApi, /Testimonial image must be below 100KB after compression\./);

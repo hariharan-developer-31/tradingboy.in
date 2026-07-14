@@ -16,12 +16,12 @@ export default async function handler(req, res) {
     const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
     let { data, error } = await admin
       .from('courses')
-      .select('id, title, description, thumbnail_url, normal_price, offer_price, price, upi_id, active, created_at')
+      .select('id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, upi_id, active, created_at')
       .eq('active', true)
       .order('created_at', { ascending: true });
     if (error?.code === '42703') {
       const legacy = await admin.from('courses').select('id, title, description, thumbnail_url, normal_price, offer_price, price, active, created_at').eq('active', true).order('created_at', { ascending: true });
-      data = (legacy.data || []).map((course) => ({ ...course, upi_id: null }));
+      data = (legacy.data || []).map((course) => ({ ...course, qr_code_url: null, upi_id: null }));
       error = legacy.error;
     }
     if (error) throw error;

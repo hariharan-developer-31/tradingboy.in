@@ -25,7 +25,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         const admin = createClient(supabaseUrl, serviceRoleKey);
         const { data, error } = await admin
           .from('courses')
-          .select('id, title, description, thumbnail_url, normal_price, offer_price, price, upi_id, active, created_at')
+          .select('id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, upi_id, active, created_at')
           .eq('active', true)
           .order('created_at', { ascending: true });
         sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data: data || [] });
@@ -504,7 +504,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (body.action === 'courses') {
           const { data, error } = await admin
             .from('courses')
-            .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at')
+            .select('id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at')
             .order('created_at', { ascending: false });
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
@@ -531,6 +531,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             discord_url: String(body.discordUrl || '').trim() || null,
             upi_id: String(body.upiId || '').trim(),
             thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
+            qr_code_url: String(body.qrCodeUrl || '').trim() || null,
           };
 
           if (body.thumbnailDataUrl) {
@@ -555,6 +556,22 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
 
             const { data: publicUrlData } = admin.storage.from('course-thumbnails').getPublicUrl(imagePath);
             payload.thumbnail_url = publicUrlData.publicUrl;
+          }
+
+          if (body.qrCodeDataUrl) {
+            const buffer = decodeDataUrl(body.qrCodeDataUrl);
+            if (buffer.byteLength > 100 * 1024) {
+              sendJson(res, 400, { error: 'Payment QR image must be below 100KB after compression.' });
+              return;
+            }
+            const imagePath = `qr-${randomUUID()}.jpg`;
+            const { error: uploadError } = await admin.storage.from('course-thumbnails').upload(imagePath, buffer, { contentType: 'image/jpeg', upsert: true });
+            if (uploadError) {
+              sendJson(res, 500, { error: uploadError.message });
+              return;
+            }
+            const { data: publicUrlData } = admin.storage.from('course-thumbnails').getPublicUrl(imagePath);
+            payload.qr_code_url = publicUrlData.publicUrl;
           }
 
           const query = body.id

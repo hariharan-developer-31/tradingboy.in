@@ -69,6 +69,7 @@ create table if not exists public.courses (
   title text not null,
   description text,
   thumbnail_url text,
+  qr_code_url text,
   normal_price integer,
   offer_price integer,
   price integer not null default 7199 check (price > 0),
@@ -81,6 +82,7 @@ create table if not exists public.courses (
 
 alter table public.courses enable row level security;
 alter table public.courses add column if not exists thumbnail_url text;
+alter table public.courses add column if not exists qr_code_url text;
 alter table public.courses add column if not exists normal_price integer;
 alter table public.courses add column if not exists offer_price integer;
 alter table public.courses add column if not exists discord_url text;
@@ -95,7 +97,7 @@ to anon
 using (active = true);
 
 revoke select on table public.courses from anon;
-grant select (id, title, description, thumbnail_url, normal_price, offer_price, price, active, created_at)
+grant select (id, title, description, thumbnail_url, qr_code_url, normal_price, offer_price, price, active, created_at)
 on table public.courses to anon;
 
 insert into public.courses (title, description, price, drive_url, active)

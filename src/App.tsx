@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Eye, EyeOff, History, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState, useRef } from 'react';
+import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Eye, EyeOff, History, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Ticket, Trash2, Upload, X } from 'lucide-react';
 import aboutImageUrl from './assets/About us.webp';
 import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
 import fundedTraderThumbnail from './assets/course-funded-trader.webp';
@@ -13,19 +13,13 @@ const DEFAULT_COURSE = 'Complete Forex Mastery';
 const PROMO_COUPON_CODE = 'TB1500';
 const PAYMENT_TIME_SECONDS = 6 * 60;
 
-const createUpiReference = () => {
-  const randomPart = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID().replace(/-/g, '').slice(0, 20)
-    : Math.random().toString(36).slice(2, 14);
-  return `TB${Date.now().toString(36)}${randomPart}`.slice(0, 35);
-};
-
 const fallbackCourses = [
   {
     id: 'complete-forex-mastery',
     title: DEFAULT_COURSE,
     description: 'A structured forex trading course covering market structure, risk management, and live execution.',
     thumbnail_url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=85',
+    qr_code_url: null,
     normal_price: 7199,
     offer_price: 7199,
     price: 7199,
@@ -41,6 +35,7 @@ const fallbackCourses = [
     description:
       'Gold trading and gold futures training with funded account rules, evaluation strategy, drawdown control, and risk-first execution.',
     thumbnail_url: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=1200&q=85',
+    qr_code_url: null,
     normal_price: 26999,
     offer_price: 5399,
     price: 5399,
@@ -74,6 +69,7 @@ type PublicCourse = {
   title: string;
   description: string | null;
   thumbnail_url: string | null;
+  qr_code_url: string | null;
   normal_price: number | null;
   offer_price: number | null;
   price: number;
@@ -194,6 +190,8 @@ type AdminCourseForm = {
   description: string;
   thumbnailUrl: string;
   thumbnailDataUrl?: string;
+  qrCodeUrl: string;
+  qrCodeDataUrl?: string;
   normalPrice: string;
   offerPrice: string;
   driveUrl: string;
@@ -335,7 +333,7 @@ export default function App() {
   const [paymentPromptOpen, setPaymentPromptOpen] = useState(false);
   const [promptedAt, setPromptedAt] = useState<number[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<{ dataUrl: string; name: string } | null>(null);
-  const paymentReferenceRef = useRef(createUpiReference());
+  const [upiCopied, setUpiCopied] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'error'>('idle');
   const [submitError, setSubmitError] = useState('');
   const [, setCreatedOrderId] = useState('');
@@ -421,6 +419,7 @@ export default function App() {
     title: '',
     description: '',
     thumbnailUrl: '',
+    qrCodeUrl: '',
     normalPrice: '',
     offerPrice: '',
     driveUrl: '',
@@ -443,28 +442,7 @@ export default function App() {
     }
   }
 
-  const getUpiUrl = useCallback((app: 'gpay' | 'phonepe' | 'paytm' | 'generic') => {
-    const courseUpiId = selectedCourse.upi_id || UPI_ID;
-    const params = new URLSearchParams({
-      pa: courseUpiId,
-      pn: 'Trading Boy Academy',
-      mc: '0000',
-      tr: paymentReferenceRef.current,
-      am: selectedOfferPrice.toString(),
-      cu: 'INR',
-      tn: selectedCourse.title,
-    });
-    const query = params.toString();
-    switch (app) {
-      case 'gpay': return `gpay://upi/pay?${query}`;
-      case 'phonepe': return `phonepe://pay?${query}`;
-      case 'paytm': return `paytmmp://pay?${query}`;
-      case 'generic':
-      default: return `upi://pay?${query}`;
-    }
-  }, [selectedCourse.title, selectedCourse.upi_id, selectedOfferPrice]);
   const selectedUpiId = selectedCourse.upi_id || UPI_ID;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(getUpiUrl('generic'))}`;
 
   const filteredOrders = useMemo(() => {
     const query = paymentSearch.trim().toLowerCase();
@@ -651,7 +629,7 @@ export default function App() {
   }, [joinStep, paymentSeconds, promptedAt]);
 
   const openCheckout = (courseName = selectedCourse.title) => {
-    paymentReferenceRef.current = createUpiReference();
+    setUpiCopied(false);
     setJoinStep('details');
     setPaymentSeconds(PAYMENT_TIME_SECONDS);
     setPromptedAt([]);
@@ -960,7 +938,7 @@ export default function App() {
   };
 
   const resetCourseForm = () => {
-    setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', thumbnailDataUrl: undefined, normalPrice: '', offerPrice: '', driveUrl: '', discordUrl: '', upiId: '' });
+    setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', thumbnailDataUrl: undefined, qrCodeUrl: '', qrCodeDataUrl: undefined, normalPrice: '', offerPrice: '', driveUrl: '', discordUrl: '', upiId: '' });
     setShowCourseForm(false);
   };
 
@@ -979,6 +957,8 @@ export default function App() {
         description: courseForm.description,
         thumbnailUrl: courseForm.thumbnailUrl,
         thumbnailDataUrl: courseForm.thumbnailDataUrl,
+        qrCodeUrl: courseForm.qrCodeUrl,
+        qrCodeDataUrl: courseForm.qrCodeDataUrl,
         normalPrice,
         offerPrice,
         driveUrl: courseForm.driveUrl,
@@ -999,6 +979,7 @@ export default function App() {
       title: course.title,
       description: course.description || '',
       thumbnailUrl: course.thumbnail_url || '',
+      qrCodeUrl: course.qr_code_url || '',
       normalPrice: String(course.normal_price || course.price),
       offerPrice: String(course.offer_price || course.price),
       driveUrl: course.drive_url || '',
@@ -1868,37 +1849,25 @@ export default function App() {
             {joinStep === 'payment' && (
               <>
               <div className={`mx-auto w-full max-w-xl transition duration-300 ${paymentPromptOpen ? 'pointer-events-none select-none blur-sm' : ''}`} aria-hidden={paymentPromptOpen}>
-                <div className="mx-auto w-fit border border-white/10 bg-white p-5 sm:p-6">
-                  <img src={qrCodeUrl} alt="UPI payment QR code" className="block h-44 w-44 sm:h-52 sm:w-52" />
-                </div>
+                {selectedCourse.qr_code_url && (
+                  <div className="mx-auto w-fit border border-white/10 bg-white p-5 sm:p-6">
+                    <img src={selectedCourse.qr_code_url} alt="UPI payment QR code" className="block h-44 w-44 object-contain sm:h-52 sm:w-52" />
+                  </div>
+                )}
                 <div className="mt-8 font-inter">
                   <div className="text-xs uppercase tracking-[0.3em] text-electric">Pay exactly</div>
                   <div className="mt-3 text-4xl font-bold text-white">{money(selectedOfferPrice)}</div>
-                  <div className="mt-4 border border-white/10 bg-ink p-4 text-sm text-white/70">
-                    <div className="text-white/45">UPI ID</div>
-                    <div className="mt-1 text-base font-bold text-white sm:text-lg">{selectedUpiId}</div>
+                  <div className="mt-4 flex items-center justify-between gap-4 border border-white/10 bg-ink p-4 text-sm text-white/70">
+                    <div className="min-w-0">
+                      <div className="text-white/45">UPI ID</div>
+                      <div className="mt-1 break-all text-base font-bold text-white sm:text-lg">{selectedUpiId}</div>
+                    </div>
+                    <button type="button" onClick={async () => { await navigator.clipboard.writeText(selectedUpiId); setUpiCopied(true); window.setTimeout(() => setUpiCopied(false), 1800); }} className="flex shrink-0 items-center gap-2 border border-electric/35 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-electric transition hover:bg-electric hover:text-black">
+                      <Copy className="h-4 w-4" /> {upiCopied ? 'Copied' : 'Copy'}
+                    </button>
                   </div>
                   <div className="mt-4 text-sm leading-relaxed text-white/60">
                     Timer: {Math.floor(paymentSeconds / 60)}:{String(paymentSeconds % 60).padStart(2, '0')}. Keep this page open after paying.
-                  </div>
-                  <div className="mt-6 flex flex-col gap-3">
-                    <a href={getUpiUrl('gpay')} className="flex h-12 w-full items-center justify-center rounded-lg bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-6 object-contain" />
-                    </a>
-
-                    <a href={getUpiUrl('phonepe')} className="flex h-12 w-full items-center justify-center rounded-lg bg-[#5f259f] shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
-                      <span className="flex items-center gap-2 font-bold tracking-tight text-white text-lg">
-                        <Smartphone className="h-6 w-6" /> PhonePe
-                      </span>
-                    </a>
-
-                    <a href={getUpiUrl('paytm')} className="flex h-12 w-full items-center justify-center rounded-lg bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-5 object-contain" />
-                    </a>
-
-                    <button type="button" onClick={() => { window.location.href = getUpiUrl('generic'); }} className="flex h-12 w-full items-center justify-center rounded-lg border border-white/20 bg-transparent transition-all hover:bg-white/5 hover:scale-[1.02]" aria-label="Choose an installed UPI payment app">
-                      <span className="font-inter font-bold text-white">Other UPI Apps</span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -2555,6 +2524,31 @@ export default function App() {
                                 />
                               </div>
                             </div>
+                            <div className="flex flex-col gap-2">
+                              <label className="font-inter text-xs text-white/50 uppercase tracking-widest">Payment QR Code</label>
+                              <div className="flex items-center gap-4">
+                                {(courseForm.qrCodeDataUrl || courseForm.qrCodeUrl) && (
+                                  <img src={courseForm.qrCodeDataUrl || courseForm.qrCodeUrl} alt="Payment QR preview" className="h-24 w-24 border border-white/10 bg-white object-contain" />
+                                )}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={async (event) => {
+                                    const file = event.target.files?.[0];
+                                    if (!file) return;
+                                    try {
+                                      const qrCodeDataUrl = await compressImageToDataUrl(file);
+                                      setCourseForm((current) => ({ ...current, qrCodeDataUrl }));
+                                      setAdminStatus('Payment QR compressed below 100 KB.');
+                                    } catch (error) {
+                                      setAdminStatus(error instanceof Error ? error.message : 'Could not compress this QR image.');
+                                    }
+                                  }}
+                                  className="w-full cursor-pointer text-sm text-white/60 file:mr-4 file:border-0 file:bg-white/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/20"
+                                />
+                              </div>
+                              <p className="font-inter text-[10px] uppercase tracking-[0.14em] text-white/35">Automatically converted to JPEG and compressed below 100 KB.</p>
+                            </div>
                             <input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Name of the course" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <textarea value={courseForm.description} onChange={(event) => setCourseForm({ ...courseForm, description: event.target.value })} placeholder="Description" rows={5} className="w-full resize-none border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -2567,7 +2561,7 @@ export default function App() {
                             <div>
                               <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Course payment UPI ID</label>
                               <input required value={courseForm.upiId} onChange={(event) => setCourseForm({ ...courseForm, upiId: event.target.value.trim() })} placeholder="name@bank" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                              <p className="mt-2 font-inter text-[10px] text-white/35">The QR code and every payment-app link for this course will use this UPI ID.</p>
+                              <p className="mt-2 font-inter text-[10px] text-white/35">Students can copy this UPI ID from the payment page.</p>
                             </div>
                             <div className="flex flex-wrap gap-3 pt-2">
                               <button type="submit" className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">{courseForm.id ? 'Update Course' : 'Save Course'}</button>
