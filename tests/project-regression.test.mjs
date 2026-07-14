@@ -84,6 +84,21 @@ test('checkout resets to the top between steps and exposes stored proofs securel
   assert.match(checkoutApi, /p_payment_screenshot_path: paymentScreenshotPath/);
 });
 
+test('checkout and payment confirmation render as dedicated pages, not popup windows', () => {
+  const app = read('src/App.tsx');
+  const checkoutStart = app.indexOf('{checkoutOpen && (');
+  const checkoutEnd = app.indexOf('{selectedTestimonial && (', checkoutStart);
+  const checkout = app.slice(checkoutStart, checkoutEnd);
+
+  assert.match(checkout, /fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ink/);
+  assert.match(checkout, /sticky top-0[\s\S]*Join Course/);
+  assert.match(checkout, /<main className="mx-auto w-full max-w-4xl/);
+  assert.match(checkout, /paymentPromptOpen \? \(/);
+  assert.match(checkout, /Did you complete the payment\?/);
+  assert.doesNotMatch(checkout, /items-start justify-center bg-black\/80/);
+  assert.doesNotMatch(app, /paymentPromptOpen && \(\s*<div className="fixed inset-0/);
+});
+
 test('payment admin supports safe bulk deletion, date filters, and confirmed status changes', () => {
   const app = read('src/App.tsx');
   const adminApi = read('api/admin.js');

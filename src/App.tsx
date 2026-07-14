@@ -1587,18 +1587,20 @@ export default function App() {
       )}
 
       {checkoutOpen && (
-        <div ref={checkoutScrollRef} className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-6 sm:p-8 overflow-y-auto page-enter">
-          <div className="w-full max-w-3xl border border-white/10 bg-black p-6 shadow-glow sm:p-8 smooth-card my-auto">
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Join Course</div>
-                <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">
-                  {joinStep === 'payment' ? 'Complete UPI Payment' : joinStep === 'thanks' ? 'Payment Submitted' : joinStep === 'failed' ? 'Payment Failed' : 'Enter Your Details'}
-                </h2>
-              </div>
-              <button onClick={() => joinStep === 'payment' ? setJoinStep('details') : closeHashPage()} aria-label="Close checkout page">
-                <X className="h-7 w-7 text-white" />
-              </button>
+        <div ref={checkoutScrollRef} className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ink page-enter">
+          <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-ink/90 px-6 py-4 backdrop-blur-xl">
+            <button onClick={() => joinStep === 'proof' ? setJoinStep('payment') : joinStep === 'payment' ? setJoinStep('details') : closeHashPage()} className="flex h-10 w-10 items-center justify-center text-electric transition hover:text-skyline" aria-label="Back">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="font-podium text-lg uppercase text-white">Join Course</div>
+            <div className="w-10" />
+          </header>
+          <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 lg:px-8">
+            <div className="mb-8 border-b border-white/10 pb-7">
+              <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Secure Enrollment</div>
+              <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-5xl">
+                {joinStep === 'payment' ? 'Complete UPI Payment' : joinStep === 'proof' ? 'Upload Payment Proof' : joinStep === 'thanks' ? 'Payment Submitted' : joinStep === 'failed' ? 'Payment Failed' : 'Enter Your Details'}
+              </h2>
             </div>
 
             {joinStep === 'details' && (
@@ -1697,7 +1699,21 @@ export default function App() {
               </form>
             )}
 
-            {joinStep === 'payment' && (
+            {joinStep === 'payment' && (paymentPromptOpen ? (
+              <section className="max-w-xl border border-electric/25 bg-black p-6 sm:p-8">
+                <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Payment Check</div>
+                <h3 className="mt-3 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Did you complete the payment?</h3>
+                <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">Select yes only after paying {money(selectedOfferPrice)} to {selectedUpiId}.</p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button onClick={() => { setPaymentPromptOpen(false); setJoinStep('proof'); }} className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">Yes</button>
+                  {paymentSeconds > 0 ? (
+                    <button onClick={() => setPaymentPromptOpen(false)} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Wait</button>
+                  ) : (
+                    <button onClick={() => { setPaymentPromptOpen(false); setJoinStep('failed'); }} className="border border-red-400/40 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-red-300 transition hover:bg-red-950/30">No</button>
+                  )}
+                </div>
+              </section>
+            ) : (
               <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
                 <div className="border border-white/10 bg-white p-4">
                   <img src={qrCodeUrl} alt="UPI payment QR code" className="mx-auto h-44 w-44 sm:h-52 sm:w-52" />
@@ -1733,7 +1749,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            )}
+            ))}
 
             {joinStep === 'proof' && (
               <div className="animate-scale-in border border-electric/25 bg-[linear-gradient(145deg,#101820,#0b0d0f_55%)] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)] sm:p-6 lg:p-8">
@@ -1836,7 +1852,7 @@ export default function App() {
                 </button>
               </div>
             )}
-          </div>
+          </main>
         </div>
       )}
 
@@ -2737,25 +2753,6 @@ export default function App() {
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-electric border-t-transparent"></div>
           <p className="mt-4 font-inter text-sm font-bold uppercase tracking-widest text-white">Uploading Proof...</p>
-        </div>
-      )}
-
-      {paymentPromptOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4">
-          <div className="animate-scale-in max-w-md border border-white/10 bg-ink p-6 shadow-glow">
-            <h3 className="font-podium text-3xl uppercase leading-none text-white">Did you complete the payment?</h3>
-            <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">Select yes only after paying {money(selectedOfferPrice)} to {selectedUpiId}.</p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => { setPaymentPromptOpen(false); setJoinStep('proof'); }} className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
-                Yes
-              </button>
-              {paymentSeconds > 0 ? (
-                <button onClick={() => setPaymentPromptOpen(false)} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Wait</button>
-              ) : (
-                <button onClick={() => { setPaymentPromptOpen(false); setJoinStep('failed'); }} className="border border-red-400/40 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-red-300 transition hover:bg-red-950/30">No</button>
-              )}
-            </div>
-          </div>
         </div>
       )}
 
