@@ -275,9 +275,8 @@ test('course offer leads to course selection and Blueprint shows its shorter dur
   assert.match(app, /const PROMO_COUPON_CODE = 'TB1500'/);
   assert.match(app, /Save <span className="text-electric">₹1,500<\/span>/);
   assert.match(app, /text-\[2\.2rem\]/);
-  assert.match(app, /const \[promoSeconds, setPromoSeconds\] = useState\(15 \* 60\)/);
-  assert.match(app, /Offer ends in/);
-  assert.match(app, /promoSeconds === 0 \? 'Offer Ended' : 'Claim Now'/);
+  assert.doesNotMatch(app, /promoSeconds|Offer ends in|Offer Ended/);
+  assert.match(app, />\s*Claim Now\s*</);
   assert.doesNotMatch(app, /Enter the code at checkout/);
   assert.match(app, /placeholder="Coupon code \(optional\)"/);
   assert.match(app, /Remove coupon/);
