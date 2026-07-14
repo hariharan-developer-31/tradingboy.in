@@ -95,6 +95,7 @@ type CourseOrder = {
   phone: string;
   trading_experience: string | null;
   terms_accepted: boolean;
+  coupon_code?: string | null;
   original_amount: number;
   discount_amount: number;
   final_amount: number;
@@ -2516,7 +2517,7 @@ export default function App() {
                       </div>
                     </div>
                     <div className="overflow-x-auto border border-white/10 bg-black">
-                      <table className="min-w-[1370px] w-full table-fixed border-collapse font-inter text-sm">
+                      <table className="min-w-[1600px] w-full table-fixed border-collapse font-inter text-sm">
                         <thead className="bg-white/[0.04] text-left text-xs uppercase tracking-widest text-white/45">
                           <tr>
                             <th className="w-[50px] px-4 py-4">
@@ -2527,6 +2528,8 @@ export default function App() {
                             <th className="w-[300px] px-4 py-4">Contact</th>
                             <th className="w-[170px] px-4 py-4">Experience</th>
                             <th className="w-[260px] px-4 py-4">Course</th>
+                            <th className="w-[140px] px-4 py-4">Coupon Code</th>
+                            <th className="w-[140px] px-4 py-4">Discount</th>
                             <th className="w-[130px] px-4 py-4">Amount</th>
                             <th className="w-[150px] px-4 py-4">Proof</th>
                             <th className="w-[190px] px-4 py-4">Status</th>
@@ -2534,7 +2537,7 @@ export default function App() {
                         </thead>
                         <tbody className="divide-y divide-white/10">
                           {filteredOrders.length === 0 ? (
-                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={9}>No payments found.</td></tr>
+                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={11}>No payments found.</td></tr>
                           ) : (
                             filteredOrders.map((order) => (
                               <tr key={order.id} className="align-top transition hover:bg-white/[0.03]">
@@ -2555,6 +2558,10 @@ export default function App() {
                                 </td>
                                 <td className="px-4 py-5 text-white/70"><span className="block truncate" title={order.trading_experience || '-'}>{order.trading_experience || '-'}</span></td>
                                 <td className="px-4 py-5 text-white/70"><span className="block truncate" title={order.course_name || '-'}>{order.course_name || '-'}</span></td>
+                                <td className="px-4 py-5">
+                                  {order.coupon_code ? <span className="inline-flex border border-electric/30 bg-electric/10 px-2 py-1 font-mono text-xs font-bold text-electric">{order.coupon_code}</span> : <span className="text-white/30">—</span>}
+                                </td>
+                                <td className="px-4 py-5 font-semibold text-emerald-300">{order.discount_amount > 0 ? `-${money(order.discount_amount)}` : '—'}</td>
                                 <td className="px-4 py-5 font-bold text-white">{money(order.final_amount)}</td>
                                 <td className="px-4 py-5">
                                   {order.payment_screenshot_url ? (

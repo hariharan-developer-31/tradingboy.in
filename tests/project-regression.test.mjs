@@ -60,8 +60,12 @@ test('admin tables keep empty-state cells aligned with visible columns', () => {
   const app = read('src/App.tsx');
 
   assert.match(app, /<td colSpan=\{6\}[^>]*>\s*No coupons found\./);
-  assert.match(app, /colSpan=\{9\}>No payments found\./);
+  assert.match(app, /colSpan=\{11\}>No payments found\./);
   assert.match(app, /order\.payment_screenshot_url \?/);
+  assert.match(app, />Coupon Code<\/th>/);
+  assert.match(app, />Discount<\/th>/);
+  assert.match(app, /order\.coupon_code/);
+  assert.match(app, /order\.discount_amount > 0 \? `-\$\{money\(order\.discount_amount\)\}`/);
 });
 
 test('checkout resets to the top between steps and exposes stored proofs securely', () => {
