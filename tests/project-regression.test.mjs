@@ -120,9 +120,11 @@ test('admin session restores on refresh and email tools expose compose, attachme
   assert.match(app, /Unique Recipients \(\{campaignRecipientCount\}\)/);
   assert.match(app, /Click to view recipients\./);
   assert.match(app, /maximum 10 MB/);
-  assert.match(app, /uploadToSignedUrl/);
+  assert.match(app, /fetch\(upload\.signedUrl/);
+  assert.doesNotMatch(app, /Attachment storage is not configured\./);
   assert.match(adminApi, /action === 'session'/);
   assert.match(adminApi, /action === 'prepareCampaignAttachment'/);
+  assert.match(adminApi, /signedUrl: data\.signedUrl/);
   assert.match(adminApi, /size > 10 \* 1024 \* 1024/);
   assert.match(adminApi, /attachments/);
   assert.match(security, /Path=\/api;/);

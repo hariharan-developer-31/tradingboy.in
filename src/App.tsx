@@ -1013,10 +1013,12 @@ export default function App() {
       setAdminStatus(`Sending campaign to ${campaignRecipientCount} recipients...`);
       let attachmentPayload: Record<string, string> = {};
       if (campaignAttachment) {
-        if (!supabase) throw new Error('Attachment storage is not configured.');
-        const upload = await adminRequest<{ path: string; token: string }>('prepareCampaignAttachment', { name: campaignAttachment.name, size: campaignAttachment.size });
-        const { error: uploadError } = await supabase.storage.from('mail-attachments').uploadToSignedUrl(upload.path, upload.token, campaignAttachment, { contentType: campaignAttachment.type || 'application/octet-stream' });
-        if (uploadError) throw new Error(`Could not upload attachment: ${uploadError.message}`);
+        const upload = await adminRequest<{ path: string; signedUrl: string }>('prepareCampaignAttachment', { name: campaignAttachment.name, size: campaignAttachment.size });
+        const uploadBody = new FormData();
+        uploadBody.append('cacheControl', '3600');
+        uploadBody.append('', campaignAttachment);
+        const uploadResponse = await fetch(upload.signedUrl, { method: 'PUT', headers: { 'x-upsert': 'false' }, body: uploadBody });
+        if (!uploadResponse.ok) throw new Error('Could not upload the attachment. Please try again.');
         attachmentPayload = { attachmentPath: upload.path, attachmentName: campaignAttachment.name };
       }
       const result = await adminRequest<{ sent: number }>('sendCampaign', {

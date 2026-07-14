@@ -268,7 +268,7 @@ export default async function handler(req, res) {
     const path = `${crypto.randomUUID()}-${originalName}`;
     const { data, error } = await admin.storage.from('mail-attachments').createSignedUploadUrl(path);
     if (error) return json(res, 500, { error: error.message });
-    return json(res, 200, { path, token: data.token });
+    return json(res, 200, { path, signedUrl: data.signedUrl });
   }
 
   if (action === 'coupons') {
