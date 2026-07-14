@@ -266,6 +266,26 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
       }
     });
 
+    server.middlewares.use('/api/support', async (req, res) => {
+      if ((req as any).method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
+      const supabaseUrl = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
+      const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseUrl || !serviceRoleKey) return sendJson(res, 500, { error: 'Environment variables are missing.' });
+      try {
+        const body = await readJsonBody(req);
+        const name = String(body.name || '').trim().slice(0, 100);
+        const email = String(body.email || '').trim().toLowerCase().slice(0, 254);
+        const subject = String(body.subject || '').trim().slice(0, 150);
+        const message = String(body.message || '').trim().slice(0, 5000);
+        if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || subject.length < 3 || message.length < 10) return sendJson(res, 400, { error: 'Enter a valid name, email, subject, and detailed message.' });
+        const admin = createClient(supabaseUrl, serviceRoleKey);
+        const { data, error } = await admin.from('support_tickets').insert({ name, email, subject, message, status: 'open' }).select('id').single();
+        sendJson(res, error ? 500 : 201, error ? { error: error.message } : { ok: true, ticketId: data.id });
+      } catch (error) {
+        sendJson(res, 500, { error: error instanceof Error ? error.message : 'Support API failed.' });
+      }
+    });
+
     server.middlewares.use('/api/admin', async (req, res) => {
       if ((req as any).method !== 'POST') {
         sendJson(res, 405, { error: 'Method not allowed' });
@@ -292,6 +312,39 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         }
 
         const admin = createClient(supabaseUrl, serviceRoleKey);
+
+        if (body.action === 'prepareCampaignAttachment') {
+          const size = Number(body.size);
+          const name = String(body.name || '').trim().replace(/[^a-zA-Z0-9._ -]/g, '_').slice(0, 180);
+          if (!name || !Number.isSafeInteger(size) || size < 1 || size > 10 * 1024 * 1024) return sendJson(res, 400, { error: 'Attachment must be 10 MB or smaller.' });
+          const path = `${randomUUID()}-${name}`;
+          const { data, error } = await admin.storage.from('mail-attachments').createSignedUploadUrl(path);
+          sendJson(res, error ? 500 : 200, error ? { error: error.message } : { path, signedUrl: data.signedUrl });
+          return;
+        }
+
+        if (body.action === 'supportTickets') {
+          const { data, error } = await admin.from('support_tickets').select('id, name, email, subject, message, status, admin_reply, reply_attachment_name, created_at, replied_at').order('created_at', { ascending: false }).limit(500);
+          sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
+          return;
+        }
+
+        if (body.action === 'replySupportTicket') {
+          const reply = String(body.reply || '').trim().slice(0, 5000);
+          const { data: ticket, error: ticketError } = await admin.from('support_tickets').select('id, name, email, subject').eq('id', body.ticketId).maybeSingle();
+          if (ticketError || !ticket || !reply) return sendJson(res, 400, { error: ticketError?.message || 'A valid ticket and reply are required.' });
+          let attachments: Array<{ filename: string; content: string }> = [];
+          if (body.attachmentPath && body.attachmentName) {
+            const { data: attachment, error } = await admin.storage.from('mail-attachments').download(String(body.attachmentPath));
+            if (error || !attachment || attachment.size > 10 * 1024 * 1024) return sendJson(res, 400, { error: 'Could not read the attachment, or it exceeds 10 MB.' });
+            attachments = [{ filename: String(body.attachmentName).slice(0, 180), content: Buffer.from(await attachment.arrayBuffer()).toString('base64') }];
+          }
+          const sent = await sendMail(env, { to: ticket.email, subject: `Re: ${ticket.subject}`, html: darkEmail(`<div style="font-family:Arial,sans-serif;background:#000;color:#fff;padding:32px"><div style="max-width:620px;margin:auto;border:1px solid #1f2933;padding:28px"><h2>${escapeHtml(ticket.subject)}</h2><p>Hi ${escapeHtml(ticket.name)},</p><div style="white-space:pre-wrap">${escapeHtml(reply)}</div></div></div>`), attachments });
+          if (!sent) return sendJson(res, 502, { error: 'The reply email could not be delivered.' });
+          const { error } = await admin.from('support_tickets').update({ status: 'replied', admin_reply: reply, reply_attachment_path: body.attachmentPath || null, reply_attachment_name: body.attachmentName || null, reply_attachment_type: body.attachmentType || null, replied_at: new Date().toISOString() }).eq('id', ticket.id);
+          sendJson(res, error ? 500 : 200, error ? { error: error.message } : { ok: true });
+          return;
+        }
 
         if (body.action === 'orders') {
           const { data, error } = await admin
@@ -598,7 +651,7 @@ const decodeDataUrl = (dataUrl: string) => {
 
 const sendMail = async (
   env: Record<string, string>,
-  message: { to: string; subject: string; html: string },
+  message: { to: string; subject: string; html: string; attachments?: Array<{ filename: string; content: string }> },
 ) => {
   if (!env.RESEND_API_KEY) {
     return false;

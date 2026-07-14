@@ -123,6 +123,35 @@ test('checkout warns students to verify their email before enrollment', () => {
   assert.match(app, />I Understand<\/button>/);
 });
 
+test('support tickets can be raised publicly and answered securely by admin', () => {
+  const app = read('src/App.tsx');
+  const supportApi = read('api/support.js');
+  const adminApi = read('api/admin.js');
+  const migration = read('migrations/20260714_support_tickets.sql');
+  const viteConfig = read('vite.config.ts');
+  const packageJson = read('package.json');
+
+  assert.match(app, />Support<\/button>/);
+  assert.match(app, /fetch\('\/api\/support'/);
+  assert.match(app, /supportSubmitting \? 'Creating ticket\.\.\.' : 'Raise Ticket'/);
+  assert.match(app, /Contact on Instagram/);
+  assert.match(app, /setAdminSection\('support'\)/);
+  assert.match(app, /Support Tickets/);
+  assert.match(app, /Reply to Ticket/);
+  assert.match(app, /Reply attachment \(optional, max 10 MB\)/);
+  assert.match(supportApi, /scope: 'support-ticket', limit: 5, windowMs: 60 \* 60_000/);
+  assert.match(supportApi, /from\('support_tickets'\)\.insert/);
+  assert.match(adminApi, /action === 'supportTickets'/);
+  assert.match(adminApi, /action === 'replySupportTicket'/);
+  assert.match(adminApi, /status: 'replied'/);
+  assert.match(adminApi, /attachments/);
+  assert.match(viteConfig, /server\.middlewares\.use\('\/api\/support'/);
+  assert.match(packageJson, /node --check api\/support\.js/);
+  assert.match(migration, /create table if not exists public\.support_tickets/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /revoke all on table public\.support_tickets from public, anon, authenticated/);
+});
+
 test('payment admin supports safe bulk deletion, date filters, and confirmed status changes', () => {
   const app = read('src/App.tsx');
   const adminApi = read('api/admin.js');

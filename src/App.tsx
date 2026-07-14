@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Eye, EyeOff, History, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
-import { supabase } from './lib/supabase';
 import aboutImageUrl from './assets/About us.webp';
 import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
 import fundedTraderThumbnail from './assets/course-funded-trader.webp';
@@ -124,6 +123,19 @@ type EmailCampaign = {
   attachment_name: string | null;
   attachment_type: string | null;
   created_at: string;
+};
+
+type SupportTicket = {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: 'open' | 'replied' | 'closed';
+  admin_reply: string | null;
+  reply_attachment_name: string | null;
+  created_at: string;
+  replied_at: string | null;
 };
 
 type Testimonial = {
@@ -284,6 +296,10 @@ function TestimonialCarousel({ testimonials, direction = 'forward', onSelect }: 
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportForm, setSupportForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [supportSubmitting, setSupportSubmitting] = useState(false);
+  const [supportStatus, setSupportStatus] = useState('');
   const [promoOpen, setPromoOpen] = useState(false);
   const [promoCopied, setPromoCopied] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -319,7 +335,7 @@ export default function App() {
   const [adminAuthStep, setAdminAuthStep] = useState<'passcode' | 'otp'>('passcode');
   const [adminOtp, setAdminOtp] = useState('');
   const [showAdminPasscode, setShowAdminPasscode] = useState(false);
-  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails'>('home');
+  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails' | 'support'>('home');
   const [adminStatus, setAdminStatus] = useState('');
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
   const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
@@ -364,6 +380,11 @@ export default function App() {
   const [campaignMessage, setCampaignMessage] = useState('');
   const [sendingCampaign, setSendingCampaign] = useState(false);
   const [adminCampaigns, setAdminCampaigns] = useState<EmailCampaign[]>([]);
+  const [adminSupportTickets, setAdminSupportTickets] = useState<SupportTicket[]>([]);
+  const [selectedSupportTicket, setSelectedSupportTicket] = useState<SupportTicket | null>(null);
+  const [supportReply, setSupportReply] = useState('');
+  const [supportReplyAttachment, setSupportReplyAttachment] = useState<File | null>(null);
+  const [sendingSupportReply, setSendingSupportReply] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null);
   const [campaignAttachmentUrl, setCampaignAttachmentUrl] = useState('');
   const [loadingCampaignAttachment, setLoadingCampaignAttachment] = useState(false);
@@ -730,6 +751,23 @@ export default function App() {
     return result as T;
   };
 
+  const submitSupportTicket = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSupportSubmitting(true);
+    setSupportStatus('');
+    try {
+      const response = await fetch('/api/support', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(supportForm) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not create the support ticket.');
+      setSupportForm({ name: '', email: '', subject: '', message: '' });
+      setSupportStatus(`Ticket ${result.ticketId} was created. We will reply by email.`);
+    } catch (error) {
+      setSupportStatus(error instanceof Error ? error.message : 'Could not create the support ticket.');
+    } finally {
+      setSupportSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     if (!adminOpen || adminUnlocked || import.meta.env.DEV) return;
     let cancelled = false;
@@ -738,7 +776,7 @@ export default function App() {
       try {
         await adminRequest('session');
         if (cancelled) return;
-        await Promise.all([loadAdminCourses(), loadAdminOrders(), loadAdminCoupons(), loadAdminTestimonials(), loadAdminCampaigns()]);
+        await Promise.all([loadAdminCourses(), loadAdminOrders(), loadAdminCoupons(), loadAdminTestimonials(), loadAdminCampaigns(), loadAdminSupportTickets()]);
         if (!cancelled) setAdminUnlocked(true);
       } catch {
         // No valid cookie: show the normal passcode form.
@@ -805,7 +843,7 @@ export default function App() {
       setAdminLoading(true);
       setAdminStatus('');
       await adminRequest('verifyOtp', { otp: adminOtp });
-      await Promise.all([loadAdminCourses(), loadAdminOrders(), loadAdminCoupons(), loadAdminTestimonials(), loadAdminCampaigns()]);
+      await Promise.all([loadAdminCourses(), loadAdminOrders(), loadAdminCoupons(), loadAdminTestimonials(), loadAdminCampaigns(), loadAdminSupportTickets()]);
       setAdminOtp('');
       setAdminAuthStep('passcode');
       setAdminUnlocked(true);
@@ -1076,6 +1114,42 @@ export default function App() {
     }
   };
 
+  const loadAdminSupportTickets = async () => {
+    try {
+      const response = await adminRequest<{ data: SupportTicket[] }>('supportTickets');
+      setAdminSupportTickets(response.data || []);
+    } catch (error) {
+      console.error('Could not load support tickets.', error);
+    }
+  };
+
+  const sendSupportReply = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedSupportTicket || !supportReply.trim()) return;
+    try {
+      setSendingSupportReply(true);
+      let attachmentPayload: Record<string, string> = {};
+      if (supportReplyAttachment) {
+        const upload = await adminRequest<{ path: string; signedUrl: string }>('prepareCampaignAttachment', { name: supportReplyAttachment.name, size: supportReplyAttachment.size });
+        const uploadBody = new FormData();
+        uploadBody.append('', supportReplyAttachment);
+        const uploadResponse = await fetch(upload.signedUrl, { method: 'PUT', headers: { 'x-upsert': 'false' }, body: uploadBody });
+        if (!uploadResponse.ok) throw new Error('Could not upload the reply attachment.');
+        attachmentPayload = { attachmentPath: upload.path, attachmentName: supportReplyAttachment.name, attachmentType: supportReplyAttachment.type || 'application/octet-stream' };
+      }
+      await adminRequest('replySupportTicket', { ticketId: selectedSupportTicket.id, reply: supportReply.trim(), ...attachmentPayload });
+      setAdminStatus('Support reply sent.');
+      setSelectedSupportTicket(null);
+      setSupportReply('');
+      setSupportReplyAttachment(null);
+      await loadAdminSupportTickets();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not send the support reply.');
+    } finally {
+      setSendingSupportReply(false);
+    }
+  };
+
   const openCampaignHistory = async (campaign: EmailCampaign) => {
     setSelectedCampaign(campaign);
     setCampaignAttachmentUrl('');
@@ -1240,6 +1314,7 @@ export default function App() {
               {link}
             </a>
           ))}
+          <button onClick={() => { setMenuOpen(false); setSupportOpen(true); setSupportStatus(''); }} className="font-podium text-4xl uppercase text-white">Support</button>
           <button onClick={() => { setMenuOpen(false); openCheckout(); }} className="bg-electric px-7 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline">
             Join Now
           </button>
@@ -1858,6 +1933,32 @@ export default function App() {
         </div>
       )}
 
+      {supportOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ink page-enter">
+          <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-ink/90 px-6 py-4 backdrop-blur-xl">
+            <button onClick={() => setSupportOpen(false)} className="flex h-10 w-10 items-center justify-center text-electric" aria-label="Back to website"><ArrowLeft className="h-5 w-5" /></button>
+            <div className="font-podium text-lg uppercase text-white">Support</div><div className="w-10" />
+          </header>
+          <main className="mx-auto grid w-full max-w-5xl flex-1 gap-8 px-6 py-10 lg:grid-cols-[1fr_320px] lg:px-8">
+            <form onSubmit={submitSupportTicket} className="space-y-4 border border-white/10 bg-black p-6 sm:p-8">
+              <div className="text-xs font-bold uppercase tracking-[0.25em] text-electric">Raise a ticket</div>
+              <h2 className="font-podium text-4xl uppercase text-white">How can we help?</h2>
+              <input required maxLength={100} value={supportForm.name} onChange={(event) => setSupportForm({ ...supportForm, name: event.target.value })} placeholder="Your name" className="h-12 w-full border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric" />
+              <input required type="email" maxLength={254} value={supportForm.email} onChange={(event) => setSupportForm({ ...supportForm, email: event.target.value })} placeholder="Your email address" className="h-12 w-full border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric" />
+              <input required maxLength={150} value={supportForm.subject} onChange={(event) => setSupportForm({ ...supportForm, subject: event.target.value })} placeholder="Ticket subject" className="h-12 w-full border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric" />
+              <textarea required maxLength={5000} rows={8} value={supportForm.message} onChange={(event) => setSupportForm({ ...supportForm, message: event.target.value })} placeholder="Describe your issue clearly..." className="w-full border border-white/10 bg-ink px-4 py-3 text-sm leading-relaxed text-white outline-none focus:border-electric" />
+              {supportStatus && <div className="border border-electric/25 bg-electric/10 p-3 text-sm text-white/75" role="status">{supportStatus}</div>}
+              <button disabled={supportSubmitting} className="inline-flex w-full items-center justify-center gap-2 bg-electric px-6 py-4 text-xs font-bold uppercase tracking-widest text-black disabled:opacity-50">{supportSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{supportSubmitting ? 'Creating ticket...' : 'Raise Ticket'}</button>
+            </form>
+            <aside className="h-fit border border-electric/25 bg-electric/[0.06] p-6">
+              <Instagram className="h-8 w-8 text-electric" /><h3 className="mt-5 font-podium text-2xl uppercase text-white">Contact on Instagram</h3>
+              <p className="mt-3 text-sm leading-relaxed text-white/55">For quick general questions, message Trading Boy directly on Instagram.</p>
+              <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" className="mt-6 inline-flex w-full items-center justify-center gap-2 border border-electric px-4 py-3 text-xs font-bold uppercase tracking-widest text-electric">Open Instagram <ArrowUpRight className="h-4 w-4" /></a>
+            </aside>
+          </main>
+        </div>
+      )}
+
       {selectedTestimonial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6 backdrop-blur-sm page-enter" onClick={() => setSelectedTestimonial(null)}>
           <div className="relative w-full max-w-2xl bg-ink p-8 border border-white/10 shadow-glow" onClick={(e) => e.stopPropagation()}>
@@ -2057,6 +2158,10 @@ export default function App() {
                         </p>
                       </div>
                     </button>
+                    <button onClick={() => setAdminSection('support')} className="group relative flex min-h-[330px] flex-col overflow-hidden border border-white/10 border-t-electric/50 bg-[#090b0d] p-7 text-left transition-all duration-300 hover:-translate-y-1 hover:border-electric/40">
+                      <div className="relative mb-8 flex w-full justify-between"><div className="flex h-12 w-12 items-center justify-center border border-white/10 bg-black text-white group-hover:text-electric"><MessageSquareQuote className="h-6 w-6" /></div><div className="flex min-w-9 items-center justify-center border border-electric/25 bg-electric/10 px-2 py-1 text-xs font-bold text-electric">{adminSupportTickets.filter((ticket) => ticket.status === 'open').length}</div></div>
+                      <div className="relative"><div className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-electric/70">Customer care</div><h3 className="mb-4 font-podium text-2xl font-semibold text-white">Support Tickets</h3><p className="text-sm leading-relaxed text-white/60">Review customer questions and reply by email with an optional attachment.</p></div>
+                    </button>
                   </div>
                 ) : (
                   <div>
@@ -2067,7 +2172,7 @@ export default function App() {
                       </button>
                       <div className="hidden sm:block h-6 w-px bg-white/20 shrink-0"></div>
                       <div className="font-podium text-xl tracking-wider uppercase text-white break-words">
-                        {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : adminSection === 'testimonials' ? 'Testimonial Management' : adminSection === 'emails' ? 'Email Campaigns' : 'Coupon Management'}
+                        {adminSection === 'courses' ? 'Course Management' : adminSection === 'payments' ? 'Payment Management' : adminSection === 'testimonials' ? 'Testimonial Management' : adminSection === 'emails' ? 'Email Campaigns' : adminSection === 'support' ? 'Support Tickets' : 'Coupon Management'}
                       </div>
                     </div>
                     {adminStatus && <div className="mb-5 border border-white/10 bg-black p-4 font-inter text-sm text-white/70">{adminStatus}</div>}
@@ -2482,6 +2587,16 @@ export default function App() {
                     </aside>
                   </div>
                   )
+                ) : adminSection === 'support' ? (
+                  <div className="space-y-4">
+                    <button onClick={loadAdminSupportTickets} className="inline-flex items-center gap-2 border border-white/15 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white"><RefreshCcw className="h-4 w-4" /> Refresh Tickets</button>
+                    {adminSupportTickets.length === 0 ? <div className="border border-white/10 bg-black p-8 text-sm text-white/50">No support tickets yet.</div> : adminSupportTickets.map((ticket) => (
+                      <button key={ticket.id} onClick={() => { setSelectedSupportTicket(ticket); setSupportReply(ticket.admin_reply || ''); setSupportReplyAttachment(null); }} className="block w-full border border-white/10 bg-black p-5 text-left transition hover:border-electric/40">
+                        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-xs uppercase tracking-widest text-electric">{ticket.subject}</div><div className="mt-2 font-bold text-white">{ticket.name} · {ticket.email}</div></div><span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${ticket.status === 'open' ? 'bg-amber-400/15 text-amber-300' : 'bg-emerald-400/15 text-emerald-300'}`}>{ticket.status}</span></div>
+                        <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-white/60">{ticket.message}</p><div className="mt-3 text-xs text-white/35">{new Date(ticket.created_at).toLocaleString('en-IN')}</div>
+                      </button>
+                    ))}
+                  </div>
                 ) : (
                   <div className="space-y-5">
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -2633,6 +2748,18 @@ export default function App() {
         </div>
       )}
 
+      {selectedSupportTicket && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/85 px-4 py-8" onClick={() => setSelectedSupportTicket(null)}>
+          <form onSubmit={sendSupportReply} className="w-full max-w-2xl space-y-5 border border-electric/30 bg-ink p-6 shadow-glow sm:p-8" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4"><div><div className="text-xs uppercase tracking-[0.25em] text-electric">Support Ticket</div><h3 className="mt-2 font-podium text-3xl uppercase text-white">{selectedSupportTicket.subject}</h3></div><button type="button" onClick={() => setSelectedSupportTicket(null)} aria-label="Close ticket"><X className="h-6 w-6" /></button></div>
+            <div className="border border-white/10 bg-black p-4"><div className="font-bold text-white">{selectedSupportTicket.name} · {selectedSupportTicket.email}</div><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-white/65">{selectedSupportTicket.message}</p></div>
+            <textarea required maxLength={5000} rows={8} value={supportReply} onChange={(event) => setSupportReply(event.target.value)} placeholder="Write your reply..." className="w-full border border-white/10 bg-black px-4 py-3 text-sm leading-relaxed text-white outline-none focus:border-electric" />
+            <label className="flex min-h-16 cursor-pointer items-center gap-3 border border-dashed border-white/20 bg-black px-4 text-sm text-white/60"><Paperclip className="h-5 w-5 text-electric" /><span className="min-w-0 flex-1 truncate">{supportReplyAttachment ? supportReplyAttachment.name : 'Reply attachment (optional, max 10 MB)'}</span><input type="file" className="sr-only" onChange={(event) => { const file = event.target.files?.[0] || null; if (file && file.size > 10 * 1024 * 1024) { setAdminStatus('Attachment must be 10 MB or smaller.'); event.target.value = ''; return; } setSupportReplyAttachment(file); }} /></label>
+            <button disabled={sendingSupportReply || !supportReply.trim()} className="inline-flex w-full items-center justify-center gap-2 bg-electric px-6 py-4 text-xs font-bold uppercase tracking-widest text-black disabled:opacity-40">{sendingSupportReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{sendingSupportReply ? 'Sending reply...' : 'Reply to Ticket'}</button>
+          </form>
+        </div>
+      )}
+
       {selectedCampaign && adminOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm" onClick={() => setSelectedCampaign(null)}>
           <section className="flex max-h-[88vh] w-full max-w-3xl flex-col border border-electric/30 bg-[#090b0d] shadow-glow" role="dialog" aria-modal="true" aria-labelledby="campaign-detail-title" onClick={(event) => event.stopPropagation()}>
@@ -2699,7 +2826,7 @@ export default function App() {
         </div>
       )}
 
-      {promoOpen && !adminOpen && !checkoutOpen && !courseDetailsOpen && (!window.location.hash || window.location.hash === '#home') && (
+      {promoOpen && !adminOpen && !checkoutOpen && !courseDetailsOpen && !supportOpen && (!window.location.hash || window.location.hash === '#home') && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md" onClick={() => setPromoOpen(false)}>
           <div className="relative w-full max-w-lg overflow-hidden border border-electric/35 bg-[#07131c] p-6 shadow-[0_0_80px_rgba(37,174,244,0.3)] sm:p-9" onClick={(event) => event.stopPropagation()}>
             <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-electric/20 blur-3xl" />

@@ -297,6 +297,34 @@ export default async function handler(req, res) {
     return json(res, 200, { path, signedUrl: data.signedUrl });
   }
 
+  if (action === 'supportTickets') {
+    const { data, error } = await admin.from('support_tickets').select('id, name, email, subject, message, status, admin_reply, reply_attachment_name, created_at, replied_at').order('created_at', { ascending: false }).limit(500);
+    if (error) return json(res, 500, { error: error.message });
+    return json(res, 200, { data });
+  }
+
+  if (action === 'replySupportTicket') {
+    if (!isUuid(body.ticketId)) return json(res, 400, { error: 'Invalid support ticket.' });
+    const reply = cleanText(body.reply, 5000);
+    const attachmentPath = cleanText(body.attachmentPath, 300);
+    const attachmentName = cleanText(body.attachmentName, 180);
+    const attachmentType = cleanText(body.attachmentType, 120) || 'application/octet-stream';
+    if (!reply) return json(res, 400, { error: 'A reply is required.' });
+    const { data: ticket, error: ticketError } = await admin.from('support_tickets').select('id, name, email, subject').eq('id', body.ticketId).maybeSingle();
+    if (ticketError || !ticket) return json(res, 404, { error: 'Support ticket not found.' });
+    let attachments = [];
+    if (attachmentPath && attachmentName) {
+      const { data: attachment, error: attachmentError } = await admin.storage.from('mail-attachments').download(attachmentPath);
+      if (attachmentError || !attachment || attachment.size > 10 * 1024 * 1024) return json(res, 400, { error: 'Could not read the attachment, or it exceeds 10 MB.' });
+      attachments = [{ filename: attachmentName, content: Buffer.from(await attachment.arrayBuffer()).toString('base64') }];
+    }
+    const delivery = await sendEmail({ to: ticket.email, subject: `Re: ${ticket.subject}`, html: darkEmail(`<div style="font-family:Arial,sans-serif;background:#000;color:#fff;padding:32px"><div style="max-width:620px;margin:auto;border:1px solid #1f2933;padding:28px"><div style="color:#25aef4;letter-spacing:3px;text-transform:uppercase;font-size:12px">Trading Boy Support</div><h2>${escapeHtml(ticket.subject)}</h2><p>Hi ${escapeHtml(ticket.name)},</p><div style="white-space:pre-wrap;color:#cbd5e1;line-height:1.7">${escapeHtml(reply)}</div></div></div>`), attachments });
+    if (!delivery.ok) return json(res, 502, { error: 'The reply email could not be delivered.' });
+    const { error: updateError } = await admin.from('support_tickets').update({ status: 'replied', admin_reply: reply, reply_attachment_path: attachmentPath || null, reply_attachment_name: attachmentName || null, reply_attachment_type: attachmentPath ? attachmentType : null, replied_at: new Date().toISOString() }).eq('id', ticket.id);
+    if (updateError) return json(res, 500, { error: updateError.message });
+    return json(res, 200, { ok: true });
+  }
+
   if (action === 'coupons') {
     const { data, error } = await admin
       .from('coupons')
