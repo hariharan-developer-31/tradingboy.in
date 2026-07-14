@@ -204,7 +204,14 @@ export default async function handler(req, res) {
       return;
     }
 
-    json(res, 200, { data });
+    const ordersWithProofUrls = await Promise.all((data || []).map(async (order) => {
+      if (!order.payment_screenshot_path) return { ...order, payment_screenshot_url: null };
+      const { data: signedProof, error: signedProofError } = await admin.storage
+        .from('payment-proofs')
+        .createSignedUrl(order.payment_screenshot_path, 10 * 60);
+      return { ...order, payment_screenshot_url: signedProofError ? null : signedProof?.signedUrl || null };
+    }));
+    json(res, 200, { data: ordersWithProofUrls });
     return;
   }
 

@@ -53,6 +53,7 @@ test('local dev admin API returns payment proof and coupon metadata', () => {
   assert.match(viteConfig, /payment_screenshot_path, remarks, created_at/);
   assert.match(viteConfig, /course_name, discount_type, discount_value, active, expires_at, max_uses, current_uses, created_at/);
   assert.match(viteConfig, /body\.action === 'deleteCoupon'/);
+  assert.match(viteConfig, /createSignedUrl\(order\.payment_screenshot_path, 10 \* 60\)/);
 });
 
 test('admin tables keep empty-state cells aligned with visible columns', () => {
@@ -60,7 +61,23 @@ test('admin tables keep empty-state cells aligned with visible columns', () => {
 
   assert.match(app, /<td colSpan=\{6\}[^>]*>\s*No coupons found\./);
   assert.match(app, /colSpan=\{9\}>No payments found\./);
-  assert.match(app, /order\.payment_screenshot_path && supabase/);
+  assert.match(app, /order\.payment_screenshot_url \?/);
+});
+
+test('checkout resets to the top between steps and exposes stored proofs securely', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+  const checkoutApi = read('api/checkout.js');
+
+  assert.match(app, /checkoutScrollRef\.current\?\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/);
+  assert.match(app, /\[checkoutOpen, joinStep\]/);
+  assert.match(app, /validatingCoupon \? <><Loader2[^>]*animate-spin/);
+  assert.match(app, /h-44 w-44 sm:h-52 sm:w-52/);
+  assert.match(app, /className="flex h-12 w-full/);
+  assert.match(app, /href=\{order\.payment_screenshot_url\}/);
+  assert.doesNotMatch(app, /getPublicUrl\(order\.payment_screenshot_path\)/);
+  assert.match(adminApi, /createSignedUrl\(order\.payment_screenshot_path, 10 \* 60\)/);
+  assert.match(checkoutApi, /p_payment_screenshot_path: paymentScreenshotPath/);
 });
 
 test('payment admin supports safe bulk deletion, date filters, and confirmed status changes', () => {

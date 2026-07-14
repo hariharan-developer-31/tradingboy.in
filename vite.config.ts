@@ -301,7 +301,18 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             )
             .order('created_at', { ascending: false });
 
-          sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
+          if (error) {
+            sendJson(res, 500, { error: error.message });
+            return;
+          }
+          const ordersWithProofUrls = await Promise.all((data || []).map(async (order: any) => {
+            if (!order.payment_screenshot_path) return { ...order, payment_screenshot_url: null };
+            const { data: signedProof, error: signedProofError } = await admin.storage
+              .from('payment-proofs')
+              .createSignedUrl(order.payment_screenshot_path, 10 * 60);
+            return { ...order, payment_screenshot_url: signedProofError ? null : signedProof?.signedUrl || null };
+          }));
+          sendJson(res, 200, { data: ordersWithProofUrls });
           return;
         }
 

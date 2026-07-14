@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
+import { FormEvent, useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Copy, CreditCard, Edit3, Eye, EyeOff, History, Instagram, Loader2, LogOut, Mail, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Smartphone, Ticket, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import aboutImageUrl from './assets/About us.webp';
@@ -100,6 +100,7 @@ type CourseOrder = {
   final_amount: number;
   payment_status: string;
   payment_screenshot_path?: string | null;
+  payment_screenshot_url?: string | null;
   remarks?: string | null;
   created_at: string;
 };
@@ -370,6 +371,7 @@ export default function App() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
   const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const checkoutScrollRef = useRef<HTMLDivElement>(null);
   const [courseForm, setCourseForm] = useState<AdminCourseForm>({
     id: null,
     title: '',
@@ -537,6 +539,14 @@ export default function App() {
       setPaymentSeconds((current) => Math.max(0, current - 1));
     }, 1000);
     return () => window.clearInterval(interval);
+  }, [checkoutOpen, joinStep]);
+
+  useEffect(() => {
+    if (!checkoutOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      checkoutScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [checkoutOpen, joinStep]);
 
   useEffect(() => {
@@ -1576,7 +1586,7 @@ export default function App() {
       )}
 
       {checkoutOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-12 sm:p-8 overflow-y-auto page-enter">
+        <div ref={checkoutScrollRef} className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-6 sm:p-8 overflow-y-auto page-enter">
           <div className="w-full max-w-3xl border border-white/10 bg-black p-6 shadow-glow sm:p-8 smooth-card my-auto">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
@@ -1665,7 +1675,7 @@ export default function App() {
                   <div className="flex gap-2">
                     <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} placeholder="Coupon code (optional)" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric uppercase" />
                     <button type="button" onClick={validateCouponCode} disabled={validatingCoupon || !couponInput} className="bg-white/5 border border-white/10 px-6 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:bg-white/10 disabled:opacity-50">
-                      Apply
+                      {validatingCoupon ? <><Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Applying...</> : 'Apply'}
                     </button>
                   </div>
                 )}
@@ -1689,34 +1699,34 @@ export default function App() {
             {joinStep === 'payment' && (
               <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
                 <div className="border border-white/10 bg-white p-4">
-                  <img src={qrCodeUrl} alt="UPI payment QR code" className="mx-auto h-60 w-60" />
+                  <img src={qrCodeUrl} alt="UPI payment QR code" className="mx-auto h-44 w-44 sm:h-52 sm:w-52" />
                 </div>
                 <div className="font-inter">
                   <div className="text-xs uppercase tracking-[0.3em] text-electric">Pay exactly</div>
                   <div className="mt-3 text-4xl font-bold text-white">{money(selectedOfferPrice)}</div>
                   <div className="mt-4 border border-white/10 bg-ink p-4 text-sm text-white/70">
                     <div className="text-white/45">UPI ID</div>
-                    <div className="mt-1 text-lg font-bold text-white">{UPI_ID}</div>
+                    <div className="mt-1 text-base font-bold text-white sm:text-lg">{selectedUpiId}</div>
                   </div>
                   <div className="mt-4 text-sm leading-relaxed text-white/60">
                     Timer: {Math.floor(paymentSeconds / 60)}:{String(paymentSeconds % 60).padStart(2, '0')}. Keep this page open after paying.
                   </div>
                   <div className="mt-6 flex flex-col gap-3">
-                    <a href={getUpiUrl('gpay')} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+                    <a href={getUpiUrl('gpay')} className="flex h-12 w-full items-center justify-center rounded-lg bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
                       <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" className="h-6 object-contain" />
                     </a>
 
-                    <a href={getUpiUrl('phonepe')} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-[#5f259f] shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+                    <a href={getUpiUrl('phonepe')} className="flex h-12 w-full items-center justify-center rounded-lg bg-[#5f259f] shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
                       <span className="flex items-center gap-2 font-bold tracking-tight text-white text-lg">
                         <Smartphone className="h-6 w-6" /> PhonePe
                       </span>
                     </a>
 
-                    <a href={getUpiUrl('paytm')} className="flex h-[60px] w-full items-center justify-center rounded-xl bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+                    <a href={getUpiUrl('paytm')} className="flex h-12 w-full items-center justify-center rounded-lg bg-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
                       <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-5 object-contain" />
                     </a>
 
-                    <a href={getUpiUrl('generic')} className="flex h-[60px] w-full items-center justify-center rounded-xl border border-white/20 bg-transparent transition-all hover:bg-white/5 hover:scale-[1.02]">
+                    <a href={getUpiUrl('generic')} className="flex h-12 w-full items-center justify-center rounded-lg border border-white/20 bg-transparent transition-all hover:bg-white/5 hover:scale-[1.02]">
                       <span className="font-inter font-bold text-white">Other UPI Apps</span>
                     </a>
                   </div>
@@ -2547,9 +2557,9 @@ export default function App() {
                                 <td className="px-4 py-5 text-white/70"><span className="block truncate" title={order.course_name || '-'}>{order.course_name || '-'}</span></td>
                                 <td className="px-4 py-5 font-bold text-white">{money(order.final_amount)}</td>
                                 <td className="px-4 py-5">
-                                  {order.payment_screenshot_path && supabase ? (
+                                  {order.payment_screenshot_url ? (
                                     <a 
-                                      href={supabase?.storage.from('payment-proofs').getPublicUrl(order.payment_screenshot_path).data.publicUrl} 
+                                      href={order.payment_screenshot_url}
                                       target="_blank" 
                                       rel="noopener noreferrer" 
                                       className="text-electric hover:underline text-xs font-bold uppercase tracking-widest inline-block mb-1"
