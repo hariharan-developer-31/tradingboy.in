@@ -102,10 +102,11 @@ test('checkout and payment confirmation render as dedicated pages, not popup win
   assert.match(checkout, /fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ink/);
   assert.match(checkout, /sticky top-0[\s\S]*Join Course/);
   assert.match(checkout, /<main className="mx-auto w-full max-w-4xl/);
-  assert.match(checkout, /paymentPromptOpen \? \(/);
+  assert.match(checkout, /paymentPromptOpen && \(/);
   assert.match(checkout, /Did you complete the payment\?/);
   assert.doesNotMatch(checkout, /items-start justify-center bg-black\/80/);
-  assert.doesNotMatch(app, /paymentPromptOpen && \(\s*<div className="fixed inset-0/);
+  assert.match(checkout, /paymentPromptOpen && \(/);
+  assert.match(checkout, /bg-black\/65 px-5 backdrop-blur-md/);
 });
 
 test('checkout back actions confirm cancellation and success has a centered website exit', () => {
@@ -125,7 +126,8 @@ test('payment page uses a six-minute timer, centered QR, and no duplicate final-
   assert.match(app, /const PAYMENT_TIME_SECONDS = 6 \* 60/);
   assert.match(app, /useState\(PAYMENT_TIME_SECONDS\)/);
   assert.match(app, /PAYMENT_TIME_SECONDS - paymentSeconds/);
-  assert.match(app, /promptTimes = \[60, 120, 180, 240, 300, 360\]/);
+  assert.match(app, /PAYMENT_TIME_SECONDS \/ 30/);
+  assert.match(app, /\(index \+ 1\) \* 30/);
   assert.match(app, /mx-auto w-fit border border-white\/10 bg-white p-5 sm:p-6/);
   assert.match(app, /block h-44 w-44 sm:h-52 sm:w-52/);
   assert.match(app, /joinStep !== 'proof' && joinStep !== 'thanks'/);
