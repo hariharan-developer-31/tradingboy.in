@@ -2664,6 +2664,10 @@ export default function App() {
                 <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" /> Limited Course Offer
               </div>
               <div className="mt-7 font-inter text-xs font-bold uppercase tracking-[0.3em] text-electric">Unlock your trading journey</div>
+              <div className="mt-4 flex items-center justify-between border border-electric/40 bg-electric/[0.08] px-4 py-3 font-inter shadow-[0_0_28px_rgba(37,174,244,0.22)]">
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-electric/75">Offer ends in</span>
+                <span className="font-mono text-lg font-bold tracking-widest text-electric drop-shadow-[0_0_8px_rgba(37,174,244,0.8)]">{String(Math.floor(promoSeconds / 60)).padStart(2, '0')}:{String(promoSeconds % 60).padStart(2, '0')}</span>
+              </div>
               <h2 className="mt-3 max-w-md font-podium text-[2.2rem] font-bold uppercase leading-[0.95] text-white">
                 Save <span className="text-electric">₹1,500</span> on your course
               </h2>
@@ -2684,11 +2688,7 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="mt-5 flex items-center justify-between border border-amber-400/25 bg-amber-400/[0.06] px-4 py-3 font-inter">
-                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/70">Offer ends in</span>
-                <span className="font-mono text-lg font-bold tracking-widest text-amber-300">{String(Math.floor(promoSeconds / 60)).padStart(2, '0')}:{String(promoSeconds % 60).padStart(2, '0')}</span>
-              </div>
-              <button disabled={promoSeconds === 0} onClick={() => { setPromoOpen(false); setCouponInput(PROMO_COUPON_CODE); setAppliedCoupon(null); setCouponError(''); window.location.hash = 'course'; }} className="group mt-3 flex w-full items-center justify-center bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.18em] text-black shadow-glow transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-40 sm:py-5">
+              <button disabled={promoSeconds === 0} onClick={() => { setPromoOpen(false); setCouponInput(PROMO_COUPON_CODE); setAppliedCoupon(null); setCouponError(''); window.location.hash = 'course'; }} className="group mt-5 flex w-full items-center justify-center bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-[0.18em] text-black shadow-glow transition hover:bg-skyline disabled:cursor-not-allowed disabled:opacity-40 sm:py-5">
                 {promoSeconds === 0 ? 'Offer Ended' : 'Claim Now'}
                 <ArrowUpRight className="ml-2 h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </button>
