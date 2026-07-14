@@ -330,7 +330,7 @@ export default function App() {
   const [paymentScreenshot, setPaymentScreenshot] = useState<{ dataUrl: string; name: string } | null>(null);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'error'>('idle');
   const [submitError, setSubmitError] = useState('');
-  const [createdOrderId, setCreatedOrderId] = useState('');
+  const [, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminSessionChecking, setAdminSessionChecking] = useState(() => window.location.hash === '#admin' && !import.meta.env.DEV);
@@ -1977,8 +1977,13 @@ export default function App() {
                   <p className="mt-4 leading-relaxed text-white/70">
                     <strong className="font-bold text-white">It is pending for admin verification.</strong> Once verified, your course access and payment confirmation will be sent to your registered email address within 12 hours. Please also check your spam folder.
                   </p>
-                  {createdOrderId && <p className="mt-4 text-xs text-white/45">Order ID: {createdOrderId}</p>}
-                  <button onClick={closeHashPage} className="mt-7 inline-flex min-h-12 w-full items-center justify-center bg-electric px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline sm:w-auto sm:min-w-56">
+                  <p className="mt-5 text-sm leading-relaxed text-white/65">If you do not receive your course access email within 12 hours, contact us on Instagram.</p>
+                  <a href="https://www.instagram.com/trading_boy_tamil/?hl=en" target="_blank" rel="noreferrer" className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-electric px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-black transition hover:bg-skyline sm:w-auto sm:min-w-64">
+                    <Instagram className="h-4 w-4" />
+                    Contact on Instagram
+                    <ArrowUpRight className="h-4 w-4" />
+                  </a>
+                  <button onClick={closeHashPage} className="mx-auto mt-5 block font-inter text-xs font-bold uppercase tracking-[0.16em] text-white/60 transition hover:text-electric">
                     Back to Website
                   </button>
                 </div>

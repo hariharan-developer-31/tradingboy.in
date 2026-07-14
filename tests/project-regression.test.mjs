@@ -116,7 +116,11 @@ test('checkout back actions confirm cancellation and success has a centered webs
   assert.match(app, /Are you sure you want to cancel\?/);
   assert.match(app, /Your payment is paid successfully\./);
   assert.match(app, /It is pending for admin verification\./);
+  assert.match(app, /If you do not receive your course access email within 12 hours, contact us on Instagram\./);
+  assert.match(app, />\s*Contact on Instagram\s*</);
+  assert.doesNotMatch(app, /Order ID: \{createdOrderId\}/);
   assert.match(app, /min-h-\[calc\(100vh-9rem\)\] items-center justify-center/);
+  assert.match(app, /mx-auto mt-5 block font-inter text-xs/);
   assert.match(app, />\s*Back to Website\s*</);
 });
 
