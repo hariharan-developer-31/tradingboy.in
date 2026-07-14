@@ -116,11 +116,14 @@ test('payment page uses a six-minute timer, centered QR, and no duplicate final-
 test('checkout warns students to verify their email before enrollment', () => {
   const app = read('src/App.tsx');
 
-  assert.match(app, /type="email"[^>]*onFocus=\{\(\) => setEmailNoticeOpen\(true\)\}/);
+  assert.match(app, /ref=\{enrollmentEmailRef\}[^>]*type="email"/);
+  assert.match(app, /if \(!emailNoticeShown\) \{ setEmailNoticeShown\(true\); setEmailNoticeOpen\(true\); \}/);
   assert.match(app, /emailNoticeOpen && checkoutOpen && joinStep === 'details'/);
   assert.match(app, /role="dialog" aria-modal="true" aria-labelledby="email-notice-title"/);
   assert.match(app, /Your course access and payment updates will be sent only to this email address\./);
   assert.match(app, />I Understand<\/button>/);
+  assert.match(app, /requestAnimationFrame\(\(\) => enrollmentEmailRef\.current\?\.focus\(\)\)/);
+  assert.match(app, /onClick=\{dismissEmailNotice\}/);
 });
 
 test('support tickets can be raised publicly and answered securely by admin', () => {
