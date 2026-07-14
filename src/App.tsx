@@ -13,6 +13,13 @@ const DEFAULT_COURSE = 'Complete Forex Mastery';
 const PROMO_COUPON_CODE = 'TB1500';
 const PAYMENT_TIME_SECONDS = 6 * 60;
 
+const createUpiReference = () => {
+  const randomPart = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID().replace(/-/g, '').slice(0, 20)
+    : Math.random().toString(36).slice(2, 14);
+  return `TB${Date.now().toString(36)}${randomPart}`.slice(0, 35);
+};
+
 const fallbackCourses = [
   {
     id: 'complete-forex-mastery',
@@ -328,6 +335,7 @@ export default function App() {
   const [paymentPromptOpen, setPaymentPromptOpen] = useState(false);
   const [promptedAt, setPromptedAt] = useState<number[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<{ dataUrl: string; name: string } | null>(null);
+  const paymentReferenceRef = useRef(createUpiReference());
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'error'>('idle');
   const [submitError, setSubmitError] = useState('');
   const [, setCreatedOrderId] = useState('');
@@ -440,13 +448,15 @@ export default function App() {
     const params = new URLSearchParams({
       pa: courseUpiId,
       pn: 'Trading Boy Academy',
+      mc: '0000',
+      tr: paymentReferenceRef.current,
       am: selectedOfferPrice.toString(),
       cu: 'INR',
       tn: selectedCourse.title,
     });
     const query = params.toString();
     switch (app) {
-      case 'gpay': return `tez://upi/pay?${query}`;
+      case 'gpay': return `gpay://upi/pay?${query}`;
       case 'phonepe': return `phonepe://pay?${query}`;
       case 'paytm': return `paytmmp://pay?${query}`;
       case 'generic':
@@ -641,6 +651,7 @@ export default function App() {
   }, [joinStep, paymentSeconds, promptedAt]);
 
   const openCheckout = (courseName = selectedCourse.title) => {
+    paymentReferenceRef.current = createUpiReference();
     setJoinStep('details');
     setPaymentSeconds(PAYMENT_TIME_SECONDS);
     setPromptedAt([]);
