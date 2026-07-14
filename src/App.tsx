@@ -1469,9 +1469,13 @@ export default function App() {
                 <p className="max-w-sm text-sm leading-relaxed text-white/50">Feedback from Trading Boy members learning disciplined, risk-first execution.</p>
               </div>
               {testimonials.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <>
+                <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-electric md:hidden">
+                  <ArrowUpRight className="h-4 w-4 rotate-45" /> Swipe to see more reviews
+                </div>
+                <div className="scrollbar-hide -mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-3 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
                   {testimonials.map((testimonial) => (
-                    <button key={testimonial.id} type="button" onClick={() => setSelectedTestimonial(testimonial)} className="smooth-card flex h-full min-w-0 flex-col border border-white/10 bg-black p-5 text-left hover:border-electric/35">
+                    <button key={testimonial.id} type="button" onClick={() => setSelectedTestimonial(testimonial)} className="smooth-card flex h-full w-[82vw] max-w-[360px] shrink-0 snap-center flex-col border border-white/10 bg-black p-5 text-left hover:border-electric/35 md:w-auto md:max-w-none md:min-w-0">
                       <MessageSquareQuote className="h-6 w-6 text-electric" />
                       <p className="mt-5 text-sm leading-relaxed text-white/75">“{testimonial.quote}”</p>
                       {testimonial.photo_url && (
@@ -1486,6 +1490,7 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+                </>
               ) : (
                 <div className="border border-white/10 bg-black p-6 text-sm text-white/45">No member reviews are published yet.</div>
               )}

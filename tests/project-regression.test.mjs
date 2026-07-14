@@ -218,6 +218,9 @@ test('course details have shareable entry files, member reviews, and Instagram s
   assert.match(app, /testimonials\.map\(\(testimonial\) =>/);
   assert.match(app, /testimonial\.photo_url/);
   assert.match(app, /Message on Instagram/);
+  assert.match(app, /Swipe to see more reviews/);
+  assert.match(app, /snap-x snap-mandatory/);
+  assert.match(app, /w-\[82vw\][^\"]*snap-center/);
   assert.doesNotMatch(app, /message trading_boy_tamil on Instagram/);
   assert.match(forexEntry, /#course\/forex-mastery/);
   assert.match(fundedEntry, /#course\/funded-trader-blueprint/);
