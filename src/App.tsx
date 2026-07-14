@@ -334,12 +334,12 @@ export default function App() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminRefreshing, setAdminRefreshing] = useState<'payments' | 'support' | null>(null);
-  const [adminSessionChecking, setAdminSessionChecking] = useState(() => window.location.hash === '#admin' && !import.meta.env.DEV);
+  const [adminSessionChecking, setAdminSessionChecking] = useState(() => window.location.hash.startsWith('#admin') && !import.meta.env.DEV);
   const [adminPasscode, setAdminPasscode] = useState('');
   const [adminAuthStep, setAdminAuthStep] = useState<'passcode' | 'otp'>('passcode');
   const [adminOtp, setAdminOtp] = useState('');
   const [showAdminPasscode, setShowAdminPasscode] = useState(false);
-  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails' | 'support'>('home');
+  const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails' | 'support'>(() => window.location.hash === '#admin/payments' ? 'payments' : 'home');
   const [adminStatus, setAdminStatus] = useState('');
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
   const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
@@ -544,7 +544,9 @@ export default function App() {
         return;
       }
       allowCheckoutExitRef.current = false;
-      setAdminOpen(window.location.hash === '#admin');
+      const wantsAdmin = window.location.hash.startsWith('#admin');
+      setAdminOpen(wantsAdmin);
+      if (window.location.hash === '#admin/payments') setAdminSection('payments');
       setCheckoutOpen(wantsCheckout);
     };
     syncHashPage();

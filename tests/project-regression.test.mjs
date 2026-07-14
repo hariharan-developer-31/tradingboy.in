@@ -56,6 +56,24 @@ test('checkout loads live public courses and resolves legacy course names', () =
   assert.match(viteConfig, /server\.middlewares\.use\('\/api\/courses'/);
 });
 
+test('checkout emails both the student and admin with a secure payment verification link', () => {
+  const checkout = read('api/checkout.js');
+  const vite = read('vite.config.ts');
+  const app = read('src/App.tsx');
+
+  assert.match(checkout, /const ADMIN_EMAIL = 'hari\.entrepreneur1@gmail\.com'/);
+  assert.match(checkout, /Promise\.all\(\[/);
+  assert.match(checkout, /to: ADMIN_EMAIL/);
+  assert.match(checkout, /A new student completed the payment/);
+  assert.match(checkout, /View &amp; Verify Payment/);
+  assert.match(checkout, /https:\/\/tradingboy\.in\/#admin\/payments/);
+  assert.match(checkout, /adminEmailSent: Boolean\(adminEmailSent\)/);
+  assert.match(vite, /to: 'hari\.entrepreneur1@gmail\.com'/);
+  assert.match(vite, /html: adminPaymentHtml\(order\)/);
+  assert.match(app, /window\.location\.hash\.startsWith\('#admin'\)/);
+  assert.match(app, /window\.location\.hash === '#admin\/payments' \? 'payments' : 'home'/);
+});
+
 test('local dev admin API returns payment proof and coupon metadata', () => {
   const viteConfig = read('vite.config.ts');
 

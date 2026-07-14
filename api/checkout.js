@@ -4,6 +4,8 @@ import { cleanText, decodeJpegDataUrl, escapeHtml, handleApiError, isCouponCode,
 
 const COURSE_NAME = 'Complete Forex Mastery';
 const COURSE_PRICE = 7199;
+const ADMIN_EMAIL = 'hari.entrepreneur1@gmail.com';
+const ADMIN_PAYMENTS_URL = 'https://tradingboy.in/#admin/payments';
 const COURSES = [
   { name: COURSE_NAME, price: COURSE_PRICE },
   { name: 'Blueprint to Become a Funded Trader', price: 5399 },
@@ -68,6 +70,25 @@ const receiptHtml = (order) => darkEmail(`
         <tr><td style="padding:8px 0;color:#9ca3af">Payment status</td><td style="padding:8px 0;text-align:right">${order.payment_status}</td></tr>
       </table>
       <p style="margin-top:24px;color:#9ca3af">From: admin@tradingboy.in</p>
+    </div>
+  </div>
+`);
+
+const adminPaymentHtml = (order) => darkEmail(`
+  <div style="font-family:Arial,sans-serif;background:#000000;color:#ffffff;padding:32px 16px">
+    <div style="max-width:620px;margin:0 auto;background:#0f1115;border:1px solid #1f2933;padding:32px">
+      <img src="https://tradingboy.in/logo.png" alt="Trading Boy Academy" style="height:52px;width:auto;margin:0 0 24px;display:block" />
+      <div style="color:#25aef4;font-size:12px;font-weight:bold;letter-spacing:3px;text-transform:uppercase">New Payment Submitted</div>
+      <h2 style="margin:12px 0 18px;color:#ffffff">A new student completed the payment</h2>
+      <p style="color:#cbd5e1;line-height:1.7">The student uploaded payment proof. Review the screenshot and verify the payment from the secure admin panel.</p>
+      <table style="width:100%;border-collapse:collapse;margin:24px 0;color:#ffffff">
+        <tr><td style="padding:10px 0;color:#9ca3af;border-bottom:1px solid #1f2933">Student</td><td style="padding:10px 0;text-align:right;border-bottom:1px solid #1f2933">${order.full_name}</td></tr>
+        <tr><td style="padding:10px 0;color:#9ca3af;border-bottom:1px solid #1f2933">Email</td><td style="padding:10px 0;text-align:right;border-bottom:1px solid #1f2933">${order.email}</td></tr>
+        <tr><td style="padding:10px 0;color:#9ca3af;border-bottom:1px solid #1f2933">Course</td><td style="padding:10px 0;text-align:right;border-bottom:1px solid #1f2933">${order.course_name}</td></tr>
+        <tr><td style="padding:10px 0;color:#9ca3af">Amount submitted</td><td style="padding:10px 0;text-align:right;color:#25aef4;font-weight:bold">${formatAmount(order.final_amount)}</td></tr>
+      </table>
+      <a href="${ADMIN_PAYMENTS_URL}" style="display:inline-block;background:#25aef4;color:#000000;text-decoration:none;font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;padding:15px 22px">View &amp; Verify Payment</a>
+      <p style="margin:22px 0 0;color:#64748b;font-size:12px">Admin passcode and email OTP verification are required before payment details are shown.</p>
     </div>
   </div>
 `);
@@ -259,13 +280,18 @@ export default async function handler(req, res) {
   const payableAmount = Number(order.final_amount);
 
   const safeOrder = Object.fromEntries(Object.entries(order).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value]));
-  const emailSent = await sendEmail({
-    to: email,
-    subject: payableAmount === 0 ? 'Trading Boy course access approved' : `Trading Boy receipt - ${selectedCourse.name}`,
-    html: payableAmount === 0 ? paidAccessHtml({ ...safeOrder, drive_url: isHttpsUrl(selectedCourse.drive_url) ? escapeHtml(selectedCourse.drive_url) : null, discord_url: isHttpsUrl(selectedCourse.discord_url) ? escapeHtml(selectedCourse.discord_url) : null }) : receiptHtml(safeOrder),
-  });
+  const [emailSent, adminEmailSent] = await Promise.all([
+    sendEmail({
+      to: email,
+      subject: payableAmount === 0 ? 'Trading Boy course access approved' : `Trading Boy receipt - ${selectedCourse.name}`,
+      html: payableAmount === 0 ? paidAccessHtml({ ...safeOrder, drive_url: isHttpsUrl(selectedCourse.drive_url) ? escapeHtml(selectedCourse.drive_url) : null, discord_url: isHttpsUrl(selectedCourse.discord_url) ? escapeHtml(selectedCourse.discord_url) : null }) : receiptHtml(safeOrder),
+    }),
+    payableAmount > 0
+      ? sendEmail({ to: ADMIN_EMAIL, subject: `New payment submitted - ${selectedCourse.name}`, html: adminPaymentHtml(safeOrder) })
+      : Promise.resolve(false),
+  ]);
 
-  return json(res, 200, { orderId: order.id, payableAmount, emailSent: Boolean(emailSent) });
+  return json(res, 200, { orderId: order.id, payableAmount, emailSent: Boolean(emailSent), adminEmailSent: Boolean(adminEmailSent) });
   } catch (error) {
     return handleApiError(res, error, 'checkout.create');
   }
