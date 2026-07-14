@@ -287,6 +287,7 @@ export default function App() {
   const [createdOrderId, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [adminSessionChecking, setAdminSessionChecking] = useState(() => window.location.hash === '#admin' && !import.meta.env.DEV);
   const [adminPasscode, setAdminPasscode] = useState('');
   const [showAdminPasscode, setShowAdminPasscode] = useState(false);
   const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails'>('home');
@@ -680,7 +681,7 @@ export default function App() {
     if (!adminOpen || adminUnlocked || import.meta.env.DEV) return;
     let cancelled = false;
     const restoreAdminSession = async () => {
-      setAdminLoading(true);
+      setAdminSessionChecking(true);
       try {
         await adminRequest('session');
         if (cancelled) return;
@@ -689,7 +690,7 @@ export default function App() {
       } catch {
         // No valid cookie: show the normal passcode form.
       } finally {
-        if (!cancelled) setAdminLoading(false);
+        if (!cancelled) setAdminSessionChecking(false);
       }
     };
     void restoreAdminSession();
@@ -1750,7 +1751,13 @@ export default function App() {
       {adminOpen && (
         <main className={`page-enter min-h-screen bg-ink ${adminUnlocked ? 'p-4 sm:p-6 lg:p-8' : 'flex items-center justify-center p-5'}`}>
           <div className={adminUnlocked ? 'mx-auto w-full max-w-[1440px]' : 'w-full max-w-md'}>
-            {!adminUnlocked ? (
+            {!adminUnlocked ? adminSessionChecking ? (
+              <div className="flex min-h-[280px] flex-col items-center justify-center border border-white/10 bg-black p-8 shadow-glow" role="status" aria-live="polite">
+                <Loader2 className="h-9 w-9 animate-spin text-electric" />
+                <div className="mt-6 font-inter text-xs font-bold uppercase tracking-[0.25em] text-white/70">Loading Admin</div>
+                <p className="mt-3 font-inter text-sm text-white/40">Checking your secure session...</p>
+              </div>
+            ) : (
               <form onSubmit={unlockAdmin} className="border border-white/10 bg-black p-6 shadow-glow sm:p-8">
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
                 <h2 className="mt-3 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>

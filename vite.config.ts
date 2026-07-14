@@ -624,7 +624,7 @@ const receiptHtml = (order: any) => darkEmail(`
       <h1 style="margin:0 0 12px;color:#25aef4">Trading Boy Academy</h1>
       <h2 style="margin:0 0 20px">Payment Receipt</h2>
       <p>Hi ${order.full_name},</p>
-      <p>Your course purchase request has been created. Complete the UPI payment if you have not already done it.</p>
+      <p>Your course purchase request has been created.</p>
       <p>After payment verification, the admin will share the private Google Drive course folder with this email address: <strong>${order.email}</strong>.</p>
       <table style="width:100%;border-collapse:collapse;margin-top:20px">
         <tr><td style="padding:8px 0;color:#9ca3af">Order ID</td><td style="padding:8px 0;text-align:right">${order.id}</td></tr>

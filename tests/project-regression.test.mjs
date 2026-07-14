@@ -112,6 +112,8 @@ test('admin session restores on refresh and email tools expose compose, attachme
   const migration = read('migrations/20260714_add_mail_attachments.sql');
 
   assert.match(app, /adminRequest\('session'\)/);
+  assert.match(app, /adminSessionChecking/);
+  assert.match(app, /Loading Admin/);
   assert.match(app, /Send Mail/);
   assert.match(app, /Mail History/);
   assert.match(app, /maximum 10 MB/);
