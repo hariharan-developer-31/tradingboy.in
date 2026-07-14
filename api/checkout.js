@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { cleanText, escapeHtml, handleApiError, isCouponCode, isEmail, isHttpsUrl, json, rateLimit, readJsonBody, requirePost, requireTrustedOrigin } from './_security.js';
+import { cleanText, escapeHtml, handleApiError, HttpError, isCouponCode, isEmail, isHttpsUrl, json, rateLimit, readJsonBody, requirePost, requireTrustedOrigin } from './_security.js';
 
 const COURSE_NAME = 'Complete Forex Mastery';
 const COURSE_PRICE = 7199;
@@ -136,14 +136,14 @@ const paidAccessHtml = (order) => darkEmail(`
 const razorpayRequest = async (path, options = {}) => {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
-  if (!keyId || !keySecret) throw Object.assign(new Error('Razorpay is not configured.'), { status: 503 });
+  if (!keyId || !keySecret) throw new HttpError(503, 'Razorpay is not configured on the server. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Vercel.');
   const response = await fetch(`https://api.razorpay.com/v1${path}`, {
     ...options,
     headers: { Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`, 'Content-Type': 'application/json', ...(options.headers || {}) },
     signal: AbortSignal.timeout(12_000),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw Object.assign(new Error(data.error?.description || 'Payment gateway request failed.'), { status: 502 });
+  if (!response.ok) throw new HttpError(502, data.error?.description || 'Payment gateway request failed.');
   return data;
 };
 

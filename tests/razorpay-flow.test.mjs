@@ -13,6 +13,13 @@ test('Razorpay checkout creates an order and verifies signature and gateway paym
   assert.match(api, /gatewayOrder\.amount !== checkout\.finalAmount \* 100/);
   assert.match(api, /razorpay_payment_id.*maybeSingle/);
   assert.doesNotMatch(api, /decodeJpegDataUrl|payment-proofs|A payment screenshot is required/);
+  assert.match(api, /new HttpError\(503, 'Razorpay is not configured on the server/);
+});
+
+test('production CSP permits Razorpay Checkout and its risk-detection CDN', () => {
+  const vercel = read('vercel.json');
+  assert.match(vercel, /script-src[^\n]*https:\/\/checkout\.razorpay\.com[^\n]*https:\/\/cdn\.razorpay\.com/);
+  assert.match(vercel, /frame-src https:\/\/api\.razorpay\.com https:\/\/checkout\.razorpay\.com/);
 });
 
 test('browser opens Razorpay only after details and consent and verifies before success', () => {
