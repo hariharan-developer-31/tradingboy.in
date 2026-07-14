@@ -44,6 +44,7 @@ const fallbackCourses = [
 ];
 
 const navLinks = ['Home', 'About', 'Course', 'Results', 'FAQ'];
+const headerNavLinks = navLinks.filter((link) => link !== 'FAQ');
 
 const faqs = [
   ['Is this course beginner friendly?', 'Yes. It starts with foundations, then moves into execution, risk, and live market application.'],
@@ -1097,7 +1098,7 @@ export default function App() {
             <img src={logoUrl} alt="Trading Boy Academy Logo" className="h-12 w-auto object-contain sm:h-14" />
           </a>
           <div className="hidden items-center gap-7 md:flex lg:gap-10">
-            {navLinks.map((link) => (
+            {headerNavLinks.map((link) => (
               <a key={link} href={`#${link.toLowerCase()}`} className="font-inter text-xs uppercase tracking-widest text-white/80 transition hover:text-white">
                 {link}
               </a>
@@ -1124,7 +1125,7 @@ export default function App() {
           </button>
         </div>
         <div className="flex h-[calc(100vh-88px)] flex-col items-center justify-center gap-7">
-          {navLinks.map((link) => (
+          {headerNavLinks.map((link) => (
             <a key={link} href={`#${link.toLowerCase()}`} onClick={() => setMenuOpen(false)} className="font-podium text-4xl uppercase text-white">
               {link}
             </a>
