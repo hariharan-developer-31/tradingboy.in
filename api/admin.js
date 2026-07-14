@@ -543,6 +543,7 @@ export default async function handler(req, res) {
     const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
     const courseName = String(body.courseName || 'all').trim();
     const manualEmails = String(body.manualEmails || body.additionalEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter(isEmail).slice(0, 500);
+    const excludedEmails = new Set((Array.isArray(body.excludedEmails) ? body.excludedEmails : []).map((email) => String(email).trim().toLowerCase()).filter(isEmail).slice(0, 500));
     const subject = String(body.subject || '').trim().slice(0, 150);
     const message = String(body.message || '').trim().slice(0, 5000);
     const attachmentPath = cleanText(body.attachmentPath, 300);
@@ -576,6 +577,7 @@ export default async function handler(req, res) {
     manualEmails.forEach((email) => {
       if (!recipientMap.has(email)) recipientMap.set(email, { email, full_name: 'Trader' });
     });
+    excludedEmails.forEach((email) => recipientMap.delete(email));
     const recipients = Array.from(recipientMap.values()).slice(0, 500);
     if (recipients.length === 0) {
       json(res, 400, { error: 'No recipients match this audience.' });

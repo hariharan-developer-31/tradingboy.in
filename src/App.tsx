@@ -336,6 +336,8 @@ export default function App() {
   const [campaignAudience, setCampaignAudience] = useState<'paid' | 'all' | 'manual'>('paid');
   const [campaignCourse, setCampaignCourse] = useState('All courses');
   const [campaignManualEmails, setCampaignManualEmails] = useState('');
+  const [campaignExcludedEmails, setCampaignExcludedEmails] = useState<string[]>([]);
+  const [campaignRecipientInput, setCampaignRecipientInput] = useState('');
   const [campaignSubject, setCampaignSubject] = useState('');
   const [campaignMessage, setCampaignMessage] = useState('');
   const [sendingCampaign, setSendingCampaign] = useState(false);
@@ -419,13 +421,14 @@ export default function App() {
 
   const campaignRecipients = useMemo(() => {
     const recipients = new Map<string, CampaignRecipient>();
+    const excluded = new Set(campaignExcludedEmails);
     if (campaignAudience !== 'manual') {
       adminOrders
         .filter((order) => campaignAudience === 'all' || order.payment_status === 'paid')
         .filter((order) => campaignCourse === 'all' || campaignCourse === 'All courses' || order.course_name === campaignCourse)
         .forEach((order) => {
           const email = order.email?.trim().toLowerCase();
-          if (email && !recipients.has(email)) recipients.set(email, { email, fullName: order.full_name || 'Trader', courseName: order.course_name, paymentStatus: order.payment_status });
+          if (email && !excluded.has(email) && !recipients.has(email)) recipients.set(email, { email, fullName: order.full_name || 'Trader', courseName: order.course_name, paymentStatus: order.payment_status });
         });
     }
     campaignManualEmails
@@ -433,10 +436,10 @@ export default function App() {
       .map((email) => email.trim().toLowerCase())
       .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       .forEach((email) => {
-        if (!recipients.has(email)) recipients.set(email, { email, fullName: 'Manual recipient', courseName: null, paymentStatus: null });
+        if (!excluded.has(email) && !recipients.has(email)) recipients.set(email, { email, fullName: 'Manual recipient', courseName: null, paymentStatus: null });
       });
     return Array.from(recipients.values());
-  }, [adminOrders, campaignAudience, campaignCourse, campaignManualEmails]);
+  }, [adminOrders, campaignAudience, campaignCourse, campaignExcludedEmails, campaignManualEmails]);
 
   const campaignRecipientCount = campaignRecipients.length;
 
@@ -1025,6 +1028,7 @@ export default function App() {
         audience: campaignAudience,
         courseName: campaignCourse,
         additionalEmails: campaignManualEmails,
+        excludedEmails: campaignExcludedEmails,
         subject,
         message,
         ...attachmentPayload,
@@ -1034,6 +1038,7 @@ export default function App() {
         setCampaignSubject('');
         setCampaignMessage('');
         setCampaignManualEmails('');
+        setCampaignExcludedEmails([]);
         setCampaignAttachment(null);
         await loadAdminCampaigns();
       }
@@ -2490,13 +2495,19 @@ export default function App() {
               </div>
               <button onClick={() => setShowCampaignRecipients(false)} className="flex h-10 w-10 shrink-0 items-center justify-center border border-white/10 text-white/60 transition hover:border-electric hover:text-white" aria-label="Close recipient list"><X className="h-5 w-5" /></button>
             </div>
+            <div className="border-b border-white/10 p-4 sm:p-6">
+              <form onSubmit={(event) => { event.preventDefault(); const email = campaignRecipientInput.trim().toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setAdminStatus('Enter a valid recipient email address.'); return; } setCampaignManualEmails((current) => `${current}${current.trim() ? '\n' : ''}${email}`); setCampaignExcludedEmails((current) => current.filter((item) => item !== email)); setCampaignRecipientInput(''); setAdminStatus(''); }} className="flex flex-col gap-3 sm:flex-row">
+                <input type="email" value={campaignRecipientInput} onChange={(event) => setCampaignRecipientInput(event.target.value)} placeholder="Add recipient email address" className="h-12 min-w-0 flex-1 border border-white/10 bg-black px-4 font-inter text-sm text-white outline-none placeholder:text-white/35 focus:border-electric" />
+                <button type="submit" className="inline-flex h-12 items-center justify-center gap-2 bg-electric px-5 font-inter text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-skyline"><Plus className="h-4 w-4" /> Add recipient</button>
+              </form>
+            </div>
             <div className="overflow-y-auto p-4 sm:p-6">
               {campaignRecipients.length === 0 ? (
                 <p className="py-10 text-center font-inter text-sm text-white/50">No recipients match the selected audience.</p>
               ) : (
                 <div className="space-y-3">
                   {campaignRecipients.map((recipient, index) => (
-                    <article key={recipient.email} className="grid gap-3 border border-white/10 bg-black p-4 sm:grid-cols-[40px_minmax(0,1fr)_minmax(140px,0.7fr)] sm:items-center">
+                    <article key={recipient.email} className="grid gap-3 border border-white/10 bg-black p-4 sm:grid-cols-[40px_minmax(0,1fr)_minmax(140px,0.7fr)_44px] sm:items-center">
                       <div className="flex h-9 w-9 items-center justify-center border border-electric/25 bg-electric/10 font-inter text-xs font-bold text-electric">{index + 1}</div>
                       <div className="min-w-0">
                         <div className="truncate font-inter text-sm font-semibold text-white">{recipient.fullName}</div>
@@ -2506,6 +2517,7 @@ export default function App() {
                         <div className="truncate font-inter text-xs text-white/65">{recipient.courseName || 'Manually added'}</div>
                         <div className="mt-1 font-inter text-[10px] font-bold uppercase tracking-widest text-electric">{recipient.paymentStatus || 'Manual'}</div>
                       </div>
+                      <button type="button" onClick={() => setCampaignExcludedEmails((current) => current.includes(recipient.email) ? current : [...current, recipient.email])} className="flex h-10 w-10 items-center justify-center border border-red-500/30 text-red-300 transition hover:bg-red-950/40" aria-label={`Remove ${recipient.email} from this campaign`} title="Remove from this campaign"><Trash2 className="h-4 w-4" /></button>
                     </article>
                   ))}
                 </div>

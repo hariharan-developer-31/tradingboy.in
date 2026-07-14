@@ -372,7 +372,8 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (body.action === 'sendCampaign') {
           const audience = ['all', 'manual'].includes(body.audience) ? body.audience : 'paid';
           const courseName = String(body.courseName || 'all').trim();
-          const manualEmails = String(body.manualEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500);
+          const manualEmails = String(body.manualEmails || body.additionalEmails || '').split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500);
+          const excludedEmails = new Set((Array.isArray(body.excludedEmails) ? body.excludedEmails : []).map((email) => String(email).trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 500));
           const subject = String(body.subject || '').trim().slice(0, 150);
           const message = String(body.message || '').trim().slice(0, 5000);
           if (!subject || !message) {
@@ -397,6 +398,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           manualEmails.forEach((email) => {
             if (!recipientMap.has(email)) recipientMap.set(email, { email, full_name: 'Trader' });
           });
+          excludedEmails.forEach((email) => recipientMap.delete(email));
           const recipients = Array.from(recipientMap.values()) as any[];
           if (recipients.length === 0) {
             sendJson(res, 400, { error: 'No recipients match this audience.' });

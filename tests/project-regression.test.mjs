@@ -119,6 +119,9 @@ test('admin session restores on refresh and email tools expose compose, attachme
   assert.match(app, /showCampaignRecipients/);
   assert.match(app, /Unique Recipients \(\{campaignRecipientCount\}\)/);
   assert.match(app, /Click to view recipients\./);
+  assert.match(app, /Add recipient/);
+  assert.match(app, /campaignExcludedEmails/);
+  assert.match(app, /Remove \$\{recipient\.email\} from this campaign/);
   assert.match(app, /maximum 10 MB/);
   assert.match(app, /fetch\(upload\.signedUrl/);
   assert.doesNotMatch(app, /Attachment storage is not configured\./);
@@ -127,6 +130,7 @@ test('admin session restores on refresh and email tools expose compose, attachme
   assert.match(adminApi, /signedUrl: data\.signedUrl/);
   assert.match(adminApi, /size > 10 \* 1024 \* 1024/);
   assert.match(adminApi, /attachments/);
+  assert.match(adminApi, /excludedEmails\.forEach\(\(email\) => recipientMap\.delete\(email\)\)/);
   assert.match(security, /Path=\/api;/);
   assert.match(migration, /mail-attachments/);
   assert.match(migration, /10485760/);
