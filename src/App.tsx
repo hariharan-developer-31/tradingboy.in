@@ -333,6 +333,7 @@ export default function App() {
   const [, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [adminRefreshing, setAdminRefreshing] = useState<'payments' | 'support' | null>(null);
   const [adminSessionChecking, setAdminSessionChecking] = useState(() => window.location.hash === '#admin' && !import.meta.env.DEV);
   const [adminPasscode, setAdminPasscode] = useState('');
   const [adminAuthStep, setAdminAuthStep] = useState<'passcode' | 'otp'>('passcode');
@@ -1176,6 +1177,19 @@ export default function App() {
       setAdminSupportTickets(response.data || []);
     } catch (error) {
       console.error('Could not load support tickets.', error);
+    }
+  };
+
+  const refreshAdminData = async (section: 'payments' | 'support') => {
+    if (adminRefreshing) return;
+    setAdminRefreshing(section);
+    try {
+      if (section === 'payments') await loadAdminOrders();
+      else await loadAdminSupportTickets();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not refresh admin data.');
+    } finally {
+      setAdminRefreshing(null);
     }
   };
 
@@ -2684,7 +2698,9 @@ export default function App() {
                       <select value={supportStatusFilter} onChange={(event) => setSupportStatusFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric"><option value="all">All status</option><option value="open">Open</option><option value="replied">Replied</option><option value="closed">Closed</option></select>
                       <select value={supportDateFilter} onChange={(event) => setSupportDateFilter(event.target.value as 'all' | 'today' | 'custom')} className="h-12 border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric"><option value="all">All dates</option><option value="today">Today only</option><option value="custom">Choose date</option></select>
                       {supportDateFilter === 'custom' ? <input type="date" value={supportCustomDate} onChange={(event) => setSupportCustomDate(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 text-sm text-white outline-none focus:border-electric" /> : <div className="hidden xl:block" />}
-                      <button onClick={loadAdminSupportTickets} className="inline-flex h-12 items-center justify-center gap-2 border border-white/15 px-4 text-xs font-bold uppercase tracking-widest text-white"><RefreshCcw className="h-4 w-4" /> Refresh</button>
+                      <button onClick={() => void refreshAdminData('support')} disabled={adminRefreshing !== null} className="inline-flex h-12 items-center justify-center gap-2 border border-white/15 px-4 text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric disabled:cursor-wait disabled:opacity-60">
+                        <RefreshCcw className={`h-4 w-4 ${adminRefreshing === 'support' ? 'animate-spin' : ''}`} /> {adminRefreshing === 'support' ? 'Refreshing...' : 'Refresh'}
+                      </button>
                     </div>
                     <div className="text-xs uppercase tracking-widest text-white/40">Showing {filteredSupportTickets.length} of {adminSupportTickets.length} tickets</div>
                     {filteredSupportTickets.length === 0 ? <div className="border border-white/10 bg-black p-8 text-sm text-white/50">No support tickets match these filters.</div> : filteredSupportTickets.map((ticket) => (
@@ -2734,8 +2750,8 @@ export default function App() {
                         ) : <div className="hidden xl:block" />}
                       </div>
                       <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
-                        <button onClick={loadAdminOrders} className="inline-flex h-11 items-center justify-center gap-2 border border-white/15 px-4 font-inter text-[10px] font-bold uppercase tracking-widest text-white transition hover:border-electric">
-                          <RefreshCcw className="h-4 w-4" /> Refresh
+                        <button onClick={() => void refreshAdminData('payments')} disabled={adminRefreshing !== null} className="inline-flex h-11 items-center justify-center gap-2 border border-white/15 px-4 font-inter text-[10px] font-bold uppercase tracking-widest text-white transition hover:border-electric disabled:cursor-wait disabled:opacity-60">
+                          <RefreshCcw className={`h-4 w-4 ${adminRefreshing === 'payments' ? 'animate-spin' : ''}`} /> {adminRefreshing === 'payments' ? 'Refreshing...' : 'Refresh'}
                         </button>
                         <button onClick={downloadOrdersCsv} disabled={filteredOrders.length === 0} className="h-11 bg-electric px-5 font-inter text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-50">Export CSV</button>
                         <button onClick={() => deletePaymentOrders(false)} disabled={selectedOrderIds.length === 0 || deletingOrders} className="inline-flex h-11 items-center gap-2 border border-red-400/35 px-4 font-inter text-[10px] font-bold uppercase tracking-widest text-red-300 transition hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-35">

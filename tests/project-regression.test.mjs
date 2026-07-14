@@ -207,6 +207,17 @@ test('payment admin supports safe bulk deletion, date filters, and confirmed sta
   assert.match(viteConfig, /body\.action === 'deleteOrders'/);
 });
 
+test('all admin refresh buttons show and protect their loading state', () => {
+  const app = read('src/App.tsx');
+  assert.match(app, /adminRefreshing, setAdminRefreshing/);
+  assert.match(app, /refreshAdminData\('payments'\)/);
+  assert.match(app, /refreshAdminData\('support'\)/);
+  assert.match(app, /adminRefreshing === 'payments' \? 'Refreshing\.\.\.' : 'Refresh'/);
+  assert.match(app, /adminRefreshing === 'support' \? 'Refreshing\.\.\.' : 'Refresh'/);
+  assert.match(app, /adminRefreshing === 'payments' \? 'animate-spin' : ''/);
+  assert.match(app, /adminRefreshing === 'support' \? 'animate-spin' : ''/);
+});
+
 test('email templates force dark mode and avoid viewport-height whitespace', () => {
   for (const file of ['api/admin.js', 'api/checkout.js', 'vite.config.ts']) {
     const source = read(file);
