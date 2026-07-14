@@ -409,6 +409,19 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
           return;
         }
 
+        if (body.action === 'updateDriveAccess') {
+          const { data: order, error: orderError } = await admin.from('course_orders').select('id, course_name, full_name, email, final_amount, payment_status, drive_access_status').eq('id', body.orderId).single();
+          if (orderError) return sendJson(res, 500, { error: orderError.message });
+          if (body.driveAccessStatus === 'granted' && order.payment_status !== 'paid') return sendJson(res, 400, { error: 'Drive access requires a paid order.' });
+          const { data: course } = await admin.from('courses').select('drive_url, discord_url').eq('title', order.course_name).maybeSingle();
+          if (body.driveAccessStatus === 'granted' && !course?.drive_url) return sendJson(res, 400, { error: 'Add the course Google Drive link before granting access.' });
+          const { error } = await admin.from('course_orders').update({ drive_access_status: body.driveAccessStatus }).eq('id', body.orderId);
+          if (error) return sendJson(res, 500, { error: error.message });
+          const emailSent = body.driveAccessStatus === 'granted' ? await sendMail(env, { to: order.email, subject: 'Trading Boy course access approved', html: paidAccessHtml(env, { ...order, course_drive_url: course.drive_url, course_discord_url: course.discord_url }) }) : null;
+          if (body.driveAccessStatus === 'granted' && !emailSent) await admin.from('course_orders').update({ drive_access_status: 'pending' }).eq('id', body.orderId);
+          return sendJson(res, emailSent === false ? 503 : 200, emailSent === false ? { error: 'Course email could not be sent. Access remains pending.' } : { ok: true, emailSent });
+        }
+
         if (body.action === 'deleteOrders') {
           const deleteAll = body.deleteAll === true;
           const orderIds = Array.isArray(body.orderIds) ? body.orderIds.map(String).filter(Boolean) : [];

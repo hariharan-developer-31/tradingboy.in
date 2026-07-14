@@ -436,6 +436,7 @@ function MainApp() {
   const [paymentCustomDate, setPaymentCustomDate] = useState('');
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [updatingOrderId, setUpdatingOrderId] = useState('');
+  const [updatingDriveOrderId, setUpdatingDriveOrderId] = useState('');
   const [deletingOrders, setDeletingOrders] = useState(false);
   const [campaignAudience, setCampaignAudience] = useState<'paid' | 'all' | 'manual'>('paid');
   const [campaignCourse, setCampaignCourse] = useState('All courses');
@@ -1196,6 +1197,23 @@ function MainApp() {
       if (response && response.data) setAdminCampaigns(response.data);
     } catch (error) {
       console.error('Could not load email campaigns.', error);
+    }
+  };
+
+  const updateDriveAccess = async (orderId: string, driveAccessStatus: string) => {
+    const order = adminOrders.find((item) => item.id === orderId);
+    if (!order || (order.drive_access_status || 'pending') === driveAccessStatus) return;
+    if (!window.confirm(`${driveAccessStatus === 'granted' ? 'Grant' : 'Reset'} Google Drive access for ${order.full_name}?${driveAccessStatus === 'granted' ? ' The course-access email will be sent immediately.' : ''}`)) return;
+    try {
+      setUpdatingDriveOrderId(orderId);
+      setAdminStatus(driveAccessStatus === 'granted' ? 'Granting Drive access and sending the course email...' : 'Resetting Drive access to pending...');
+      const result = await adminRequest<{ emailSent: boolean | null }>('updateDriveAccess', { orderId, driveAccessStatus });
+      setAdminStatus(result.emailSent ? 'Drive access granted and course email sent.' : 'Drive access reset to pending.');
+      await loadAdminOrders();
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not update Drive access.');
+    } finally {
+      setUpdatingDriveOrderId('');
     }
   };
 
@@ -2777,7 +2795,7 @@ function MainApp() {
                       </div>
                     </div>
                     <div className="overflow-x-auto border border-white/10 bg-black">
-                      <table className="min-w-[1600px] w-full table-fixed border-collapse font-inter text-sm">
+                      <table className="min-w-[1800px] w-full table-fixed border-collapse font-inter text-sm">
                         <thead className="bg-white/[0.04] text-left text-xs uppercase tracking-widest text-white/45">
                           <tr>
                             <th className="w-[50px] px-4 py-4">
@@ -2793,12 +2811,13 @@ function MainApp() {
                             <th className="w-[130px] px-4 py-4">Original</th>
                             <th className="w-[130px] px-4 py-4">Amount</th>
                             <th className="w-[230px] px-4 py-4">Razorpay IDs</th>
+                            <th className="w-[190px] px-4 py-4">Drive Access</th>
                             <th className="w-[190px] px-4 py-4">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/10">
                           {filteredOrders.length === 0 ? (
-                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={12}>No payments found.</td></tr>
+                            <tr><td className="px-4 py-8 text-center text-white/55" colSpan={13}>No payments found.</td></tr>
                           ) : (
                             filteredOrders.map((order) => (
                               <tr key={order.id} className="align-top transition hover:bg-white/[0.03]">
@@ -2828,7 +2847,15 @@ function MainApp() {
                                 <td className="px-4 py-5">
                                   <div className="truncate font-mono text-xs text-electric" title={order.razorpay_order_id || ''}>{order.razorpay_order_id || '—'}</div>
                                   <div className="mt-2 truncate font-mono text-xs text-white/60" title={order.razorpay_payment_id || ''}>{order.razorpay_payment_id || '—'}</div>
-                                  <div className="mt-2 text-[10px] uppercase tracking-widest text-white/40">Drive: {order.drive_access_status || 'pending'}</div>
+                                </td>
+                                <td className="px-4 py-5">
+                                  <div className="relative">
+                                    <select value={order.drive_access_status || 'pending'} disabled={updatingDriveOrderId === order.id || order.payment_status !== 'paid'} onChange={(event) => updateDriveAccess(order.id, event.target.value)} className="h-11 w-full border border-white/10 bg-ink px-3 font-inter text-xs uppercase tracking-widest text-white outline-none focus:border-electric disabled:cursor-not-allowed disabled:opacity-50">
+                                      <option value="pending">Pending</option>
+                                      <option value="granted">Granted</option>
+                                    </select>
+                                    {updatingDriveOrderId === order.id && <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-electric" />}
+                                  </div>
                                 </td>
                                 <td className="px-4 py-5">
                                   <div className="relative">

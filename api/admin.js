@@ -250,6 +250,36 @@ export default async function handler(req, res) {
     return;
   }
 
+  if (action === 'updateDriveAccess') {
+    const driveAccessStatus = cleanText(body.driveAccessStatus, 20).toLowerCase();
+    if (!isUuid(body.orderId) || !['pending', 'granted'].includes(driveAccessStatus)) return json(res, 400, { error: 'A valid order and Drive access status are required.' });
+    const { data: existing, error: existingError } = await admin.from('course_orders').select('id, course_name, full_name, email, final_amount, payment_status, drive_access_status').eq('id', body.orderId).single();
+    if (existingError) return json(res, 500, { error: existingError.message });
+    if (driveAccessStatus === 'granted' && existing.payment_status !== 'paid') return json(res, 400, { error: 'Drive access can only be granted after payment is paid.' });
+    if (existing.drive_access_status === driveAccessStatus) return json(res, 200, { ok: true, unchanged: true, emailSent: null });
+    const { error: updateError } = await admin.from('course_orders').update({ drive_access_status: driveAccessStatus }).eq('id', body.orderId);
+    if (updateError) return json(res, 500, { error: updateError.message });
+    if (driveAccessStatus === 'pending') return json(res, 200, { ok: true, emailSent: null });
+
+    const { data: course, error: courseError } = await admin.from('courses').select('drive_url, discord_url').eq('title', existing.course_name).maybeSingle();
+    if (courseError) return json(res, 500, { error: courseError.message });
+    if (!isHttpsUrl(course?.drive_url)) {
+      await admin.from('course_orders').update({ drive_access_status: 'pending' }).eq('id', body.orderId);
+      return json(res, 400, { error: 'Add a valid HTTPS Google Drive link to this course before granting access.' });
+    }
+    const safeOrder = Object.fromEntries(Object.entries(existing).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value]));
+    const emailResult = await sendEmail({
+      to: existing.email,
+      subject: 'Trading Boy course access approved',
+      html: paidAccessHtml({ ...safeOrder, course_drive_url: escapeHtml(course.drive_url), course_discord_url: isHttpsUrl(course.discord_url) ? escapeHtml(course.discord_url) : null }),
+    });
+    if (!emailResult.ok) {
+      await admin.from('course_orders').update({ drive_access_status: 'pending' }).eq('id', body.orderId);
+      return json(res, 503, { error: emailResult.error || 'Course access email could not be sent. Access remains pending.' });
+    }
+    return json(res, 200, { ok: true, emailSent: true });
+  }
+
   if (action === 'deleteOrders') {
     const deleteAll = body.deleteAll === true;
     const orderIds = Array.isArray(body.orderIds) ? body.orderIds.map(String).filter(isUuid).slice(0, 500) : [];

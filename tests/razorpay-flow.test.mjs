@@ -45,3 +45,15 @@ test('Razorpay migration records gateway IDs and removes manual payment storage'
   assert.doesNotMatch(migration, /delete from storage\.(objects|buckets)/);
   assert.match(migration, /drop policy if exists "Service role can manage payment proofs"/);
 });
+
+test('admin grants Drive access separately and sends the existing course-access email', () => {
+  const admin = read('api/admin.js');
+  const app = read('src/App.tsx');
+  assert.match(admin, /action === 'updateDriveAccess'/);
+  assert.match(admin, /drive_access_status: driveAccessStatus/);
+  assert.match(admin, /html: paidAccessHtml/);
+  assert.match(admin, /Access remains pending/);
+  assert.match(app, />Drive Access<\/th>/);
+  assert.match(app, /updateDriveAccess\(order\.id, event\.target\.value\)/);
+  assert.match(app, /Drive access granted and course email sent\./);
+});

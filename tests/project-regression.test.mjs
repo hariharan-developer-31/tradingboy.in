@@ -87,7 +87,7 @@ test('admin tables keep empty-state cells aligned and show Razorpay metadata', (
   const app = read('src/App.tsx');
 
   assert.match(app, /<td colSpan=\{6\}[^>]*>\s*No coupons found\./);
-  assert.match(app, /colSpan=\{12\}>No payments found\./);
+  assert.match(app, /colSpan=\{13\}>No payments found\./);
   assert.match(app, /order\.razorpay_payment_id/);
   assert.match(app, />Coupon Code<\/th>/);
   assert.match(app, />Discount<\/th>/);
