@@ -74,6 +74,7 @@ create table if not exists public.courses (
   price integer not null default 7199 check (price > 0),
   drive_url text,
   discord_url text,
+  upi_id text,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -83,6 +84,7 @@ alter table public.courses add column if not exists thumbnail_url text;
 alter table public.courses add column if not exists normal_price integer;
 alter table public.courses add column if not exists offer_price integer;
 alter table public.courses add column if not exists discord_url text;
+alter table public.courses add column if not exists upi_id text;
 
 drop policy if exists "Allow public active course reads" on public.courses;
 
@@ -222,10 +224,16 @@ create table if not exists public.email_campaigns (
   subject text not null,
   message text not null,
   recipients integer not null default 0,
+  attachment_path text,
+  attachment_name text,
+  attachment_type text,
   created_at timestamptz not null default now()
 );
 
 alter table public.email_campaigns enable row level security;
+alter table public.email_campaigns add column if not exists attachment_path text;
+alter table public.email_campaigns add column if not exists attachment_name text;
+alter table public.email_campaigns add column if not exists attachment_type text;
 drop policy if exists "Service role can manage campaigns" on public.email_campaigns;
 -- Only service role (api endpoints) can manage email_campaigns
 

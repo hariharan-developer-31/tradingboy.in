@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const buckets = new Map();
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -112,6 +112,41 @@ export const hasValidAdminSession = (req, secret) => {
 
 export const adminSessionCookie = (token, maxAge) => `tb_admin=${token}; Path=/api; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Strict`;
 export const clearAdminSessionCookie = () => 'tb_admin=; Path=/api; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
+
+const signOtpParts = (secret, parts) => createHmac('sha256', secret).update(parts.join('.')).digest('base64url');
+
+export const createAdminOtpChallenge = (secret, otp, ttlSeconds = 10 * 60, attempts = 5) => {
+  const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
+  const nonce = randomBytes(18).toString('base64url');
+  const otpHash = createHmac('sha256', secret).update(`${nonce}:${otp}`).digest('base64url');
+  const parts = [String(expires), String(attempts), nonce, otpHash];
+  return { token: `${parts.join('.')}.${signOtpParts(secret, parts)}`, ttlSeconds };
+};
+
+const readOtpChallenge = (req, secret) => {
+  const parts = cookieValue(req, 'tb_admin_otp').split('.');
+  if (parts.length !== 5) return null;
+  const [expiresText, attemptsText, nonce, otpHash, signature] = parts;
+  const expected = signOtpParts(secret, [expiresText, attemptsText, nonce, otpHash]);
+  const expires = Number(expiresText);
+  const attempts = Number(attemptsText);
+  if (!safeEqual(signature, expected) || !Number.isSafeInteger(expires) || expires <= Math.floor(Date.now() / 1000) || !Number.isSafeInteger(attempts) || attempts < 1) return null;
+  return { expires, attempts, nonce, otpHash };
+};
+
+export const verifyAdminOtpChallenge = (req, secret, submittedOtp) => {
+  const challenge = readOtpChallenge(req, secret);
+  if (!challenge || !/^\d{6}$/.test(String(submittedOtp || ''))) return { valid: false, token: null, ttlSeconds: 0 };
+  const submittedHash = createHmac('sha256', secret).update(`${challenge.nonce}:${submittedOtp}`).digest('base64url');
+  if (safeEqual(submittedHash, challenge.otpHash)) return { valid: true, token: null, ttlSeconds: 0 };
+  const attempts = challenge.attempts - 1;
+  if (attempts < 1) return { valid: false, token: null, ttlSeconds: 0 };
+  const parts = [String(challenge.expires), String(attempts), challenge.nonce, challenge.otpHash];
+  return { valid: false, token: `${parts.join('.')}.${signOtpParts(secret, parts)}`, ttlSeconds: Math.max(1, challenge.expires - Math.floor(Date.now() / 1000)) };
+};
+
+export const adminOtpCookie = (token, maxAge) => `tb_admin_otp=${token}; Path=/api; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Strict`;
+export const clearAdminOtpCookie = () => 'tb_admin_otp=; Path=/api; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
 
 export const cleanText = (value, maxLength) => String(value || '').trim().slice(0, maxLength);
 export const isEmail = (value) => EMAIL_PATTERN.test(value) && value.length <= 254;

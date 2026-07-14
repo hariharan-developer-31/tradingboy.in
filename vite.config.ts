@@ -25,7 +25,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         const admin = createClient(supabaseUrl, serviceRoleKey);
         const { data, error } = await admin
           .from('courses')
-          .select('id, title, description, thumbnail_url, normal_price, offer_price, price, active, created_at')
+          .select('id, title, description, thumbnail_url, normal_price, offer_price, price, upi_id, active, created_at')
           .eq('active', true)
           .order('created_at', { ascending: true });
         sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data: data || [] });
@@ -433,7 +433,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
         if (body.action === 'courses') {
           const { data, error } = await admin
             .from('courses')
-            .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at')
+            .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at')
             .order('created_at', { ascending: false });
 
           sendJson(res, error ? 500 : 200, error ? { error: error.message } : { data });
@@ -458,6 +458,7 @@ const localAdminApi = (env: Record<string, string>): Plugin => ({
             price: offerPrice,
             drive_url: String(body.driveUrl || '').trim() || null,
             discord_url: String(body.discordUrl || '').trim() || null,
+            upi_id: String(body.upiId || '').trim(),
             thumbnail_url: String(body.thumbnailUrl || '').trim() || null,
           };
 

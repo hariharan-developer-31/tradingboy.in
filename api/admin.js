@@ -1,11 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
-import { randomUUID, scryptSync } from 'node:crypto';
-import { adminSessionCookie, cleanText, clearAdminSessionCookie, createAdminSession, decodeJpegDataUrl, hasValidAdminSession, isCouponCode, isEmail, isHttpsUrl, isUuid, json, logServerError, rateLimit, readJsonBody, requirePost, requireTrustedOrigin, safeEqual } from './_security.js';
+import { randomInt, randomUUID, scryptSync } from 'node:crypto';
+import { adminOtpCookie, adminSessionCookie, cleanText, clearAdminOtpCookie, clearAdminSessionCookie, createAdminOtpChallenge, createAdminSession, decodeJpegDataUrl, hasValidAdminSession, isCouponCode, isEmail, isHttpsUrl, isUuid, json, logServerError, rateLimit, readJsonBody, requirePost, requireTrustedOrigin, safeEqual, verifyAdminOtpChallenge } from './_security.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const adminPasscode = process.env.ADMIN_PASSCODE;
 const driveCourseUrl = process.env.DRIVE_COURSE_URL;
+const adminEmail = process.env.ADMIN_EMAIL || 'hari.entrepreneur1@gmail.com';
 const fallbackAdminPasscodeSalt = '2RXfth2eWJYOrCwQcWSjhw';
 const fallbackAdminPasscodeDigest = 'jEcP8ozQj-3XfVtbPd3QNmTxv7as6DomgQEwqM99axc';
 
@@ -155,14 +156,32 @@ export default async function handler(req, res) {
   const action = body.action;
   const sessionSecret = process.env.ADMIN_SESSION_SECRET || serviceRoleKey;
   if (action === 'login') {
-    if (!rateLimit(req, res, { scope: 'admin-login', limit: 8, windowMs: 15 * 60_000 })) return;
+    if (!rateLimit(req, res, { scope: 'admin-login', limit: 5, windowMs: 15 * 60_000 })) return;
     if (!isValidAdminPasscode(body.passcode)) return json(res, 401, { error: 'Invalid admin passcode.' });
+    const otp = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const challenge = createAdminOtpChallenge(sessionSecret, otp);
+    const delivery = await sendEmail({
+      to: adminEmail,
+      subject: 'Trading Boy admin verification code',
+      html: darkEmail(`<div style="font-family:Arial,sans-serif;background:#000;color:#fff;padding:32px"><div style="max-width:520px;margin:auto;border:1px solid #1f2933;padding:32px"><div style="color:#25aef4;font-size:12px;letter-spacing:3px;text-transform:uppercase">Admin security</div><h2 style="margin:16px 0">Your verification code</h2><div style="font-size:36px;font-weight:700;letter-spacing:10px;padding:20px;background:#0f1115;text-align:center">${otp}</div><p style="color:#9ca3af;line-height:1.6">This code expires in 10 minutes. If you did not request it, do not share it with anyone.</p></div></div>`),
+    });
+    if (!delivery.ok) return json(res, 503, { error: 'Could not send the verification code. Check the email configuration.' });
+    res.setHeader('Set-Cookie', adminOtpCookie(challenge.token, challenge.ttlSeconds));
+    return json(res, 200, { ok: true, otpRequired: true, maskedEmail: 'h***@gmail.com' });
+  }
+  if (action === 'verifyOtp') {
+    if (!rateLimit(req, res, { scope: 'admin-otp', limit: 8, windowMs: 15 * 60_000 })) return;
+    const verification = verifyAdminOtpChallenge(req, sessionSecret, body.otp);
+    if (!verification.valid) {
+      res.setHeader('Set-Cookie', verification.token ? adminOtpCookie(verification.token, verification.ttlSeconds) : clearAdminOtpCookie());
+      return json(res, 401, { error: verification.token ? 'Invalid verification code.' : 'Verification code expired or too many attempts. Sign in again.' });
+    }
     const session = createAdminSession(sessionSecret);
-    res.setHeader('Set-Cookie', adminSessionCookie(session.token, session.ttlSeconds));
-    return json(res, 200, { ok: true, emailConfigured: Boolean(process.env.RESEND_API_KEY) });
+    res.setHeader('Set-Cookie', [adminSessionCookie(session.token, session.ttlSeconds), clearAdminOtpCookie()]);
+    return json(res, 200, { ok: true });
   }
   if (action === 'logout') {
-    res.setHeader('Set-Cookie', clearAdminSessionCookie());
+    res.setHeader('Set-Cookie', [clearAdminSessionCookie(), clearAdminOtpCookie()]);
     return json(res, 200, { ok: true });
   }
   if (!hasValidAdminSession(req, sessionSecret)) return json(res, 401, { error: 'Admin session expired. Sign in again.' });
@@ -287,10 +306,15 @@ export default async function handler(req, res) {
   }
 
   if (action === 'courses') {
-    const { data, error } = await admin
+    let { data, error } = await admin
       .from('courses')
-      .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at')
+      .select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, upi_id, active, created_at')
       .order('created_at', { ascending: false });
+    if (error?.code === '42703') {
+      const legacy = await admin.from('courses').select('id, title, description, thumbnail_url, normal_price, offer_price, price, drive_url, discord_url, active, created_at').order('created_at', { ascending: false });
+      data = (legacy.data || []).map((course) => ({ ...course, upi_id: null }));
+      error = legacy.error;
+    }
 
     if (error) {
       json(res, 500, { error: error.message });
@@ -305,9 +329,10 @@ export default async function handler(req, res) {
     const title = cleanText(body.title, 160);
     const normalPrice = Number(body.normalPrice);
     const offerPrice = Number(body.offerPrice);
+    const upiId = cleanText(body.upiId, 320);
 
-    if (!title || Number.isNaN(normalPrice) || normalPrice <= 0 || Number.isNaN(offerPrice) || offerPrice <= 0) {
-      json(res, 400, { error: 'Valid title, normal price, and offer price are required.' });
+    if (!title || Number.isNaN(normalPrice) || normalPrice <= 0 || Number.isNaN(offerPrice) || offerPrice <= 0 || !/^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/.test(upiId)) {
+      json(res, 400, { error: 'Valid title, prices, and course UPI ID are required.' });
       return;
     }
 
@@ -319,6 +344,7 @@ export default async function handler(req, res) {
       price: offerPrice,
       drive_url: cleanText(body.driveUrl, 1000) || null,
       discord_url: cleanText(body.discordUrl, 1000) || null,
+      upi_id: upiId,
     };
     if (!isHttpsUrl(payload.drive_url) || !isHttpsUrl(payload.discord_url)) return json(res, 400, { error: 'Course and Discord links must use HTTPS.' });
     if (body.id && !isUuid(body.id)) return json(res, 400, { error: 'Invalid course ID.' });
@@ -524,11 +550,16 @@ export default async function handler(req, res) {
     return;
   }
   if (action === 'campaigns') {
-    const { data, error } = await admin
+    let { data, error } = await admin
       .from('email_campaigns')
-      .select('id, audience, course_name, subject, message, recipients, created_at')
+      .select('id, audience, course_name, subject, message, recipients, attachment_name, attachment_type, created_at')
       .order('created_at', { ascending: false })
       .limit(100);
+    if (error?.code === '42703') {
+      const legacy = await admin.from('email_campaigns').select('id, audience, course_name, subject, message, recipients, created_at').order('created_at', { ascending: false }).limit(100);
+      data = (legacy.data || []).map((campaign) => ({ ...campaign, attachment_name: null, attachment_type: null }));
+      error = legacy.error;
+    }
 
     if (error) {
       json(res, 500, { error: error.message });
@@ -537,6 +568,16 @@ export default async function handler(req, res) {
 
     json(res, 200, { data });
     return;
+  }
+
+  if (action === 'campaignAttachmentUrl') {
+    if (!isUuid(body.campaignId)) return json(res, 400, { error: 'Invalid campaign ID.' });
+    const { data: campaign, error } = await admin.from('email_campaigns').select('attachment_path, attachment_name, attachment_type').eq('id', body.campaignId).maybeSingle();
+    if (error) return json(res, 500, { error: error.message });
+    if (!campaign?.attachment_path) return json(res, 404, { error: 'This campaign has no stored attachment.' });
+    const { data, error: signedError } = await admin.storage.from('mail-attachments').createSignedUrl(campaign.attachment_path, 10 * 60);
+    if (signedError) return json(res, 500, { error: signedError.message });
+    return json(res, 200, { url: data.signedUrl, name: campaign.attachment_name, type: campaign.attachment_type });
   }
 
   if (action === 'sendCampaign') {
@@ -548,6 +589,7 @@ export default async function handler(req, res) {
     const message = String(body.message || '').trim().slice(0, 5000);
     const attachmentPath = cleanText(body.attachmentPath, 300);
     const attachmentName = cleanText(body.attachmentName, 180);
+    const attachmentType = cleanText(body.attachmentType, 120) || 'application/octet-stream';
     let attachments = [];
     if (attachmentPath && attachmentName) {
       const { data: attachment, error: attachmentError } = await admin.storage.from('mail-attachments').download(attachmentPath);
@@ -604,14 +646,17 @@ export default async function handler(req, res) {
         course_name: courseName && courseName !== 'all' && courseName.toLowerCase() !== 'all courses' ? courseName : null,
         subject,
         message,
-        recipients: sent
+        recipients: sent,
+        attachment_path: attachmentPath || null,
+        attachment_name: attachmentName || null,
+        attachment_type: attachmentPath ? attachmentType : null,
       });
       if (dbError) {
         logServerError('campaigns.insert', dbError);
       }
     }
 
-    if (attachmentPath) await admin.storage.from('mail-attachments').remove([attachmentPath]);
+    if (attachmentPath && sent === 0) await admin.storage.from('mail-attachments').remove([attachmentPath]);
 
     json(res, 200, { ok: true, sent, failed, recipients: recipients.length });
     return;

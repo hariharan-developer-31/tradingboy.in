@@ -24,6 +24,7 @@ const fallbackCourses = [
     price: 7199,
     drive_url: null,
     discord_url: null,
+    upi_id: null,
     active: true,
     created_at: '',
   },
@@ -38,6 +39,7 @@ const fallbackCourses = [
     price: 5399,
     drive_url: null,
     discord_url: null,
+    upi_id: null,
     active: true,
     created_at: '',
   },
@@ -70,6 +72,7 @@ type PublicCourse = {
   price: number;
   drive_url: string | null;
   discord_url: string | null;
+  upi_id: string | null;
   active: boolean;
   created_at: string;
 };
@@ -106,6 +109,18 @@ type CampaignRecipient = {
   fullName: string;
   courseName: string | null;
   paymentStatus: string | null;
+};
+
+type EmailCampaign = {
+  id: string;
+  audience: string;
+  course_name: string | null;
+  subject: string;
+  message: string;
+  recipients: number;
+  attachment_name: string | null;
+  attachment_type: string | null;
+  created_at: string;
 };
 
 type Testimonial = {
@@ -161,6 +176,7 @@ type AdminCourseForm = {
   offerPrice: string;
   driveUrl: string;
   discordUrl: string;
+  upiId: string;
 };
 
 const money = (amount: number) => `Rs. ${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -297,6 +313,8 @@ export default function App() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminSessionChecking, setAdminSessionChecking] = useState(() => window.location.hash === '#admin' && !import.meta.env.DEV);
   const [adminPasscode, setAdminPasscode] = useState('');
+  const [adminAuthStep, setAdminAuthStep] = useState<'passcode' | 'otp'>('passcode');
+  const [adminOtp, setAdminOtp] = useState('');
   const [showAdminPasscode, setShowAdminPasscode] = useState(false);
   const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails'>('home');
   const [adminStatus, setAdminStatus] = useState('');
@@ -342,7 +360,10 @@ export default function App() {
   const [campaignSubject, setCampaignSubject] = useState('');
   const [campaignMessage, setCampaignMessage] = useState('');
   const [sendingCampaign, setSendingCampaign] = useState(false);
-  const [adminCampaigns, setAdminCampaigns] = useState<any[]>([]);
+  const [adminCampaigns, setAdminCampaigns] = useState<EmailCampaign[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null);
+  const [campaignAttachmentUrl, setCampaignAttachmentUrl] = useState('');
+  const [loadingCampaignAttachment, setLoadingCampaignAttachment] = useState(false);
   const [emailView, setEmailView] = useState<'menu' | 'compose' | 'mailbox'>('menu');
   const [campaignAttachment, setCampaignAttachment] = useState<File | null>(null);
   const [showCampaignRecipients, setShowCampaignRecipients] = useState(false);
@@ -359,6 +380,7 @@ export default function App() {
     offerPrice: '',
     driveUrl: '',
     discordUrl: '',
+    upiId: '',
   });
 
   const selectedCourse = useMemo(
@@ -377,8 +399,9 @@ export default function App() {
   }
 
   const getUpiUrl = useCallback((app: 'gpay' | 'phonepe' | 'paytm' | 'generic') => {
+    const courseUpiId = selectedCourse.upi_id || UPI_ID;
     const params = new URLSearchParams({
-      pa: UPI_ID,
+      pa: courseUpiId,
       pn: 'Trading Boy Academy',
       am: selectedOfferPrice.toString(),
       cu: 'INR',
@@ -392,7 +415,8 @@ export default function App() {
       case 'generic':
       default: return `upi://pay?${query}`;
     }
-  }, [selectedCourse.title, selectedOfferPrice]);
+  }, [selectedCourse.title, selectedCourse.upi_id, selectedOfferPrice]);
+  const selectedUpiId = selectedCourse.upi_id || UPI_ID;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(getUpiUrl('generic'))}`;
 
   const filteredOrders = useMemo(() => {
@@ -747,8 +771,13 @@ export default function App() {
       setAdminLoading(true);
       setAdminStatus('');
       if (!import.meta.env.DEV) {
-        await adminRequest('login', { passcode: adminPasscode });
+        const result = await adminRequest<{ otpRequired?: boolean }>('login', { passcode: adminPasscode });
         setAdminPasscode('');
+        if (result.otpRequired) {
+          setAdminAuthStep('otp');
+          setAdminStatus('A verification code was sent to the admin email.');
+          return;
+        }
       }
       await loadAdminCourses();
       await loadAdminOrders();
@@ -763,10 +792,30 @@ export default function App() {
     }
   };
 
+  const verifyAdminOtp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (adminLoading || !/^\d{6}$/.test(adminOtp)) return;
+    try {
+      setAdminLoading(true);
+      setAdminStatus('');
+      await adminRequest('verifyOtp', { otp: adminOtp });
+      await Promise.all([loadAdminCourses(), loadAdminOrders(), loadAdminCoupons(), loadAdminTestimonials(), loadAdminCampaigns()]);
+      setAdminOtp('');
+      setAdminAuthStep('passcode');
+      setAdminUnlocked(true);
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not verify the code.');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   const logoutAdmin = () => {
     void adminRequest('logout').catch(() => undefined);
     setAdminUnlocked(false);
     setAdminPasscode('');
+    setAdminOtp('');
+    setAdminAuthStep('passcode');
     setShowAdminPasscode(false);
     setAdminSection('home');
     setAdminStatus('');
@@ -783,7 +832,7 @@ export default function App() {
   };
 
   const resetCourseForm = () => {
-    setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', thumbnailDataUrl: undefined, normalPrice: '', offerPrice: '', driveUrl: '', discordUrl: '' });
+    setCourseForm({ id: null, title: '', description: '', thumbnailUrl: '', thumbnailDataUrl: undefined, normalPrice: '', offerPrice: '', driveUrl: '', discordUrl: '', upiId: '' });
     setShowCourseForm(false);
   };
 
@@ -806,6 +855,7 @@ export default function App() {
         offerPrice,
         driveUrl: courseForm.driveUrl,
         discordUrl: courseForm.discordUrl,
+        upiId: courseForm.upiId,
       });
       resetCourseForm();
       setAdminStatus('Course saved.');
@@ -825,6 +875,7 @@ export default function App() {
       offerPrice: String(course.offer_price || course.price),
       driveUrl: course.drive_url || '',
       discordUrl: course.discord_url || '',
+      upiId: course.upi_id || '',
     });
     setShowCourseForm(true);
     setAdminSection('courses');
@@ -1002,10 +1053,25 @@ export default function App() {
 
   const loadAdminCampaigns = async () => {
     try {
-      const response = await adminRequest<{ data: any[] }>('campaigns', {});
+      const response = await adminRequest<{ data: EmailCampaign[] }>('campaigns', {});
       if (response && response.data) setAdminCampaigns(response.data);
     } catch (error) {
       console.error('Could not load email campaigns.', error);
+    }
+  };
+
+  const openCampaignHistory = async (campaign: EmailCampaign) => {
+    setSelectedCampaign(campaign);
+    setCampaignAttachmentUrl('');
+    if (!campaign.attachment_name) return;
+    try {
+      setLoadingCampaignAttachment(true);
+      const result = await adminRequest<{ url: string }>('campaignAttachmentUrl', { campaignId: campaign.id });
+      setCampaignAttachmentUrl(result.url);
+    } catch (error) {
+      setAdminStatus(error instanceof Error ? error.message : 'Could not load the campaign attachment.');
+    } finally {
+      setLoadingCampaignAttachment(false);
     }
   };
 
@@ -1029,7 +1095,7 @@ export default function App() {
         uploadBody.append('', campaignAttachment);
         const uploadResponse = await fetch(upload.signedUrl, { method: 'PUT', headers: { 'x-upsert': 'false' }, body: uploadBody });
         if (!uploadResponse.ok) throw new Error('Could not upload the attachment. Please try again.');
-        attachmentPayload = { attachmentPath: upload.path, attachmentName: campaignAttachment.name };
+        attachmentPayload = { attachmentPath: upload.path, attachmentName: campaignAttachment.name, attachmentType: campaignAttachment.type || 'application/octet-stream' };
       }
       const result = await adminRequest<{ sent: number }>('sendCampaign', {
         audience: campaignAudience,
@@ -1792,6 +1858,18 @@ export default function App() {
                 <div className="mt-6 font-inter text-xs font-bold uppercase tracking-[0.25em] text-white/70">Loading Admin</div>
                 <p className="mt-3 font-inter text-sm text-white/40">Checking your secure session...</p>
               </div>
+            ) : adminAuthStep === 'otp' ? (
+              <form onSubmit={verifyAdminOtp} className="border border-white/10 bg-black p-6 shadow-glow sm:p-8">
+                <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Two-step verification</div>
+                <h2 className="mt-3 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Enter Email OTP</h2>
+                <p className="mt-4 font-inter text-sm leading-relaxed text-white/55">Enter the six-digit code sent to the protected admin email. It expires in 10 minutes.</p>
+                <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={adminOtp} onChange={(event) => setAdminOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" className="mt-8 h-16 w-full border border-white/10 bg-ink px-4 text-center font-mono text-2xl tracking-[0.45em] text-white outline-none focus:border-electric" />
+                <button disabled={adminLoading || !/^\d{6}$/.test(adminOtp)} className="mt-4 inline-flex h-14 w-full items-center justify-center gap-2 bg-electric px-6 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline disabled:opacity-40">
+                  {adminLoading && <RefreshCcw className="h-4 w-4 animate-spin" />}{adminLoading ? 'Verifying...' : 'Verify & Continue'}
+                </button>
+                <button type="button" onClick={() => { setAdminAuthStep('passcode'); setAdminOtp(''); setAdminStatus(''); }} className="mt-4 w-full font-inter text-xs text-white/50 transition hover:text-electric">Back to passcode</button>
+                {adminStatus && <p className="mt-4 border border-white/10 bg-ink p-3 font-inter text-sm text-white/70">{adminStatus}</p>}
+              </form>
             ) : (
               <form onSubmit={unlockAdmin} className="border border-white/10 bg-black p-6 shadow-glow sm:p-8">
                 <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Admin Panel</div>
@@ -2225,6 +2303,11 @@ export default function App() {
                             <div className="border border-white/10 bg-ink p-4 font-inter text-sm text-white/60">Auto offer: {offerPercent(Number(courseForm.normalPrice), Number(courseForm.offerPrice))}% Off</div>
                             <input value={courseForm.driveUrl} onChange={(event) => setCourseForm({ ...courseForm, driveUrl: event.target.value })} placeholder="Private Google Drive folder URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
                             <input value={courseForm.discordUrl} onChange={(event) => setCourseForm({ ...courseForm, discordUrl: event.target.value })} placeholder="Private Discord invite URL" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                            <div>
+                              <label className="mb-2 block font-inter text-[10px] font-bold uppercase tracking-widest text-white/50">Course payment UPI ID</label>
+                              <input required value={courseForm.upiId} onChange={(event) => setCourseForm({ ...courseForm, upiId: event.target.value.trim() })} placeholder="name@bank" className="w-full border border-white/10 bg-black px-4 py-3 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                              <p className="mt-2 font-inter text-[10px] text-white/35">The QR code and every payment-app link for this course will use this UPI ID.</p>
+                            </div>
                             <div className="flex flex-wrap gap-3 pt-2">
                               <button type="submit" className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">{courseForm.id ? 'Update Course' : 'Save Course'}</button>
                               <button type="button" onClick={resetCourseForm} className="border border-white/15 px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-white transition hover:border-electric">Cancel</button>
@@ -2349,7 +2432,7 @@ export default function App() {
                             <p className="font-inter text-sm text-white/50">No campaigns sent yet.</p>
                           ) : (
                             adminCampaigns.map((camp) => (
-                              <div key={camp.id} className="border-b border-white/10 pb-4 last:border-0 last:pb-0">
+                              <button type="button" onClick={() => void openCampaignHistory(camp)} key={camp.id} className="block w-full border-b border-white/10 pb-4 text-left transition hover:text-electric last:border-0 last:pb-0">
                                 <div className="font-bold text-white text-sm">{camp.subject}</div>
                                 <div className="mt-1 flex items-center justify-between text-xs text-white/50">
                                   <span>{new Date(camp.created_at).toLocaleDateString('en-IN')}</span>
@@ -2358,7 +2441,8 @@ export default function App() {
                                 <div className="mt-1 text-[10px] uppercase tracking-widest text-electric">
                                   {camp.course_name ? camp.course_name : camp.audience}
                                 </div>
-                              </div>
+                                {camp.attachment_name && <div className="mt-2 flex items-center gap-1.5 text-[10px] text-white/40"><Paperclip className="h-3 w-3" />{camp.attachment_name}</div>}
+                              </button>
                             ))
                           )}
                         </div>
@@ -2500,6 +2584,30 @@ export default function App() {
         </main>
       )}
 
+      {selectedCampaign && adminOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm" onClick={() => setSelectedCampaign(null)}>
+          <section className="flex max-h-[88vh] w-full max-w-3xl flex-col border border-electric/30 bg-[#090b0d] shadow-glow" role="dialog" aria-modal="true" aria-labelledby="campaign-detail-title" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between border-b border-white/10 p-5 sm:p-7">
+              <div className="min-w-0 pr-4">
+                <div className="font-inter text-xs font-bold uppercase tracking-[0.24em] text-electric">Sent Campaign</div>
+                <h2 id="campaign-detail-title" className="mt-2 break-words font-podium text-3xl text-white">{selectedCampaign.subject}</h2>
+                <div className="mt-3 flex flex-wrap gap-3 font-inter text-xs text-white/45"><span>{new Date(selectedCampaign.created_at).toLocaleString('en-IN')}</span><span>{selectedCampaign.recipients} sent</span><span className="uppercase text-electric">{selectedCampaign.course_name || selectedCampaign.audience}</span></div>
+              </div>
+              <button onClick={() => setSelectedCampaign(null)} className="flex h-10 w-10 shrink-0 items-center justify-center border border-white/10 text-white/60 transition hover:border-electric hover:text-white" aria-label="Close campaign details"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-5 sm:p-7">
+              <div className="whitespace-pre-wrap border border-white/10 bg-black p-5 font-inter text-sm leading-7 text-white/75">{selectedCampaign.message}</div>
+              {selectedCampaign.attachment_name && (
+                <div className="mt-5 border border-white/10 bg-black p-4">
+                  <div className="mb-3 flex items-center gap-2 font-inter text-xs text-white/55"><Paperclip className="h-4 w-4 text-electric" />{selectedCampaign.attachment_name}</div>
+                  {loadingCampaignAttachment ? <div className="flex items-center gap-2 py-8 text-sm text-white/45"><Loader2 className="h-4 w-4 animate-spin" /> Loading attachment...</div> : campaignAttachmentUrl && selectedCampaign.attachment_type?.startsWith('image/') ? <img src={campaignAttachmentUrl} alt={selectedCampaign.attachment_name} className="max-h-[52vh] w-full object-contain" /> : campaignAttachmentUrl ? <a href={campaignAttachmentUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-electric underline">Open attachment</a> : null}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+
       {showCampaignRecipients && adminOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm" onClick={() => setShowCampaignRecipients(false)}>
           <section className="flex max-h-[82vh] w-full max-w-3xl flex-col border border-electric/30 bg-[#090b0d] shadow-glow" role="dialog" aria-modal="true" aria-labelledby="recipient-list-title" onClick={(event) => event.stopPropagation()}>
@@ -2620,7 +2728,7 @@ export default function App() {
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4">
           <div className="animate-scale-in max-w-md border border-white/10 bg-ink p-6 shadow-glow">
             <h3 className="font-podium text-3xl uppercase leading-none text-white">Did you complete the payment?</h3>
-            <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">Select yes only after paying {money(selectedOfferPrice)} to {UPI_ID}.</p>
+            <p className="mt-4 font-inter text-sm leading-relaxed text-white/65">Select yes only after paying {money(selectedOfferPrice)} to {selectedUpiId}.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button onClick={() => { setPaymentPromptOpen(false); setJoinStep('proof'); }} className="bg-electric px-6 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black transition hover:bg-skyline">
                 Yes

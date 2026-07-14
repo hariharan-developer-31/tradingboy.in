@@ -130,10 +130,50 @@ test('admin session restores on refresh and email tools expose compose, attachme
   assert.match(adminApi, /signedUrl: data\.signedUrl/);
   assert.match(adminApi, /size > 10 \* 1024 \* 1024/);
   assert.match(adminApi, /attachments/);
+  assert.match(app, /openCampaignHistory/);
+  assert.match(app, /selectedCampaign\.message/);
+  assert.match(app, /campaignAttachmentUrl/);
+  assert.match(adminApi, /action === 'campaignAttachmentUrl'/);
+  assert.match(adminApi, /createSignedUrl\(campaign\.attachment_path, 10 \* 60\)/);
+  assert.match(adminApi, /attachment_path: attachmentPath \|\| null/);
   assert.match(adminApi, /excludedEmails\.forEach\(\(email\) => recipientMap\.delete\(email\)\)/);
   assert.match(security, /Path=\/api;/);
   assert.match(migration, /mail-attachments/);
   assert.match(migration, /10485760/);
+});
+
+test('admin login requires a rate-limited email OTP before creating a session', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+  const security = read('api/_security.js');
+
+  assert.match(adminApi, /hari\.entrepreneur1@gmail\.com/);
+  assert.match(adminApi, /randomInt\(0, 1_000_000\)/);
+  assert.match(adminApi, /createAdminOtpChallenge/);
+  assert.match(adminApi, /action === 'verifyOtp'/);
+  assert.match(adminApi, /scope: 'admin-login', limit: 5/);
+  assert.match(adminApi, /scope: 'admin-otp', limit: 8/);
+  assert.match(security, /tb_admin_otp/);
+  assert.match(security, /HttpOnly; Secure; SameSite=Strict/);
+  assert.match(security, /attempts - 1/);
+  assert.match(app, /Two-step verification/);
+  assert.match(app, /autoComplete="one-time-code"/);
+  assert.match(app, /adminRequest\('verifyOtp'/);
+});
+
+test('courses have dedicated UPI IDs for QR codes and payment app links', () => {
+  const app = read('src/App.tsx');
+  const adminApi = read('api/admin.js');
+  const coursesApi = read('api/courses.js');
+  const migration = read('migrations/20260714_admin_otp_campaign_history_upi.sql');
+
+  assert.match(app, /selectedCourse\.upi_id \|\| UPI_ID/);
+  assert.match(app, /pa: courseUpiId/);
+  assert.match(app, /Course payment UPI ID/);
+  assert.match(adminApi, /upi_id: upiId/);
+  assert.match(coursesApi, /price, upi_id, active/);
+  assert.match(migration, /courses add column if not exists upi_id/);
+  assert.match(migration, /email_campaigns add column if not exists attachment_path/);
 });
 
 test('coupon management supports editing and course scoping', () => {
