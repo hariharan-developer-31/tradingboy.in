@@ -396,6 +396,7 @@ function MainApp() {
   const [paymentScreenshot, setPaymentScreenshot] = useState<{ dataUrl: string; name: string } | null>(null);
   const [upiCopied, setUpiCopied] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'error'>('idle');
+  const [paymentVerifying, setPaymentVerifying] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [, setCreatedOrderId] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -838,6 +839,7 @@ function MainApp() {
         modal: { ondismiss: () => setSubmitStatus('idle'), confirm_close: true },
         handler: async (payment: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           setSubmitStatus('sending');
+          setPaymentVerifying(true);
           try {
             const verifyResponse = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verifyPayment', ...checkoutPayload, ...payment }) });
             const verified = await verifyResponse.json();
@@ -849,6 +851,8 @@ function MainApp() {
           } catch (error) {
             setSubmitStatus('error');
             setSubmitError(error instanceof Error ? error.message : 'Payment verification failed. Please contact support with your Razorpay payment ID.');
+          } finally {
+            setPaymentVerifying(false);
           }
         },
       });
@@ -1887,13 +1891,13 @@ function MainApp() {
 
       {checkoutOpen && (
         <div ref={checkoutScrollRef} className="fixed inset-0 z-50 flex flex-col overflow-y-auto overscroll-contain bg-ink page-enter">
-          <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-ink/90 px-6 py-4 backdrop-blur-xl">
+          {joinStep !== 'thanks' && <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-ink/90 px-6 py-4 backdrop-blur-xl">
             <button onClick={requestCheckoutExit} className="flex h-10 w-10 items-center justify-center text-electric transition hover:text-skyline" aria-label="Back">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="font-podium text-lg uppercase text-white">Join Course</div>
             <div className="w-10" />
-          </header>
+          </header>}
           <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 lg:px-8">
             {joinStep !== 'proof' && joinStep !== 'thanks' && <div className="mb-8 border-b border-white/10 pb-7">
               <div className="font-inter text-xs uppercase tracking-[0.3em] text-electric">Secure Enrollment</div>
@@ -2152,6 +2156,23 @@ function MainApp() {
               </div>
             )}
           </main>
+        </div>
+      )}
+
+      {paymentVerifying && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink px-6 text-center" role="status" aria-live="assertive">
+          <div className="relative flex h-24 w-24 items-center justify-center">
+            <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-electric" />
+            <div className="absolute inset-3 animate-[spin_1.4s_linear_infinite_reverse] rounded-full border border-electric/20 border-b-emerald-300" />
+            <CreditCard className="h-9 w-9 text-electric" />
+          </div>
+          <div className="mt-8 font-inter text-[10px] font-bold uppercase tracking-[0.32em] text-electric">Secure Payment</div>
+          <h2 className="mt-3 font-podium text-4xl uppercase text-white sm:text-5xl">Verifying Your Payment</h2>
+          <p className="mt-4 max-w-md font-inter text-sm leading-relaxed text-white/55">Please keep this page open while we confirm your Razorpay payment and prepare your receipt.</p>
+          <div className="mt-7 flex items-center gap-2 font-inter text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-electric" />
+            This may take a few seconds
+          </div>
         </div>
       )}
 

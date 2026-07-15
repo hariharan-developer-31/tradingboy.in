@@ -137,6 +137,10 @@ test('checkout resets to the top and uses verified Razorpay payments', () => {
   assert.match(app, /validatingCoupon \? <><Loader2[^>]*animate-spin/);
   assert.match(app, /checkout\.razorpay\.com\/v1\/checkout\.js/);
   assert.match(app, /action: 'verifyPayment'/);
+  assert.match(app, /setPaymentVerifying\(true\)/);
+  assert.match(app, /setPaymentVerifying\(false\)/);
+  assert.match(app, /Verifying Your Payment/);
+  assert.match(app, /Please keep this page open while we confirm your Razorpay payment/);
   assert.doesNotMatch(adminApi, /createSignedUrl\(order\.payment_screenshot_path/);
   assert.match(checkoutApi, /createHmac\('sha256'/);
 });
@@ -166,6 +170,7 @@ test('checkout back actions confirm cancellation and success has a centered webs
   const app = read('src/App.tsx');
   assert.match(app, /if \(checkoutOpenRef\.current && !wantsCheckout/);
   assert.match(app, /onClick=\{requestCheckoutExit\}/);
+  assert.match(app, /\{joinStep !== 'thanks' && <header/);
   assert.match(app, /Are you sure you want to cancel\?/);
   assert.match(app, /Your payment is paid successfully\./);
   assert.match(app, /It is pending for admin verification\./);
