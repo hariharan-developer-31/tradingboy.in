@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState, useRef } from 'react';
-import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Clock, Copy, CreditCard, Download, Edit3, Eye, EyeOff, Globe, History, Instagram, Loader2, LogOut, Mail, MapPin, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, Calculator, CheckCircle, Clock, Copy, CreditCard, Download, Edit3, Eye, EyeOff, Globe, History, Instagram, Loader2, LogOut, Mail, MapPin, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Ticket, Trash2, Upload, X } from 'lucide-react';
+import PositionCalculator from './components/PositionCalculator';
 import aboutImageUrl from './assets/About us.webp';
 import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
 import fundedTraderThumbnail from './assets/course-funded-trader.webp';
@@ -1508,6 +1509,7 @@ function MainApp() {
                 {link}
               </a>
             ))}
+            <a href="/position-calculator" className="inline-flex items-center gap-2 font-inter text-xs uppercase tracking-widest text-electric transition hover:text-white"><Calculator className="h-4 w-4" /> Calculator</a>
             <button onClick={() => { setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="font-inter text-xs uppercase tracking-widest text-white/80 transition hover:text-white">Support</button>
           </div>
           <button onClick={() => openCheckout()} className="group hidden items-center gap-2 bg-electric px-4 py-2.5 font-inter text-[11px] font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline md:flex">
@@ -1536,6 +1538,7 @@ function MainApp() {
               {link}
             </a>
           ))}
+          <a href="/position-calculator" onClick={() => setMenuOpen(false)} className="inline-flex items-center gap-3 font-podium text-3xl uppercase text-electric sm:text-4xl"><Calculator className="h-7 w-7" /> Position Calculator</a>
           <button onClick={() => { setMenuOpen(false); setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="font-podium text-3xl uppercase text-white sm:text-4xl">Support</button>
           <button onClick={() => { setMenuOpen(false); openCheckout(); }} className="bg-electric px-7 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline">
             Join Now
@@ -3260,6 +3263,7 @@ function PublicPage({ path }: { path: string }) {
 
 export default function App() {
   const path = window.location.pathname.replace(/\/$/, '') || '/';
+  if (path === '/position-calculator') return <PositionCalculator />;
   if (path === '/about' || path === '/contact' || policyPages[path]) return <PublicPage path={path} />;
   return <MainApp />;
 }

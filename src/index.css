@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .input-style {
+    @apply h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/30 focus:border-electric;
+  }
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

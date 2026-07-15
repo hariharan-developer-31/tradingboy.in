@@ -66,6 +66,22 @@ test('checkout URL preserves the selected course across refreshes', () => {
   assert.match(app, /window\.location\.hash === '#checkout' \|\| Boolean\(checkoutSlug\)/);
 });
 
+test('position calculator is linked from navigation and exposes complete risk sizing results', () => {
+  const app = read('src/App.tsx');
+  const calculator = read('src/components/PositionCalculator.tsx');
+  const vercel = read('vercel.json');
+
+  assert.match(app, /href="\/position-calculator"/);
+  assert.match(app, /path === '\/position-calculator'/);
+  assert.match(calculator, /riskMoney \/ \(stopLoss \* pipValuePerLot\)/);
+  assert.match(calculator, /instrument\.pipSize \* instrument\.contractSize \* quoteToAccount/);
+  assert.match(calculator, /Money at risk/);
+  assert.match(calculator, /Risking pips/);
+  assert.match(calculator, /Value per pip/);
+  assert.match(calculator, /Risk percentage cannot exceed 100%/);
+  assert.match(vercel, /"source": "\/position-calculator", "destination": "\/index\.html"/);
+});
+
 test('checkout emails both the student and admin with a secure payment verification link', () => {
   const checkout = read('api/checkout.js');
   const vite = read('vite.config.ts');
