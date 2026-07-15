@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Calculator, RefreshCcw, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Calculator, Download, RefreshCcw, ShieldCheck } from 'lucide-react';
 
 type Instrument = { symbol: string; base: string; quote: string; pipSize: number; contractSize: number; label: string };
 type Result = { riskMoney: number; riskPercent: number; units: number; lots: number; brokerSizing: number; pipValue: number; stopLoss: number };
 type FuturesInstrument = { code: string; name: string; size: 'mini' | 'micro'; tickSize: number; tickValue: number; unit: string };
+type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
 
 const forexSymbols = [
   'AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD', 'CADCHF', 'CADJPY', 'CHFJPY',
@@ -37,13 +38,61 @@ const futuresInstruments: FuturesInstrument[] = [
 
 export default function PositionCalculator() {
   const [calculatorType, setCalculatorType] = useState<'forex' | 'futures' | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const shellClass = calculatorType === 'forex' ? 'calculator-shell calculator-forex' : calculatorType === 'futures' ? 'calculator-shell calculator-futures' : 'calculator-shell calculator-choice';
   const heading = calculatorType === 'forex' ? 'Forex Calculator' : calculatorType === 'futures' ? 'Future Calculator' : 'Position Calculator';
+
+  useEffect(() => {
+    const manifest = document.createElement('link');
+    manifest.rel = 'manifest';
+    manifest.href = '/calculator.webmanifest';
+    manifest.dataset.calculatorPwa = 'manifest';
+    document.head.appendChild(manifest);
+
+    const appleIcon = document.createElement('link');
+    appleIcon.rel = 'apple-touch-icon';
+    appleIcon.href = '/admin-pwa-192.png';
+    appleIcon.dataset.calculatorPwa = 'apple-icon';
+    document.head.appendChild(appleIcon);
+
+    const appleCapable = document.createElement('meta');
+    appleCapable.name = 'apple-mobile-web-app-capable';
+    appleCapable.content = 'yes';
+    appleCapable.dataset.calculatorPwa = 'apple-capable';
+    document.head.appendChild(appleCapable);
+
+    const previousTitle = document.title;
+    document.title = 'Trading Boy Position Calculator';
+    const captureInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    };
+    const markInstalled = () => setInstallPrompt(null);
+    window.addEventListener('beforeinstallprompt', captureInstallPrompt);
+    window.addEventListener('appinstalled', markInstalled);
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/calculator-sw.js', { scope: '/position-calculator' }).catch(() => undefined);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', captureInstallPrompt);
+      window.removeEventListener('appinstalled', markInstalled);
+      document.querySelectorAll('[data-calculator-pwa]').forEach((element) => element.remove());
+      document.title = previousTitle;
+    };
+  }, []);
+
+  const installCalculator = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  };
+
   return <div className={`${shellClass} [&>div>header]:hidden [&>div]:!min-h-[calc(100vh-73px)]`}>
     <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 text-white sm:px-10 lg:px-16">
       <nav className="mx-auto flex max-w-7xl items-center gap-4" aria-label="Calculator navigation">
         {calculatorType ? <button type="button" onClick={() => setCalculatorType(null)} aria-label="Back to calculator selection" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></button> : <a href="/" aria-label="Back to home" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></a>}
         <button type="button" onClick={() => setCalculatorType(null)} className="text-left font-podium text-lg uppercase transition hover:text-electric">{heading}</button>
+        {installPrompt && <button type="button" onClick={installCalculator} aria-label="Install position calculator app" className="ml-auto flex h-10 items-center justify-center gap-2 border border-electric/35 px-3 text-electric transition hover:bg-electric hover:text-black"><Download className="h-4 w-4" /><span className="hidden text-[10px] font-bold uppercase tracking-widest sm:inline">Install</span></button>}
       </nav>
     </header>
     {calculatorType === 'forex' ? <ForexCalculator onChangeType={() => setCalculatorType(null)} /> : calculatorType === 'futures' ? <FuturesCalculator onChangeType={() => setCalculatorType(null)} /> : <CalculatorChoice onSelect={setCalculatorType} />}
