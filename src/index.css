@@ -12,6 +12,7 @@
   .input-style::-webkit-outer-spin-button { appearance: none; margin: 0; }
 
   .calculator-choice main > div.relative.mx-auto > :nth-child(-n+3) { display: none; }
+  .calculator-choice main { align-items: flex-start; padding-top: 1rem; }
   .calculator-choice main > div.relative.mx-auto > .grid { display: block; margin: 0 auto; max-width: 48rem; }
   .calculator-choice main > div.relative.mx-auto > .grid > button + button { margin-top: 1rem; }
   .calculator-forex main div:has(> form),
