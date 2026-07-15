@@ -1538,7 +1538,7 @@ function MainApp() {
               {link}
             </a>
           ))}
-          <a href="/position-calculator" onClick={() => setMenuOpen(false)} className="font-podium text-3xl uppercase text-electric sm:text-4xl">Position Calculator</a>
+          <a href="/position-calculator" onClick={() => setMenuOpen(false)} className="font-podium text-3xl uppercase text-electric sm:text-4xl">Calculator</a>
           <button onClick={() => { setMenuOpen(false); setSupportOpen(true); setSupportSubmitted(false); setSupportStatus(''); }} className="font-podium text-3xl uppercase text-white sm:text-4xl">Support</button>
           <button onClick={() => { setMenuOpen(false); openCheckout(); }} className="bg-electric px-7 py-4 font-inter text-xs font-bold uppercase tracking-widest text-black shadow-glow transition hover:bg-skyline">
             Join Now

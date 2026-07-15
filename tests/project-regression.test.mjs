@@ -95,7 +95,9 @@ test('position calculator is linked from navigation and exposes complete risk si
   assert.match(calculator, /Calculating Futures Size/);
   assert.match(calculator, /risk budget too small/);
   assert.doesNotMatch(app, /<Calculator className=.*Calculator/);
-  assert.doesNotMatch(calculator, /<ArrowLeft/);
+  assert.match(calculator, /aria-label="Back to home"[\s\S]*<ArrowLeft/);
+  assert.match(app, /href="\/position-calculator"[^>]*>Calculator<\/a>/);
+  assert.doesNotMatch(app, /href="\/position-calculator"[^>]*>Position Calculator<\/a>/);
   assert.match(vercel, /"source": "\/position-calculator", "destination": "\/index\.html"/);
 });
 

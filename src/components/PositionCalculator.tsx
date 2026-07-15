@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { Calculator, RefreshCcw, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Calculator, RefreshCcw, ShieldCheck } from 'lucide-react';
 
 type Instrument = { symbol: string; base: string; quote: string; pipSize: number; contractSize: number; label: string };
 type Result = { riskMoney: number; riskPercent: number; units: number; lots: number; brokerSizing: number; pipValue: number; stopLoss: number };
@@ -33,9 +33,15 @@ const futuresInstruments: FuturesInstrument[] = [
 
 export default function PositionCalculator() {
   const [calculatorType, setCalculatorType] = useState<'forex' | 'futures' | null>(null);
-  if (calculatorType === 'forex') return <ForexCalculator onChangeType={() => setCalculatorType(null)} />;
-  if (calculatorType === 'futures') return <FuturesCalculator onChangeType={() => setCalculatorType(null)} />;
-  return <CalculatorChoice onSelect={setCalculatorType} />;
+  return <div className="[&>div>header]:hidden [&>div]:!min-h-[calc(100vh-73px)]">
+    <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 text-white sm:px-10 lg:px-16">
+      <nav className="mx-auto flex max-w-7xl items-center gap-4" aria-label="Calculator navigation">
+        <a href="/" aria-label="Back to home" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></a>
+        <button type="button" onClick={() => setCalculatorType(null)} className="text-left font-podium text-lg uppercase transition hover:text-electric">Position Calculator</button>
+      </nav>
+    </header>
+    {calculatorType === 'forex' ? <ForexCalculator onChangeType={() => setCalculatorType(null)} /> : calculatorType === 'futures' ? <FuturesCalculator onChangeType={() => setCalculatorType(null)} /> : <CalculatorChoice onSelect={setCalculatorType} />}
+  </div>;
 }
 
 function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
@@ -98,8 +104,8 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
   return (
     <div className="min-h-screen bg-ink text-white">
       <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 sm:px-10 lg:px-16">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between" aria-label="Calculator navigation">
-          <a href="/" className="text-xs font-bold uppercase tracking-widest text-white/65 hover:text-electric">Home</a>
+        <nav className="mx-auto flex max-w-7xl items-center gap-5" aria-label="Calculator navigation">
+          <a href="/" aria-label="Back to home" className="flex h-10 w-10 items-center justify-center text-white/65 hover:text-electric"><ArrowLeft className="h-5 w-5" /></a>
           <button type="button" onClick={onChangeType} className="font-podium text-lg uppercase hover:text-electric">Position Calculator</button>
         </nav>
       </header>
