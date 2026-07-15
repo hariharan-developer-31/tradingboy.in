@@ -442,6 +442,7 @@ function MainApp() {
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentCourseFilter, setPaymentCourseFilter] = useState('all');
+  const [paymentDriveFilter, setPaymentDriveFilter] = useState('all');
   const [paymentDateFilter, setPaymentDateFilter] = useState<'all' | 'today' | 'custom'>('all');
   const [paymentCustomDate, setPaymentCustomDate] = useState('');
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -518,17 +519,18 @@ function MainApp() {
     return adminOrders.filter((order) => {
       const matchesStatus = paymentStatusFilter === 'all' || order.payment_status === paymentStatusFilter;
       const matchesCourse = paymentCourseFilter === 'all' || order.course_name === paymentCourseFilter;
+      const matchesDrive = paymentDriveFilter === 'all' || (order.drive_access_status || 'pending') === paymentDriveFilter;
       const orderDateKey = localDateKey(new Date(order.created_at));
       const matchesDate = paymentDateFilter === 'all' || (paymentDateFilter === 'today' ? orderDateKey === todayKey : !paymentCustomDate || orderDateKey === paymentCustomDate);
       const matchesSearch =
         !query ||
-        [order.full_name, order.email, order.phone, order.course_name || '', order.trading_experience || '']
+        [order.order_number || '', order.id, order.full_name, order.email, order.phone, order.course_name || '', order.trading_experience || '', order.coupon_code || '', order.razorpay_order_id || '', order.razorpay_payment_id || '']
           .join(' ')
           .toLowerCase()
           .includes(query);
-      return matchesStatus && matchesCourse && matchesDate && matchesSearch;
+      return matchesStatus && matchesCourse && matchesDrive && matchesDate && matchesSearch;
     });
-  }, [adminOrders, paymentCourseFilter, paymentCustomDate, paymentDateFilter, paymentSearch, paymentStatusFilter]);
+  }, [adminOrders, paymentCourseFilter, paymentCustomDate, paymentDateFilter, paymentDriveFilter, paymentSearch, paymentStatusFilter]);
 
   const filteredSupportTickets = useMemo(() => {
     const query = supportSearch.trim().toLowerCase();
@@ -1435,8 +1437,9 @@ function MainApp() {
   };
 
   const downloadOrdersCsv = () => {
-    const headers = ['Order ID', 'Date', 'Name', 'Email', 'Phone', 'Experience', 'Course', 'Amount', 'Status'];
+    const headers = ['Order Number', 'Internal Order ID', 'Date and Time (IST)', 'Student Name', 'Email', 'Phone', 'Trading Experience', 'Course', 'Coupon Code', 'Original Amount (INR)', 'Discount (INR)', 'Final Amount (INR)', 'Razorpay Order ID', 'Razorpay Payment ID', 'Drive Access', 'Payment Status', 'Terms Accepted'];
     const rows = filteredOrders.map((order) => [
+      order.order_number || '',
       order.id,
       new Date(order.created_at).toLocaleString('en-IN'),
       order.full_name,
@@ -1444,17 +1447,31 @@ function MainApp() {
       order.phone,
       order.trading_experience || '',
       order.course_name || '',
+      order.coupon_code || '',
+      order.original_amount,
+      order.discount_amount,
       order.final_amount,
+      order.razorpay_order_id || '',
+      order.razorpay_payment_id || '',
+      order.drive_access_status || 'pending',
       order.payment_status,
+      order.terms_accepted ? 'Yes' : 'No',
     ]);
-    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const escapeCsvCell = (cell: string | number | boolean) => {
+      const value = String(cell);
+      const spreadsheetSafeValue = typeof cell === 'string' && /^[=+\-@]/.test(value) ? `'${value}` : value;
+      return `"${spreadsheetSafeValue.replace(/"/g, '""')}"`;
+    };
+    const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escapeCsvCell).join(',')).join('\r\n')}`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `trading-boy-payments-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const isFundedCourse = courseDetailsOpen?.title.toLowerCase().includes('funded') ?? false;
@@ -2888,27 +2905,45 @@ function MainApp() {
                       </div>
                     </div>
                     <div className="space-y-3 border border-white/10 bg-black p-3">
-                      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_170px_230px_170px_170px]">
-                        <input value={paymentSearch} onChange={(event) => setPaymentSearch(event.target.value)} placeholder="Search name, email, phone, course" className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
-                        <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
-                          <option value="all">All status</option>
-                          <option value="pending">Pending</option>
-                          <option value="under_review">Under Review</option>
-                          <option value="paid">Paid</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                        <select value={paymentCourseFilter} onChange={(event) => setPaymentCourseFilter(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
-                          <option value="all">All courses</option>
-                          {adminCourseNames.map((course) => <option key={course}>{course}</option>)}
-                        </select>
-                        <select value={paymentDateFilter} onChange={(event) => setPaymentDateFilter(event.target.value as 'all' | 'today' | 'custom')} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
-                          <option value="all">All dates</option>
-                          <option value="today">Today only</option>
-                          <option value="custom">Choose date</option>
-                        </select>
-                        {paymentDateFilter === 'custom' ? (
-                          <input type="date" value={paymentCustomDate} onChange={(event) => setPaymentCustomDate(event.target.value)} className="h-12 border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric" />
-                        ) : <div className="hidden xl:block" />}
+                      <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-[180px_minmax(280px,1fr)_230px_190px_190px]">
+                        <label className="space-y-2">
+                          <span className="block font-inter text-[10px] font-bold uppercase tracking-widest text-white/45">Date</span>
+                          <select value={paymentDateFilter} onChange={(event) => setPaymentDateFilter(event.target.value as 'all' | 'today' | 'custom')} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                            <option value="all">All dates</option>
+                            <option value="today">Today only</option>
+                            <option value="custom">Choose date</option>
+                          </select>
+                          {paymentDateFilter === 'custom' && <input aria-label="Payment date" type="date" value={paymentCustomDate} onChange={(event) => setPaymentCustomDate(event.target.value)} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric" />}
+                        </label>
+                        <label className="space-y-2">
+                          <span className="block font-inter text-[10px] font-bold uppercase tracking-widest text-white/45">Student / Contact / IDs</span>
+                          <input value={paymentSearch} onChange={(event) => setPaymentSearch(event.target.value)} placeholder="Name, email, phone, order, coupon, Razorpay ID" className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/35 focus:border-electric" />
+                        </label>
+                        <label className="space-y-2">
+                          <span className="block font-inter text-[10px] font-bold uppercase tracking-widest text-white/45">Course</span>
+                          <select value={paymentCourseFilter} onChange={(event) => setPaymentCourseFilter(event.target.value)} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                            <option value="all">All courses</option>
+                            {adminCourseNames.map((course) => <option key={course}>{course}</option>)}
+                          </select>
+                        </label>
+                        <label className="space-y-2">
+                          <span className="block font-inter text-[10px] font-bold uppercase tracking-widest text-white/45">Drive Access</span>
+                          <select value={paymentDriveFilter} onChange={(event) => setPaymentDriveFilter(event.target.value)} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                            <option value="all">All access</option>
+                            <option value="pending">Pending</option>
+                            <option value="granted">Granted</option>
+                          </select>
+                        </label>
+                        <label className="space-y-2">
+                          <span className="block font-inter text-[10px] font-bold uppercase tracking-widest text-white/45">Payment Status</span>
+                          <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none focus:border-electric">
+                            <option value="all">All statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="under_review">Under Review</option>
+                            <option value="paid">Paid</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </label>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
                         <button onClick={() => void refreshAdminData('payments')} disabled={adminRefreshing !== null} className="inline-flex h-11 items-center justify-center gap-2 border border-white/15 px-4 font-inter text-[10px] font-bold uppercase tracking-widest text-white transition hover:border-electric disabled:cursor-wait disabled:opacity-60">

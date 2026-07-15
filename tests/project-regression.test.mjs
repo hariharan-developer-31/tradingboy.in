@@ -98,8 +98,10 @@ test('position calculator is linked from navigation and exposes complete risk si
   assert.match(calculator, /aria-label="Back to calculator selection"/);
   assert.match(calculator, /calculatorType === 'forex' \? 'Forex Calculator'/);
   assert.match(calculator, /calculatorType === 'futures' \? 'Future Calculator'/);
-  assert.match(calculator, /list="forex-pairs"/);
-  assert.match(calculator, /\^\[A-Z\]\{6\}\$/);
+  assert.match(calculator, /role="combobox"/);
+  assert.match(calculator, /id="forex-pair-suggestions" role="listbox"/);
+  assert.match(calculator, /pairSearchInvalid/);
+  assert.match(calculator, /instruments\.find\(\(item\) => item\.symbol === symbol\)/);
   assert.match(css, /\.calculator-choice[\s\S]*grid-template-columns|\.calculator-choice[\s\S]*display: block/);
   assert.match(css, /form \+ aside[\s\S]*display: none/);
   assert.doesNotMatch(app, /<Calculator className=.*Calculator/);
@@ -300,6 +302,14 @@ test('payment admin supports safe bulk deletion, date filters, and confirmed sta
   const viteConfig = read('vite.config.ts');
 
   assert.match(app, /Today only/);
+  assert.match(app, /paymentDriveFilter/);
+  assert.match(app, /Drive Access/);
+  assert.match(app, /Order Number/);
+  assert.match(app, /Razorpay Payment ID/);
+  assert.match(app, /Drive Access/);
+  assert.match(app, /Payment Status/);
+  assert.match(app, /spreadsheetSafeValue/);
+  assert.match(app, /\\uFEFF/);
   assert.match(app, /Delete selected/);
   assert.match(app, /Delete all/);
   assert.match(app, /window\.confirm\(`Change/);
