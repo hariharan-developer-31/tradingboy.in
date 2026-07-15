@@ -5,7 +5,11 @@
 @layer components {
   .input-style {
     @apply h-12 w-full border border-white/10 bg-ink px-4 font-inter text-sm text-white outline-none transition placeholder:text-white/30 focus:border-electric;
+    appearance: textfield;
   }
+
+  .input-style::-webkit-inner-spin-button,
+  .input-style::-webkit-outer-spin-button { appearance: none; margin: 0; }
 }
 
 @layer base {

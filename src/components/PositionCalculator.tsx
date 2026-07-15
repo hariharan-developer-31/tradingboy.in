@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { ArrowLeft, Calculator, RefreshCcw, ShieldCheck } from 'lucide-react';
+import { Calculator, RefreshCcw, ShieldCheck } from 'lucide-react';
 
 type Instrument = { symbol: string; base: string; quote: string; pipSize: number; contractSize: number; label: string };
 type Result = { riskMoney: number; riskPercent: number; units: number; lots: number; brokerSizing: number; pipValue: number; stopLoss: number };
@@ -16,13 +16,14 @@ const instruments: Instrument[] = [
 ].map(([symbol, base, quote, pipSize, contractSize, label]) => ({ symbol, base, quote, pipSize, contractSize, label } as Instrument));
 
 const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD', 'INR'];
-const initialForm = { symbol: 'EURUSD', accountCurrency: 'USD', accountSize: '', riskMode: 'percent' as 'percent' | 'money', riskPercent: '1', riskMoney: '', stopLoss: '', brokerLotUnit: '1', conversionRate: '', pairPrice: '' };
+const initialForm = { symbol: 'EURUSD', accountCurrency: 'USD', accountSize: '', riskMode: 'percent' as 'percent' | 'money', riskPercent: '1', riskMoney: '', stopMode: 'pips' as 'pips' | 'levels', stopLoss: '', entryPrice: '', stopPrice: '', brokerLotUnit: '1', conversionRate: '', pairPrice: '' };
 const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 
 export default function PositionCalculator() {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState('');
   const [result, setResult] = useState<Result | null>(null);
+  const [calculating, setCalculating] = useState(false);
   const instrument = useMemo(() => instruments.find((item) => item.symbol === form.symbol) || instruments[0], [form.symbol]);
   const needsPairPrice = form.accountCurrency === instrument.base;
   const needsConversion = form.accountCurrency !== instrument.quote && !needsPairPrice;
@@ -36,18 +37,21 @@ export default function PositionCalculator() {
   const calculate = (event: FormEvent) => {
     event.preventDefault();
     const accountSize = Number(form.accountSize);
-    const stopLoss = Number(form.stopLoss);
+    const entryPrice = Number(form.entryPrice);
+    const stopPrice = Number(form.stopPrice);
+    const stopLoss = form.stopMode === 'pips' ? Number(form.stopLoss) : Math.abs(entryPrice - stopPrice) / instrument.pipSize;
     const brokerLotUnit = Number(form.brokerLotUnit);
     const riskInput = Number(form.riskMode === 'percent' ? form.riskPercent : form.riskMoney);
     if (!Number.isFinite(accountSize) || accountSize <= 0) return setError('Enter an account size greater than zero.');
     if (!Number.isFinite(riskInput) || riskInput <= 0) return setError(`Enter a valid risk ${form.riskMode === 'percent' ? 'percentage' : 'amount'}.`);
     if (form.riskMode === 'percent' && riskInput > 100) return setError('Risk percentage cannot exceed 100%.');
-    if (!Number.isFinite(stopLoss) || stopLoss <= 0) return setError('Enter a stop-loss distance greater than zero pips.');
+    if (form.stopMode === 'levels' && (!Number.isFinite(entryPrice) || entryPrice <= 0 || !Number.isFinite(stopPrice) || stopPrice <= 0)) return setError('Enter valid entry and stop-loss prices.');
+    if (!Number.isFinite(stopLoss) || stopLoss <= 0) return setError(form.stopMode === 'levels' ? 'Entry and stop-loss prices must be different.' : 'Enter a stop-loss distance greater than zero pips.');
     if (!Number.isFinite(brokerLotUnit) || brokerLotUnit <= 0) return setError('Broker lot unit must be greater than zero.');
 
     let quoteToAccount = 1;
     if (needsPairPrice) {
-      const pairPrice = Number(form.pairPrice);
+      const pairPrice = Number(form.stopMode === 'levels' ? form.entryPrice : form.pairPrice);
       if (!Number.isFinite(pairPrice) || pairPrice <= 0) return setError(`Enter the current ${instrument.label} market price.`);
       quoteToAccount = 1 / pairPrice;
     } else if (needsConversion) {
@@ -61,7 +65,13 @@ export default function PositionCalculator() {
     const lots = riskMoney / (stopLoss * pipValuePerLot);
     const units = lots * instrument.contractSize;
     if (![pipValuePerLot, lots, units].every(Number.isFinite) || lots <= 0) return setError('These values could not produce a valid position size.');
-    setResult({ riskMoney, riskPercent: riskMoney / accountSize * 100, units, lots, brokerSizing: lots / brokerLotUnit, pipValue: pipValuePerLot * lots, stopLoss });
+    const nextResult = { riskMoney, riskPercent: riskMoney / accountSize * 100, units, lots, brokerSizing: lots / brokerLotUnit, pipValue: pipValuePerLot * lots, stopLoss };
+    setCalculating(true);
+    window.setTimeout(() => {
+      setResult(nextResult);
+      setCalculating(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 850);
   };
 
   const reset = () => { setForm(initialForm); setResult(null); setError(''); };
@@ -70,41 +80,23 @@ export default function PositionCalculator() {
     <div className="min-h-screen bg-ink text-white">
       <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 sm:px-10 lg:px-16">
         <nav className="mx-auto flex max-w-7xl items-center justify-between" aria-label="Calculator navigation">
-          <a href="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/65 hover:text-electric"><ArrowLeft className="h-4 w-4" /> Home</a>
-          <div className="flex items-center gap-2 font-podium text-lg uppercase"><Calculator className="h-5 w-5 text-electric" /> Position Calculator</div>
+          <a href="/" className="text-xs font-bold uppercase tracking-widest text-white/65 hover:text-electric">Home</a>
+          <div className="font-podium text-lg uppercase">Position Calculator</div>
         </nav>
       </header>
       <main className="relative overflow-hidden px-5 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
         <div className="pointer-events-none absolute left-1/2 top-0 h-96 w-[75%] -translate-x-1/2 bg-electric/10 blur-[130px]" />
         <div className="relative mx-auto max-w-6xl">
-          <div className="max-w-3xl">
+          {!result && <div className="max-w-3xl">
             <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-electric">Risk Management Tool</div>
             <h1 className="mt-4 font-podium text-5xl uppercase leading-none sm:text-7xl">Position Size Calculator</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">Calculate a risk-based forex or gold position before placing a trade. Enter the same values you use with your broker; the result is informational, not financial advice.</p>
-          </div>
+          </div>}
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-            <form onSubmit={calculate} className="border border-white/10 bg-black/35 p-5 sm:p-8">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Currency pair"><select value={form.symbol} onChange={(e) => setField('symbol', e.target.value)} className="input-style">{instruments.map((item) => <option key={item.symbol} value={item.symbol}>{item.symbol} — {item.label}</option>)}</select></Field>
-                <Field label="Account currency"><select value={form.accountCurrency} onChange={(e) => setField('accountCurrency', e.target.value)} className="input-style">{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></Field>
-                <Field label="Account size"><input type="number" min="0" step="any" inputMode="decimal" value={form.accountSize} onChange={(e) => setField('accountSize', e.target.value)} placeholder="e.g. 10,000" className="input-style" /></Field>
-                <Field label="Broker lot unit" hint="1 standard · 0.1 mini · 0.01 micro"><select value={form.brokerLotUnit} onChange={(e) => setField('brokerLotUnit', e.target.value)} className="input-style"><option value="1">1 — Standard account</option><option value="0.1">0.1 — Mini account</option><option value="0.01">0.01 — Micro account</option></select></Field>
-                <div className="sm:col-span-2">
-                  <div className="mb-3 flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">Risk input</span><button type="button" onClick={() => setField('riskMode', form.riskMode === 'percent' ? 'money' : 'percent')} className="border border-electric/30 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-electric hover:bg-electric hover:text-black">Use {form.riskMode === 'percent' ? 'Money' : 'Percentage'}</button></div>
-                  {form.riskMode === 'percent' ? <input type="number" min="0" max="100" step="any" inputMode="decimal" value={form.riskPercent} onChange={(e) => setField('riskPercent', e.target.value)} placeholder="Risk ratio, %" className="input-style" /> : <input type="number" min="0" step="any" inputMode="decimal" value={form.riskMoney} onChange={(e) => setField('riskMoney', e.target.value)} placeholder={`Risk money, ${form.accountCurrency}`} className="input-style" />}
-                </div>
-                <Field label="Stop-loss distance" hint="Enter pips, not points"><input type="number" min="0" step="any" inputMode="decimal" value={form.stopLoss} onChange={(e) => setField('stopLoss', e.target.value)} placeholder="e.g. 30 pips" className="input-style" /></Field>
-                {needsPairPrice && <Field label={`Current ${instrument.symbol} price`} hint={`Needed to convert ${instrument.quote} into ${form.accountCurrency}`}><input type="number" min="0" step="any" inputMode="decimal" value={form.pairPrice} onChange={(e) => setField('pairPrice', e.target.value)} placeholder="Current market price" className="input-style" /></Field>}
-                {needsConversion && <Field label={`${instrument.quote} → ${form.accountCurrency} rate`} hint={`Enter the ${form.accountCurrency} value of 1 ${instrument.quote}`}><input type="number" min="0" step="any" inputMode="decimal" value={form.conversionRate} onChange={(e) => setField('conversionRate', e.target.value)} placeholder={`1 ${instrument.quote} = ? ${form.accountCurrency}`} className="input-style" /></Field>}
-              </div>
-              {error && <div className="mt-5 border border-red-400/30 bg-red-950/20 p-4 text-sm text-red-200" role="alert">{error}</div>}
-              <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={reset} className="inline-flex items-center justify-center gap-2 border border-white/15 px-5 py-4 text-xs font-bold uppercase tracking-widest text-white/65 hover:border-electric hover:text-white"><RefreshCcw className="h-4 w-4" /> Reset</button><button className="inline-flex items-center justify-center gap-2 bg-electric px-7 py-4 text-xs font-bold uppercase tracking-widest text-black shadow-glow hover:bg-skyline"><Calculator className="h-4 w-4" /> Calculate</button></div>
-            </form>
-
-            <aside className="h-fit border border-electric/25 bg-electric/[0.06] p-5 sm:p-7" aria-live="polite">
-              <div className="flex items-center gap-3"><ShieldCheck className="h-6 w-6 text-electric" /><h2 className="font-podium text-2xl uppercase">Results</h2></div>
-              {!result ? <div className="mt-6 border border-dashed border-white/15 px-5 py-12 text-center text-sm leading-6 text-white/40">Complete the values and select Calculate to see your position size.</div> : <div className="mt-6 space-y-3">
+          {result ? (
+            <section className="mx-auto mt-10 max-w-2xl border border-electric/25 bg-electric/[0.06] p-5 sm:p-8" aria-live="polite">
+              <div className="flex items-center gap-3"><ShieldCheck className="h-6 w-6 text-electric" /><h2 className="font-podium text-3xl uppercase">Position Size Results</h2></div>
+              <div className="mt-6 space-y-3">
                 <ResultRow label="Calculated size" value={`${result.lots.toFixed(4)} lots`} highlight />
                 <ResultRow label="Lot equivalents" value={`${result.lots.toFixed(2)} std · ${(result.lots * 10).toFixed(2)} mini · ${(result.lots * 100).toFixed(2)} micro`} />
                 <ResultRow label="Units" value={Math.floor(result.units).toLocaleString('en-US')} />
@@ -113,18 +105,58 @@ export default function PositionCalculator() {
                 <ResultRow label="Risk ratio" value={`${numberFormat.format(result.riskPercent)}%`} />
                 <ResultRow label="Risking pips" value={`${numberFormat.format(result.stopLoss)} pips`} />
                 <ResultRow label={`Value per pip (${form.accountCurrency})`} value={`${form.accountCurrency} ${numberFormat.format(result.pipValue)}`} />
-                <p className="pt-3 text-[10px] leading-5 text-white/35">The exact size is mathematical. Confirm your broker's contract specification and round down to its permitted lot step before trading.</p>
-              </div>}
+                <p className="pt-3 text-[10px] leading-5 text-white/35">Confirm your broker's contract specification and round down to its permitted lot step before trading.</p>
+              </div>
+              <button type="button" onClick={reset} className="mt-7 inline-flex w-full items-center justify-center gap-2 border border-electric/40 px-6 py-4 text-xs font-bold uppercase tracking-widest text-electric hover:bg-electric hover:text-black"><RefreshCcw className="h-4 w-4" /> New Calculation</button>
+            </section>
+          ) : <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+            <form onSubmit={calculate} className="border border-white/10 bg-black/35 p-5 sm:p-8">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Currency pair"><select value={form.symbol} onChange={(e) => setField('symbol', e.target.value)} className="input-style">{instruments.map((item) => <option key={item.symbol} value={item.symbol}>{item.symbol} — {item.label}</option>)}</select></Field>
+                <Field label="Account currency"><select value={form.accountCurrency} onChange={(e) => setField('accountCurrency', e.target.value)} className="input-style">{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></Field>
+                <Field label="Account size"><input type="number" min="0" step="any" inputMode="decimal" value={form.accountSize} onChange={(e) => setField('accountSize', e.target.value)} placeholder="e.g. 10,000" className="input-style" /></Field>
+                <Field label="Broker lot unit" hint="1 standard · 0.1 mini · 0.01 micro"><select value={form.brokerLotUnit} onChange={(e) => setField('brokerLotUnit', e.target.value)} className="input-style"><option value="1">1 — Standard account</option><option value="0.1">0.1 — Mini account</option><option value="0.01">0.01 — Micro account</option></select></Field>
+                <div className="sm:col-span-2">
+                  <span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">Risk input</span>
+                  <div className="mb-3 grid grid-cols-2 border border-white/10 p-1">
+                    <ModeButton active={form.riskMode === 'percent'} onClick={() => setField('riskMode', 'percent')}>Percentage</ModeButton>
+                    <ModeButton active={form.riskMode === 'money'} onClick={() => setField('riskMode', 'money')}>Money ({form.accountCurrency})</ModeButton>
+                  </div>
+                  {form.riskMode === 'percent' ? <input type="number" min="0" max="100" step="any" inputMode="decimal" value={form.riskPercent} onChange={(e) => setField('riskPercent', e.target.value)} placeholder="Risk ratio, %" className="input-style" /> : <input type="number" min="0" step="any" inputMode="decimal" value={form.riskMoney} onChange={(e) => setField('riskMoney', e.target.value)} placeholder={`Risk money, ${form.accountCurrency}`} className="input-style" />}
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">Stop-loss input</span>
+                  <div className="mb-3 grid grid-cols-2 border border-white/10 p-1">
+                    <ModeButton active={form.stopMode === 'pips'} onClick={() => setField('stopMode', 'pips')}>Use Pips</ModeButton>
+                    <ModeButton active={form.stopMode === 'levels'} onClick={() => setField('stopMode', 'levels')}>Use Price Levels</ModeButton>
+                  </div>
+                  {form.stopMode === 'pips' ? <Field label="Stop-loss distance" hint="Enter pips, not broker points"><input type="number" min="0" step="any" inputMode="decimal" value={form.stopLoss} onChange={(e) => setField('stopLoss', e.target.value)} placeholder="e.g. 30 pips" className="input-style" /></Field> : <div className="grid gap-4 sm:grid-cols-2"><Field label="Entry price"><input type="number" min="0" step="any" inputMode="decimal" value={form.entryPrice} onChange={(e) => setField('entryPrice', e.target.value)} placeholder="e.g. 2350.50" className="input-style" /></Field><Field label="Stop-loss price" hint="Pips are calculated automatically"><input type="number" min="0" step="any" inputMode="decimal" value={form.stopPrice} onChange={(e) => setField('stopPrice', e.target.value)} placeholder="e.g. 2345.50" className="input-style" /></Field></div>}
+                </div>
+                {needsPairPrice && form.stopMode === 'pips' && <Field label={`Current ${instrument.symbol} price`} hint={`Needed to convert ${instrument.quote} into ${form.accountCurrency}`}><input type="number" min="0" step="any" inputMode="decimal" value={form.pairPrice} onChange={(e) => setField('pairPrice', e.target.value)} placeholder="Current market price" className="input-style" /></Field>}
+                {needsConversion && <Field label={`${instrument.quote} → ${form.accountCurrency} rate`} hint={`Enter the ${form.accountCurrency} value of 1 ${instrument.quote}`}><input type="number" min="0" step="any" inputMode="decimal" value={form.conversionRate} onChange={(e) => setField('conversionRate', e.target.value)} placeholder={`1 ${instrument.quote} = ? ${form.accountCurrency}`} className="input-style" /></Field>}
+              </div>
+              {error && <div className="mt-5 border border-red-400/30 bg-red-950/20 p-4 text-sm text-red-200" role="alert">{error}</div>}
+              <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={reset} className="inline-flex items-center justify-center gap-2 border border-white/15 px-5 py-4 text-xs font-bold uppercase tracking-widest text-white/65 hover:border-electric hover:text-white"><RefreshCcw className="h-4 w-4" /> Reset</button><button className="inline-flex items-center justify-center gap-2 bg-electric px-7 py-4 text-xs font-bold uppercase tracking-widest text-black shadow-glow hover:bg-skyline"><Calculator className="h-4 w-4" /> Calculate</button></div>
+            </form>
+
+            <aside className="h-fit border border-electric/25 bg-electric/[0.06] p-5 sm:p-7">
+              <div className="flex items-center gap-3"><ShieldCheck className="h-6 w-6 text-electric" /><h2 className="font-podium text-2xl uppercase">Results</h2></div>
+              <div className="mt-6 border border-dashed border-white/15 px-5 py-12 text-center text-sm leading-6 text-white/40">Complete the values and select Calculate. Your results will open on a clean summary screen.</div>
             </aside>
-          </div>
+          </div>}
         </div>
       </main>
+      {calculating && <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink px-6 text-center" role="status" aria-live="assertive"><div className="relative h-24 w-24"><div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-electric" /><div className="absolute inset-4 animate-[spin_1.3s_linear_infinite_reverse] rounded-full border border-electric/20 border-b-emerald-300" /></div><div className="mt-8 text-[10px] font-bold uppercase tracking-[0.3em] text-electric">Risk Calculation</div><h2 className="mt-3 font-podium text-4xl uppercase sm:text-5xl">Calculating Position Size</h2><p className="mt-4 max-w-md text-sm leading-7 text-white/50">Checking pip value, risk money, contract size, and currency conversion.</p></div>}
     </div>
   );
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return <label className="block"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">{label}</span>{children}{hint && <span className="mt-2 block text-[10px] leading-4 text-white/35">{hint}</span>}</label>;
+}
+
+function ModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} aria-pressed={active} className={`px-3 py-3 text-[10px] font-bold uppercase tracking-widest transition ${active ? 'bg-electric text-black shadow-glow' : 'text-white/45 hover:text-white'}`}>{children}</button>;
 }
 
 function ResultRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {

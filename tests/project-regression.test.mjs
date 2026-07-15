@@ -79,6 +79,13 @@ test('position calculator is linked from navigation and exposes complete risk si
   assert.match(calculator, /Risking pips/);
   assert.match(calculator, /Value per pip/);
   assert.match(calculator, /Risk percentage cannot exceed 100%/);
+  assert.match(calculator, /Math\.abs\(entryPrice - stopPrice\) \/ instrument\.pipSize/);
+  assert.match(calculator, /form\.stopMode === 'pips'/);
+  assert.match(calculator, /Calculating Position Size/);
+  assert.match(calculator, /setResult\(nextResult\)/);
+  assert.match(calculator, /New Calculation/);
+  assert.doesNotMatch(app, /<Calculator className=.*Calculator/);
+  assert.doesNotMatch(calculator, /<ArrowLeft/);
   assert.match(vercel, /"source": "\/position-calculator", "destination": "\/index\.html"/);
 });
 
