@@ -233,8 +233,10 @@ export default async function handler(req, res) {
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const checkout = await getCheckout(admin, body);
   if (body.action === 'createOrder') {
-    if (checkout.finalAmount < 1) return json(res, 400, { error: 'A zero-value checkout is not supported. Contact support.' });
-    const gatewayOrder = await razorpayRequest('/orders', { method: 'POST', body: JSON.stringify({ amount: checkout.finalAmount * 100, currency: 'INR', receipt: businessOrderNumber(), payment_capture: 1, notes: { course: checkout.course.name, full_name: checkout.fullName, email: checkout.email, phone: checkout.phone, trading_experience: checkout.tradingExperience, coupon: checkout.coupon?.code || '' } }) });
+    const amountInPaise = checkout.finalAmount * 100;
+    if (!Number.isSafeInteger(amountInPaise) || amountInPaise < 100) return json(res, 400, { error: 'The final payment amount must be at least Rs. 1 and use whole paise.' });
+    const gatewayOrder = await razorpayRequest('/orders', { method: 'POST', body: JSON.stringify({ amount: amountInPaise, currency: 'INR', receipt: businessOrderNumber(), payment_capture: 1, notes: { course: checkout.course.name, full_name: checkout.fullName, email: checkout.email, phone: checkout.phone, trading_experience: checkout.tradingExperience, coupon: checkout.coupon?.code || '' } }) });
+    if (!/^order_[A-Za-z0-9]+$/.test(String(gatewayOrder.id || '')) || gatewayOrder.amount !== amountInPaise || gatewayOrder.currency !== 'INR') throw new HttpError(502, 'Razorpay returned an invalid order. Please try again.');
     return json(res, 200, { keyId: process.env.RAZORPAY_KEY_ID, razorpayOrderId: gatewayOrder.id, amount: gatewayOrder.amount, currency: gatewayOrder.currency, courseName: checkout.course.name });
   }
   if (body.action !== 'verifyPayment') return json(res, 400, { error: 'Invalid checkout action.' });

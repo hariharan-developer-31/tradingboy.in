@@ -20,6 +20,16 @@ test('production CSP permits Razorpay Checkout and its risk-detection CDN', () =
   const vercel = read('vercel.json');
   assert.match(vercel, /script-src[^\n]*https:\/\/checkout\.razorpay\.com[^\n]*https:\/\/cdn\.razorpay\.com/);
   assert.match(vercel, /frame-src https:\/\/api\.razorpay\.com https:\/\/checkout\.razorpay\.com/);
+  assert.match(vercel, /payment=\(self \\"https:\/\/checkout\.razorpay\.com\\" \\"https:\/\/api\.razorpay\.com\\"\)/);
+  assert.doesNotMatch(vercel, /payment=\(\)/);
+});
+
+test('checkout validates a minimum integer paise amount and the returned gateway order', () => {
+  const api = read('api/checkout.js');
+  assert.match(api, /const amountInPaise = checkout\.finalAmount \* 100/);
+  assert.match(api, /Number\.isSafeInteger\(amountInPaise\)/);
+  assert.match(api, /amountInPaise < 100/);
+  assert.match(api, /gatewayOrder\.amount !== amountInPaise/);
 });
 
 test('browser opens Razorpay only after details and consent and verifies before success', () => {

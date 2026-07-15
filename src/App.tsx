@@ -707,9 +707,16 @@ function MainApp() {
 
   const loadRazorpay = () => new Promise<boolean>((resolve) => {
     if ((window as any).Razorpay) return resolve(true);
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(Boolean((window as any).Razorpay)), { once: true });
+      existing.addEventListener('error', () => resolve(false), { once: true });
+      return;
+    }
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
+    script.async = true;
+    script.onload = () => resolve(Boolean((window as any).Razorpay));
     script.onerror = () => resolve(false);
     document.head.appendChild(script);
   });
@@ -776,7 +783,12 @@ function MainApp() {
           }
         },
       });
-      razorpay.on('payment.failed', (response: any) => { setSubmitStatus('error'); setSubmitError(response.error?.description || 'Payment failed. Please try again.'); });
+      razorpay.on('payment.failed', (response: any) => {
+        setSubmitStatus('error');
+        const description = response.error?.description || 'Payment failed. Please try again.';
+        const reason = response.error?.reason ? ` (${String(response.error.reason).replace(/_/g, ' ')})` : '';
+        setSubmitError(`${description}${reason}`);
+      });
       razorpay.open();
     } catch (error) {
       setSubmitStatus('error');
