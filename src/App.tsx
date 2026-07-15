@@ -589,9 +589,14 @@ function MainApp() {
 
   useEffect(() => {
     const syncHashPage = () => {
-      const wantsCheckout = window.location.hash === '#checkout';
+      const checkoutSlug = window.location.hash.startsWith('#checkout/') ? window.location.hash.slice('#checkout/'.length) : '';
+      const wantsCheckout = window.location.hash === '#checkout' || Boolean(checkoutSlug);
+      if (checkoutSlug) {
+        const checkoutCourse = publicCourses.find((course) => courseSlug(course.title) === checkoutSlug);
+        if (checkoutCourse) setJoinForm((current) => current.courseName === checkoutCourse.title ? current : { ...current, courseName: checkoutCourse.title });
+      }
       if (checkoutOpenRef.current && !wantsCheckout && !allowCheckoutExitRef.current && joinStepRef.current !== 'thanks') {
-        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#checkout`);
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#checkout/${courseSlug(joinForm.courseName)}`);
         setCheckoutCancelOpen(true);
         return;
       }
@@ -607,7 +612,7 @@ function MainApp() {
     syncHashPage();
     window.addEventListener('hashchange', syncHashPage);
     return () => window.removeEventListener('hashchange', syncHashPage);
-  }, []);
+  }, [joinForm.courseName, publicCourses]);
 
   useEffect(() => {
     if (!adminOpen) return undefined;
@@ -736,7 +741,7 @@ function MainApp() {
     setCreatedOrderId('');
     setCheckoutCancelOpen(false);
     setJoinForm((current) => ({ ...current, courseName }));
-    window.location.hash = 'checkout';
+    window.location.hash = `checkout/${courseSlug(courseName)}`;
   };
 
   const openCourseDetails = (course: PublicCourse) => {

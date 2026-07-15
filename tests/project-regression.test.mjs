@@ -56,6 +56,16 @@ test('checkout loads live public courses and resolves legacy course names', () =
   assert.match(viteConfig, /server\.middlewares\.use\('\/api\/courses'/);
 });
 
+test('checkout URL preserves the selected course across refreshes', () => {
+  const app = read('src/App.tsx');
+
+  assert.match(app, /window\.location\.hash = `checkout\/\$\{courseSlug\(courseName\)\}`/);
+  assert.match(app, /window\.location\.hash\.startsWith\('#checkout\/'\)/);
+  assert.match(app, /publicCourses\.find\(\(course\) => courseSlug\(course\.title\) === checkoutSlug\)/);
+  assert.match(app, /courseName: checkoutCourse\.title/);
+  assert.match(app, /window\.location\.hash === '#checkout' \|\| Boolean\(checkoutSlug\)/);
+});
+
 test('checkout emails both the student and admin with a secure payment verification link', () => {
   const checkout = read('api/checkout.js');
   const vite = read('vite.config.ts');
