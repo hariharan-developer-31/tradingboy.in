@@ -81,7 +81,11 @@ export default function PositionCalculator() {
   }, []);
 
   const installCalculator = async () => {
-    if (!installPrompt) return;
+    if (!installPrompt) {
+      const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      window.alert(isAppleMobile ? 'To install, tap Share and then Add to Home Screen.' : 'Open your browser menu and choose Install app or Add to Home screen.');
+      return;
+    }
     await installPrompt.prompt();
     await installPrompt.userChoice;
     setInstallPrompt(null);
@@ -90,9 +94,9 @@ export default function PositionCalculator() {
   return <div className={`${shellClass} [&>div>header]:hidden [&>div]:!min-h-[calc(100vh-73px)]`}>
     <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 text-white sm:px-10 lg:px-16">
       <nav className="mx-auto flex max-w-7xl items-center gap-4" aria-label="Calculator navigation">
-        {calculatorType ? <button type="button" onClick={() => setCalculatorType(null)} aria-label="Back to calculator selection" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></button> : <a href="/" aria-label="Back to home" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></a>}
+        {calculatorType ? <button type="button" onClick={() => setCalculatorType(null)} aria-label="Back to calculator selection" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></button> : <a href="/" aria-label="Back to home" className="hidden h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric lg:flex"><ArrowLeft className="h-5 w-5" /></a>}
         <button type="button" onClick={() => setCalculatorType(null)} className="text-left font-podium text-lg uppercase transition hover:text-electric">{heading}</button>
-        {installPrompt && <button type="button" onClick={installCalculator} aria-label="Install position calculator app" className="ml-auto flex h-10 items-center justify-center gap-2 border border-electric/35 px-3 text-electric transition hover:bg-electric hover:text-black"><Download className="h-4 w-4" /><span className="hidden text-[10px] font-bold uppercase tracking-widest sm:inline">Install</span></button>}
+        {!calculatorType && <button type="button" onClick={installCalculator} aria-label="Install position calculator app" className="calculator-install-glow ml-auto flex h-10 items-center justify-center gap-2 border border-electric/55 bg-electric/10 px-3 text-electric transition hover:bg-electric hover:text-black lg:hidden"><Download className="h-4 w-4" /><span className="hidden text-[10px] font-bold uppercase tracking-widest sm:inline">Install</span></button>}
       </nav>
     </header>
     {calculatorType === 'forex' ? <ForexCalculator onChangeType={() => setCalculatorType(null)} /> : calculatorType === 'futures' ? <FuturesCalculator onChangeType={() => setCalculatorType(null)} /> : <CalculatorChoice onSelect={setCalculatorType} />}

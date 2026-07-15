@@ -409,6 +409,10 @@
     animation: cta-glow-pulse 3.6s ease-in-out infinite;
   }
 
+  .calculator-install-glow {
+    animation: cta-glow-pulse 2.4s ease-in-out infinite;
+  }
+
   .site-shell main a:hover,
   .site-shell main button:hover,
   .site-shell header a:hover,
