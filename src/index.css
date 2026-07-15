@@ -21,6 +21,11 @@
   .calculator-forex main form + aside,
   .calculator-futures main form + aside { display: none; }
   .calculator-futures main > div.relative.mx-auto > .max-w-3xl { display: none; }
+  .calculator-futures main button[aria-pressed="true"] {
+    background-color: #6ee7b7;
+    color: #080d12;
+    box-shadow: 0 0 22px rgba(110, 231, 183, 0.22);
+  }
 }
 
 @layer base {
