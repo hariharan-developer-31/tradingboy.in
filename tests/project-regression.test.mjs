@@ -84,6 +84,16 @@ test('position calculator is linked from navigation and exposes complete risk si
   assert.match(calculator, /Calculating Position Size/);
   assert.match(calculator, /setResult\(nextResult\)/);
   assert.match(calculator, /New Calculation/);
+  assert.match(calculator, /text-\[2\.5rem\]/);
+  assert.match(calculator, /Choose Your Market/);
+  assert.match(calculator, /code: 'MES'[\s\S]*tickSize: 0\.25, tickValue: 1\.25/);
+  assert.match(calculator, /code: 'MNQ'[\s\S]*tickSize: 0\.25, tickValue: 0\.50/);
+  assert.match(calculator, /code: 'MGC'[\s\S]*tickSize: 0\.10, tickValue: 1/);
+  assert.match(calculator, /code: 'MCL'[\s\S]*tickSize: 0\.01, tickValue: 1/);
+  assert.match(calculator, /const contracts = Math\.floor\(exactContracts\)/);
+  assert.match(calculator, /Math\.abs\(entry - stop\) \/ instrument\.tickSize/);
+  assert.match(calculator, /Calculating Futures Size/);
+  assert.match(calculator, /risk budget too small/);
   assert.doesNotMatch(app, /<Calculator className=.*Calculator/);
   assert.doesNotMatch(calculator, /<ArrowLeft/);
   assert.match(vercel, /"source": "\/position-calculator", "destination": "\/index\.html"/);

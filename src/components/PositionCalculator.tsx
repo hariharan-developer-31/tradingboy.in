@@ -3,6 +3,7 @@ import { Calculator, RefreshCcw, ShieldCheck } from 'lucide-react';
 
 type Instrument = { symbol: string; base: string; quote: string; pipSize: number; contractSize: number; label: string };
 type Result = { riskMoney: number; riskPercent: number; units: number; lots: number; brokerSizing: number; pipValue: number; stopLoss: number };
+type FuturesInstrument = { code: string; name: string; size: 'mini' | 'micro'; tickSize: number; tickValue: number; unit: string };
 
 const instruments: Instrument[] = [
   ['EURUSD', 'EUR', 'USD', 0.0001, 100000, 'EUR/USD'], ['GBPUSD', 'GBP', 'USD', 0.0001, 100000, 'GBP/USD'],
@@ -19,7 +20,25 @@ const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD', 'INR
 const initialForm = { symbol: 'EURUSD', accountCurrency: 'USD', accountSize: '', riskMode: 'percent' as 'percent' | 'money', riskPercent: '1', riskMoney: '', stopMode: 'pips' as 'pips' | 'levels', stopLoss: '', entryPrice: '', stopPrice: '', brokerLotUnit: '1', conversionRate: '', pairPrice: '' };
 const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 
+const futuresInstruments: FuturesInstrument[] = [
+  { code: 'ES', name: 'E-mini S&P 500', size: 'mini', tickSize: 0.25, tickValue: 12.50, unit: 'index points' },
+  { code: 'MES', name: 'Micro E-mini S&P 500', size: 'micro', tickSize: 0.25, tickValue: 1.25, unit: 'index points' },
+  { code: 'NQ', name: 'E-mini Nasdaq-100', size: 'mini', tickSize: 0.25, tickValue: 5, unit: 'index points' },
+  { code: 'MNQ', name: 'Micro E-mini Nasdaq-100', size: 'micro', tickSize: 0.25, tickValue: 0.50, unit: 'index points' },
+  { code: 'GC', name: 'Gold Futures', size: 'mini', tickSize: 0.10, tickValue: 10, unit: 'USD per troy ounce' },
+  { code: 'MGC', name: 'Micro Gold', size: 'micro', tickSize: 0.10, tickValue: 1, unit: 'USD per troy ounce' },
+  { code: 'CL', name: 'WTI Crude Oil', size: 'mini', tickSize: 0.01, tickValue: 10, unit: 'USD per barrel' },
+  { code: 'MCL', name: 'Micro WTI Crude Oil', size: 'micro', tickSize: 0.01, tickValue: 1, unit: 'USD per barrel' },
+];
+
 export default function PositionCalculator() {
+  const [calculatorType, setCalculatorType] = useState<'forex' | 'futures' | null>(null);
+  if (calculatorType === 'forex') return <ForexCalculator onChangeType={() => setCalculatorType(null)} />;
+  if (calculatorType === 'futures') return <FuturesCalculator onChangeType={() => setCalculatorType(null)} />;
+  return <CalculatorChoice onSelect={setCalculatorType} />;
+}
+
+function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState('');
   const [result, setResult] = useState<Result | null>(null);
@@ -81,7 +100,7 @@ export default function PositionCalculator() {
       <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 sm:px-10 lg:px-16">
         <nav className="mx-auto flex max-w-7xl items-center justify-between" aria-label="Calculator navigation">
           <a href="/" className="text-xs font-bold uppercase tracking-widest text-white/65 hover:text-electric">Home</a>
-          <div className="font-podium text-lg uppercase">Position Calculator</div>
+          <button type="button" onClick={onChangeType} className="font-podium text-lg uppercase hover:text-electric">Position Calculator</button>
         </nav>
       </header>
       <main className="relative overflow-hidden px-5 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
@@ -89,7 +108,7 @@ export default function PositionCalculator() {
         <div className="relative mx-auto max-w-6xl">
           {!result && <div className="max-w-3xl">
             <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-electric">Risk Management Tool</div>
-            <h1 className="mt-4 font-podium text-5xl uppercase leading-none sm:text-7xl">Position Size Calculator</h1>
+            <h1 className="mt-4 font-podium text-[2.5rem] uppercase leading-none sm:text-7xl">Position Size Calculator</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">Calculate a risk-based forex or gold position before placing a trade. Enter the same values you use with your broker; the result is informational, not financial advice.</p>
           </div>}
 
@@ -149,6 +168,56 @@ export default function PositionCalculator() {
       {calculating && <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink px-6 text-center" role="status" aria-live="assertive"><div className="relative h-24 w-24"><div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-electric" /><div className="absolute inset-4 animate-[spin_1.3s_linear_infinite_reverse] rounded-full border border-electric/20 border-b-emerald-300" /></div><div className="mt-8 text-[10px] font-bold uppercase tracking-[0.3em] text-electric">Risk Calculation</div><h2 className="mt-3 font-podium text-4xl uppercase sm:text-5xl">Calculating Position Size</h2><p className="mt-4 max-w-md text-sm leading-7 text-white/50">Checking pip value, risk money, contract size, and currency conversion.</p></div>}
     </div>
   );
+}
+
+function CalculatorChoice({ onSelect }: { onSelect: (type: 'forex' | 'futures') => void }) {
+  return <div className="min-h-screen bg-ink text-white"><header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 sm:px-10 lg:px-16"><nav className="mx-auto flex max-w-7xl items-center justify-between"><a href="/" className="text-xs font-bold uppercase tracking-widest text-white/65 hover:text-electric">Home</a><div className="font-podium text-lg uppercase">Position Calculator</div></nav></header><main className="relative flex min-h-[calc(100vh-73px)] items-center overflow-hidden px-5 py-12 sm:px-8"><div className="pointer-events-none absolute left-1/2 top-1/3 h-96 w-[75%] -translate-x-1/2 bg-electric/10 blur-[130px]" /><div className="relative mx-auto w-full max-w-4xl text-center"><div className="text-[10px] font-bold uppercase tracking-[0.3em] text-electric">Choose Your Market</div><h1 className="mt-4 font-podium text-[2.5rem] uppercase leading-none sm:text-7xl">Position Size Calculator</h1><p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">Forex uses pip value and lots. Futures uses exchange tick value and whole contracts. Select the market you are sizing.</p><div className="mt-10 grid gap-5 sm:grid-cols-2"><button type="button" onClick={() => onSelect('forex')} className="group border border-electric/35 bg-electric/[0.07] p-7 text-left transition hover:border-electric hover:bg-electric/[0.12] sm:p-9"><div className="text-[10px] font-bold uppercase tracking-[0.25em] text-electric">Lots &amp; Pips</div><h2 className="mt-3 font-podium text-4xl uppercase">Forex</h2><p className="mt-4 text-sm leading-7 text-white/50">Size currency pairs and gold using account currency, risk, pip distance, and broker lot type.</p><span className="mt-7 inline-block text-xs font-bold uppercase tracking-widest text-white group-hover:text-electric">Open Forex Calculator →</span></button><button type="button" onClick={() => onSelect('futures')} className="group border border-emerald-400/30 bg-emerald-400/[0.06] p-7 text-left transition hover:border-emerald-300 hover:bg-emerald-400/[0.1] sm:p-9"><div className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-300">Contracts &amp; Ticks</div><h2 className="mt-3 font-podium text-4xl uppercase">Futures</h2><p className="mt-4 text-sm leading-7 text-white/50">Size E-mini, Micro E-mini, metals, and energy contracts without exceeding your risk budget.</p><span className="mt-7 inline-block text-xs font-bold uppercase tracking-widest text-white group-hover:text-emerald-300">Open Futures Calculator →</span></button></div></div></main></div>;
+}
+
+type FuturesResult = { budget: number; riskPercent: number; stopTicks: number; stopPoints: number; exactContracts: number; contracts: number; actualRisk: number };
+
+function FuturesCalculator({ onChangeType }: { onChangeType: () => void }) {
+  const [contractSize, setContractSize] = useState<'mini' | 'micro'>('micro');
+  const [code, setCode] = useState('MES');
+  const [accountSize, setAccountSize] = useState('');
+  const [riskMode, setRiskMode] = useState<'percent' | 'money'>('percent');
+  const [riskPercent, setRiskPercent] = useState('1');
+  const [riskMoney, setRiskMoney] = useState('');
+  const [stopMode, setStopMode] = useState<'ticks' | 'levels'>('ticks');
+  const [stopTicks, setStopTicks] = useState('');
+  const [entryPrice, setEntryPrice] = useState('');
+  const [stopPrice, setStopPrice] = useState('');
+  const [error, setError] = useState('');
+  const [calculating, setCalculating] = useState(false);
+  const [result, setResult] = useState<FuturesResult | null>(null);
+  const available = futuresInstruments.filter((item) => item.size === contractSize);
+  const instrument = futuresInstruments.find((item) => item.code === code) || available[0];
+
+  const changeSize = (size: 'mini' | 'micro') => { setContractSize(size); setCode(futuresInstruments.find((item) => item.size === size)?.code || 'MES'); setResult(null); setError(''); };
+  const reset = () => { setAccountSize(''); setRiskMode('percent'); setRiskPercent('1'); setRiskMoney(''); setStopMode('ticks'); setStopTicks(''); setEntryPrice(''); setStopPrice(''); setResult(null); setError(''); };
+  const calculate = (event: FormEvent) => {
+    event.preventDefault();
+    const balance = Number(accountSize);
+    const riskInput = Number(riskMode === 'percent' ? riskPercent : riskMoney);
+    const entry = Number(entryPrice);
+    const stop = Number(stopPrice);
+    const ticks = stopMode === 'ticks' ? Number(stopTicks) : Math.abs(entry - stop) / instrument.tickSize;
+    if (!Number.isFinite(balance) || balance <= 0) return setError('Enter an account size greater than zero.');
+    if (!Number.isFinite(riskInput) || riskInput <= 0) return setError(`Enter a valid risk ${riskMode === 'percent' ? 'percentage' : 'amount'}.`);
+    if (riskMode === 'percent' && riskInput > 100) return setError('Risk percentage cannot exceed 100%.');
+    if (stopMode === 'levels' && (!Number.isFinite(entry) || entry <= 0 || !Number.isFinite(stop) || stop <= 0)) return setError('Enter valid entry and stop-loss prices.');
+    if (!Number.isFinite(ticks) || ticks <= 0) return setError(stopMode === 'levels' ? 'Entry and stop-loss prices must be different.' : 'Enter a stop distance greater than zero ticks.');
+    const budget = riskMode === 'percent' ? balance * riskInput / 100 : riskInput;
+    if (budget > balance) return setError('Risk money cannot be greater than the account size.');
+    const riskPerContract = ticks * instrument.tickValue;
+    const exactContracts = budget / riskPerContract;
+    const contracts = Math.floor(exactContracts);
+    const next = { budget, riskPercent: budget / balance * 100, stopTicks: ticks, stopPoints: ticks * instrument.tickSize, exactContracts, contracts, actualRisk: contracts * riskPerContract };
+    setError(''); setCalculating(true); window.setTimeout(() => { setResult(next); setCalculating(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }, 850);
+  };
+
+  return <div className="min-h-screen bg-ink text-white"><header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 sm:px-10 lg:px-16"><nav className="mx-auto flex max-w-7xl items-center justify-between"><a href="/" className="text-xs font-bold uppercase tracking-widest text-white/65 hover:text-electric">Home</a><button type="button" onClick={onChangeType} className="font-podium text-lg uppercase hover:text-electric">Position Calculator</button></nav></header><main className="relative overflow-hidden px-5 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20"><div className="pointer-events-none absolute left-1/2 top-0 h-96 w-[75%] -translate-x-1/2 bg-emerald-400/10 blur-[130px]" /><div className="relative mx-auto max-w-6xl">{!result && <div className="max-w-3xl"><div className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-300">Futures Risk Tool</div><h1 className="mt-4 font-podium text-[2.5rem] uppercase leading-none sm:text-7xl">Futures Position Calculator</h1><p className="mt-5 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">Calculate whole contracts from your maximum risk and the exchange-defined tick value. Results always round down to avoid exceeding the selected risk.</p></div>}
+  {result ? <section className="mx-auto mt-10 max-w-2xl border border-emerald-400/25 bg-emerald-400/[0.06] p-5 sm:p-8"><div className="flex items-center gap-3"><ShieldCheck className="h-6 w-6 text-emerald-300" /><h2 className="font-podium text-3xl uppercase">Futures Results</h2></div><div className="mt-6 space-y-3"><ResultRow label="Instrument" value={`${instrument.code} · ${instrument.name}`} /><ResultRow label="Contracts to trade" value={result.contracts > 0 ? String(result.contracts) : '0 — risk budget too small'} highlight /><ResultRow label="Exact mathematical size" value={numberFormat.format(result.exactContracts)} /><ResultRow label="Risk budget" value={`USD ${numberFormat.format(result.budget)}`} /><ResultRow label="Actual risk after rounding" value={`USD ${numberFormat.format(result.actualRisk)}`} /><ResultRow label="Risk ratio" value={`${numberFormat.format(result.riskPercent)}%`} /><ResultRow label="Stop distance" value={`${numberFormat.format(result.stopTicks)} ticks · ${numberFormat.format(result.stopPoints)} points`} /><ResultRow label="Tick value" value={`USD ${instrument.tickValue.toFixed(2)}`} /><ResultRow label="Point value" value={`USD ${(instrument.tickValue / instrument.tickSize).toFixed(2)}`} />{result.contracts === 0 && <p className="border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">One contract would exceed your risk budget. Do not round up; use a smaller contract or a wider risk budget only if it fits your plan.</p>}<p className="pt-3 text-[10px] leading-5 text-white/35">Contract specifications can change. Confirm the active contract and tick value with your broker or exchange before placing an order.</p></div><button type="button" onClick={reset} className="mt-7 inline-flex w-full items-center justify-center gap-2 border border-emerald-300/40 px-6 py-4 text-xs font-bold uppercase tracking-widest text-emerald-300 hover:bg-emerald-300 hover:text-black"><RefreshCcw className="h-4 w-4" /> New Calculation</button></section> : <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]"><form onSubmit={calculate} className="border border-white/10 bg-black/35 p-5 sm:p-8"><div className="grid gap-5 sm:grid-cols-2"><div className="sm:col-span-2"><span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">Contract size</span><div className="grid grid-cols-2 border border-white/10 p-1"><ModeButton active={contractSize === 'mini'} onClick={() => changeSize('mini')}>E-mini / Standard</ModeButton><ModeButton active={contractSize === 'micro'} onClick={() => changeSize('micro')}>Micro</ModeButton></div></div><Field label="Futures contract"><select value={instrument.code} onChange={(e) => { setCode(e.target.value); setResult(null); setError(''); }} className="input-style">{available.map((item) => <option key={item.code} value={item.code}>{item.code} — {item.name}</option>)}</select></Field><Field label="Account size (USD)"><input type="number" min="0" step="any" inputMode="decimal" value={accountSize} onChange={(e) => setAccountSize(e.target.value)} placeholder="e.g. 25,000" className="input-style" /></Field><div className="sm:col-span-2"><span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">Risk input</span><div className="mb-3 grid grid-cols-2 border border-white/10 p-1"><ModeButton active={riskMode === 'percent'} onClick={() => setRiskMode('percent')}>Percentage</ModeButton><ModeButton active={riskMode === 'money'} onClick={() => setRiskMode('money')}>Money (USD)</ModeButton></div>{riskMode === 'percent' ? <input type="number" min="0" max="100" step="any" inputMode="decimal" value={riskPercent} onChange={(e) => setRiskPercent(e.target.value)} placeholder="Risk ratio, %" className="input-style" /> : <input type="number" min="0" step="any" inputMode="decimal" value={riskMoney} onChange={(e) => setRiskMoney(e.target.value)} placeholder="Risk money, USD" className="input-style" />}</div><div className="sm:col-span-2"><span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">Stop-loss input</span><div className="mb-3 grid grid-cols-2 border border-white/10 p-1"><ModeButton active={stopMode === 'ticks'} onClick={() => setStopMode('ticks')}>Use Ticks</ModeButton><ModeButton active={stopMode === 'levels'} onClick={() => setStopMode('levels')}>Use Price Levels</ModeButton></div>{stopMode === 'ticks' ? <Field label="Stop distance" hint={`1 tick = ${instrument.tickSize} ${instrument.unit} · $${instrument.tickValue.toFixed(2)}`}><input type="number" min="0" step="any" inputMode="decimal" value={stopTicks} onChange={(e) => setStopTicks(e.target.value)} placeholder="e.g. 20 ticks" className="input-style" /></Field> : <div className="grid gap-4 sm:grid-cols-2"><Field label="Entry price"><input type="number" min="0" step="any" inputMode="decimal" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} placeholder="Entry level" className="input-style" /></Field><Field label="Stop-loss price" hint="Ticks are calculated automatically"><input type="number" min="0" step="any" inputMode="decimal" value={stopPrice} onChange={(e) => setStopPrice(e.target.value)} placeholder="Stop level" className="input-style" /></Field></div>}</div></div>{error && <div className="mt-5 border border-red-400/30 bg-red-950/20 p-4 text-sm text-red-200" role="alert">{error}</div>}<div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={reset} className="inline-flex items-center justify-center gap-2 border border-white/15 px-5 py-4 text-xs font-bold uppercase tracking-widest text-white/65 hover:border-electric"><RefreshCcw className="h-4 w-4" /> Reset</button><button className="inline-flex items-center justify-center gap-2 bg-emerald-300 px-7 py-4 text-xs font-bold uppercase tracking-widest text-black hover:bg-emerald-200"><Calculator className="h-4 w-4" /> Calculate</button></div></form><aside className="h-fit border border-emerald-400/25 bg-emerald-400/[0.06] p-5 sm:p-7"><div className="flex items-center gap-3"><ShieldCheck className="h-6 w-6 text-emerald-300" /><h2 className="font-podium text-2xl uppercase">Contract Details</h2></div><div className="mt-6 space-y-3"><ResultRow label="Code" value={instrument.code} /><ResultRow label="Tick size" value={String(instrument.tickSize)} /><ResultRow label="Tick value" value={`$${instrument.tickValue.toFixed(2)}`} /><ResultRow label="Point value" value={`$${(instrument.tickValue / instrument.tickSize).toFixed(2)}`} /></div><p className="mt-5 text-[10px] leading-5 text-white/35">Sizing is based on whole contracts; fractional futures contracts cannot be traded.</p></aside></div>}</div></main>{calculating && <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink px-6 text-center" role="status" aria-live="assertive"><div className="relative h-24 w-24"><div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-emerald-300" /><div className="absolute inset-4 animate-[spin_1.3s_linear_infinite_reverse] rounded-full border border-emerald-300/20 border-b-electric" /></div><div className="mt-8 text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-300">Contract Risk</div><h2 className="mt-3 font-podium text-4xl uppercase sm:text-5xl">Calculating Futures Size</h2><p className="mt-4 max-w-md text-sm leading-7 text-white/50">Checking stop ticks, exchange tick value, and whole-contract risk.</p></div>}</div>;
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
