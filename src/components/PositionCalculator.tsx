@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Calculator, RefreshCcw, ShieldCheck } from 'lucide-react';
 
 type Instrument = { symbol: string; base: string; quote: string; pipSize: number; contractSize: number; label: string };
@@ -21,7 +21,7 @@ const instruments: Instrument[] = [
 ];
 
 const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD', 'INR', 'SGD', 'HKD', 'ZAR', 'TRY', 'MXN', 'NOK', 'SEK', 'DKK', 'PLN', 'HUF', 'CZK', 'CNH', 'THB'];
-const initialForm = { symbol: 'EURUSD', accountCurrency: 'USD', accountSize: '', riskMode: 'percent' as 'percent' | 'money', riskPercent: '1', riskMoney: '', stopMode: 'pips' as 'pips' | 'levels', stopLoss: '', entryPrice: '', stopPrice: '', brokerLotUnit: '1', conversionRate: '', pairPrice: '' };
+const initialForm = { symbol: 'EURUSD', accountCurrency: 'USD', accountSize: '', riskMode: 'percent' as 'percent' | 'money', riskPercent: '1', riskMoney: '', stopMode: 'pips' as 'pips' | 'levels', stopLoss: '', entryPrice: '', stopPrice: '', brokerLotUnit: '1' };
 const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 
 const futuresInstruments: FuturesInstrument[] = [
@@ -55,6 +55,8 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
   const [error, setError] = useState('');
   const [result, setResult] = useState<Result | null>(null);
   const [calculating, setCalculating] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(1);
+  const [rateStatus, setRateStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('ready');
   const [pairSearchOpen, setPairSearchOpen] = useState(false);
   const [activePairIndex, setActivePairIndex] = useState(0);
   const pairQuery = form.symbol.trim().toUpperCase();
@@ -70,8 +72,41 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
     return instruments.find((item) => item.symbol === symbol);
   }, [form.symbol]);
   const instrument = selectedInstrument || instruments[0];
-  const needsPairPrice = form.accountCurrency === instrument.base;
-  const needsConversion = form.accountCurrency !== instrument.quote && !needsPairPrice;
+  const needsConversion = form.accountCurrency !== instrument.quote;
+
+  useEffect(() => {
+    if (!selectedInstrument) {
+      setExchangeRate(null);
+      setRateStatus('idle');
+      return;
+    }
+    if (!needsConversion) {
+      setExchangeRate(1);
+      setRateStatus('ready');
+      return;
+    }
+
+    const controller = new AbortController();
+    setExchangeRate(null);
+    setRateStatus('loading');
+    fetch(`https://api.frankfurter.dev/v2/rate/${instrument.quote}/${form.accountCurrency}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error('Rate unavailable');
+        return response.json() as Promise<{ rate?: number }>;
+      })
+      .then((data) => {
+        if (!Number.isFinite(data.rate) || Number(data.rate) <= 0) throw new Error('Invalid rate');
+        setExchangeRate(Number(data.rate));
+        setRateStatus('ready');
+      })
+      .catch((rateError: unknown) => {
+        if (rateError instanceof DOMException && rateError.name === 'AbortError') return;
+        setExchangeRate(null);
+        setRateStatus('error');
+      });
+
+    return () => controller.abort();
+  }, [form.accountCurrency, instrument.quote, needsConversion, selectedInstrument]);
 
   const setField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -116,15 +151,9 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
     if (!Number.isFinite(stopLoss) || stopLoss <= 0) return setError(form.stopMode === 'levels' ? 'Entry and stop-loss prices must be different.' : 'Enter a stop-loss distance greater than zero pips.');
     if (!Number.isFinite(brokerLotUnit) || brokerLotUnit <= 0) return setError('Broker lot unit must be greater than zero.');
 
-    let quoteToAccount = 1;
-    if (needsPairPrice) {
-      const pairPrice = Number(form.stopMode === 'levels' ? form.entryPrice : form.pairPrice);
-      if (!Number.isFinite(pairPrice) || pairPrice <= 0) return setError(`Enter the current ${instrument.label} market price.`);
-      quoteToAccount = 1 / pairPrice;
-    } else if (needsConversion) {
-      quoteToAccount = Number(form.conversionRate);
-      if (!Number.isFinite(quoteToAccount) || quoteToAccount <= 0) return setError(`Enter how many ${form.accountCurrency} equal 1 ${instrument.quote}.`);
-    }
+    if (needsConversion && rateStatus === 'loading') return setError('Please wait while the currency conversion rate loads.');
+    if (needsConversion && (rateStatus === 'error' || !exchangeRate)) return setError('The automatic currency conversion rate is temporarily unavailable. Please try again.');
+    const quoteToAccount = exchangeRate ?? 1;
 
     const riskMoney = form.riskMode === 'percent' ? accountSize * riskInput / 100 : riskInput;
     if (riskMoney > accountSize) return setError('Risk money cannot be greater than the account size.');
@@ -223,8 +252,7 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
                   </div>
                   {form.stopMode === 'pips' ? <Field label="Stop-loss distance" hint="Enter pips, not broker points"><input type="number" min="0" step="any" inputMode="decimal" value={form.stopLoss} onChange={(e) => setField('stopLoss', e.target.value)} placeholder="e.g. 30 pips" className="input-style" /></Field> : <div className="grid gap-4 sm:grid-cols-2"><Field label="Entry price"><input type="number" min="0" step="any" inputMode="decimal" value={form.entryPrice} onChange={(e) => setField('entryPrice', e.target.value)} placeholder="e.g. 2350.50" className="input-style" /></Field><Field label="Stop-loss price" hint="Pips are calculated automatically"><input type="number" min="0" step="any" inputMode="decimal" value={form.stopPrice} onChange={(e) => setField('stopPrice', e.target.value)} placeholder="e.g. 2345.50" className="input-style" /></Field></div>}
                 </div>
-                {needsPairPrice && form.stopMode === 'pips' && <Field label={`Current ${instrument.symbol} price`} hint={`Needed to convert ${instrument.quote} into ${form.accountCurrency}`}><input type="number" min="0" step="any" inputMode="decimal" value={form.pairPrice} onChange={(e) => setField('pairPrice', e.target.value)} placeholder="Current market price" className="input-style" /></Field>}
-                {needsConversion && <Field label={`${instrument.quote} → ${form.accountCurrency} rate`} hint={`Enter the ${form.accountCurrency} value of 1 ${instrument.quote}`}><input type="number" min="0" step="any" inputMode="decimal" value={form.conversionRate} onChange={(e) => setField('conversionRate', e.target.value)} placeholder={`1 ${instrument.quote} = ? ${form.accountCurrency}`} className="input-style" /></Field>}
+                {needsConversion && <div className={`text-xs ${rateStatus === 'error' ? 'text-red-300' : 'text-white/40'}`} aria-live="polite">{rateStatus === 'loading' ? `Loading ${instrument.quote} → ${form.accountCurrency} rate…` : rateStatus === 'error' ? 'Automatic conversion rate unavailable. Please try again.' : `Automatic rate: 1 ${instrument.quote} = ${exchangeRate?.toFixed(6)} ${form.accountCurrency}`}</div>}
               </div>
               {error && <div className="mt-5 border border-red-400/30 bg-red-950/20 p-4 text-sm text-red-200" role="alert">{error}</div>}
               <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={reset} className="inline-flex items-center justify-center gap-2 border border-white/15 px-5 py-4 text-xs font-bold uppercase tracking-widest text-white/65 hover:border-electric hover:text-white"><RefreshCcw className="h-4 w-4" /> Reset</button><button className="inline-flex items-center justify-center gap-2 bg-electric px-7 py-4 text-xs font-bold uppercase tracking-widest text-black shadow-glow hover:bg-skyline"><Calculator className="h-4 w-4" /> Calculate</button></div>
