@@ -55,12 +55,19 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
   const [error, setError] = useState('');
   const [result, setResult] = useState<Result | null>(null);
   const [calculating, setCalculating] = useState(false);
+  const [pairSearchOpen, setPairSearchOpen] = useState(false);
+  const [activePairIndex, setActivePairIndex] = useState(0);
+  const pairQuery = form.symbol.trim().toUpperCase();
+  const pairSuggestions = useMemo(() => {
+    if (!pairQuery) return instruments.slice(0, 8);
+    return instruments
+      .filter((item) => item.symbol.includes(pairQuery) || item.label.toUpperCase().includes(pairQuery))
+      .slice(0, 8);
+  }, [pairQuery]);
+  const pairSearchInvalid = pairQuery.length > 0 && pairSuggestions.length === 0;
   const selectedInstrument = useMemo(() => {
     const symbol = form.symbol.trim().toUpperCase();
-    const listed = instruments.find((item) => item.symbol === symbol);
-    if (listed) return listed;
-    if (/^[A-Z]{6}$/.test(symbol)) return { symbol, base: symbol.slice(0, 3), quote: symbol.slice(3), pipSize: symbol.endsWith('JPY') ? 0.01 : 0.0001, contractSize: 100000, label: `${symbol.slice(0, 3)}/${symbol.slice(3)}` };
-    return undefined;
+    return instruments.find((item) => item.symbol === symbol);
   }, [form.symbol]);
   const instrument = selectedInstrument || instruments[0];
   const needsPairPrice = form.accountCurrency === instrument.base;
@@ -70,6 +77,27 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
     setForm((current) => ({ ...current, [field]: value }));
     setResult(null);
     setError('');
+  };
+
+  const selectPair = (symbol: string) => {
+    setField('symbol', symbol);
+    setPairSearchOpen(false);
+    setActivePairIndex(0);
+  };
+
+  const handlePairKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') return setPairSearchOpen(false);
+    if (!pairSearchOpen || pairSuggestions.length === 0) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActivePairIndex((current) => (current + 1) % pairSuggestions.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActivePairIndex((current) => (current - 1 + pairSuggestions.length) % pairSuggestions.length);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      selectPair(pairSuggestions[activePairIndex]?.symbol ?? pairSuggestions[0].symbol);
+    }
   };
 
   const calculate = (event: FormEvent) => {
@@ -145,7 +173,37 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
           ) : <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
             <form onSubmit={calculate} className="border border-white/10 bg-black/35 p-5 sm:p-8">
               <div className="grid gap-5">
-                <Field label="Search currency pair" hint={`${instruments.length} supported forex and metal pairs`}><input list="forex-pairs" value={form.symbol} onChange={(e) => setField('symbol', e.target.value.toUpperCase())} autoComplete="off" placeholder="Type EURUSD, GBPJPY, XAUUSD..." className="input-style" /><datalist id="forex-pairs">{instruments.map((item) => <option key={item.symbol} value={item.symbol}>{item.label}</option>)}</datalist></Field>
+                <div className="relative">
+                  <label htmlFor="forex-pair-search" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">Search currency pair</label>
+                  <input
+                    id="forex-pair-search"
+                    value={form.symbol}
+                    onChange={(event) => { setField('symbol', event.target.value.toUpperCase().replace(/[^A-Z]/g, '')); setPairSearchOpen(true); setActivePairIndex(0); }}
+                    onFocus={() => setPairSearchOpen(true)}
+                    onBlur={() => setPairSearchOpen(false)}
+                    onKeyDown={handlePairKeyDown}
+                    autoComplete="off"
+                    placeholder="Type EURUSD, GBPJPY, XAUUSD..."
+                    className={`input-style ${pairSearchInvalid ? '!border-red-400/60' : ''}`}
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={pairSearchOpen && pairSuggestions.length > 0}
+                    aria-controls="forex-pair-suggestions"
+                    aria-invalid={pairSearchInvalid}
+                    aria-describedby={pairSearchInvalid ? 'forex-pair-error' : 'forex-pair-hint'}
+                  />
+                  {pairSearchOpen && pairSuggestions.length > 0 && (
+                    <div id="forex-pair-suggestions" role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto border border-electric/35 bg-[#080d12] shadow-2xl">
+                      {pairSuggestions.map((item, index) => (
+                        <button key={item.symbol} type="button" role="option" aria-selected={index === activePairIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => selectPair(item.symbol)} onMouseEnter={() => setActivePairIndex(index)} className={`flex w-full items-center justify-between gap-4 border-b border-white/[0.06] px-4 py-3 text-left transition last:border-b-0 ${index === activePairIndex ? 'bg-electric/15 text-electric' : 'text-white hover:bg-white/5'}`}>
+                          <strong className="text-sm tracking-wide">{item.symbol}</strong>
+                          <span className="text-xs text-white/45">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {pairSearchInvalid ? <span id="forex-pair-error" className="mt-2 block text-xs text-red-300" role="alert">Enter a valid currency pair.</span> : <span id="forex-pair-hint" className="mt-2 block text-[10px] leading-4 text-white/35">{instruments.length} supported forex and metal pairs</span>}
+                </div>
                 <Field label="Account currency"><select value={form.accountCurrency} onChange={(e) => setField('accountCurrency', e.target.value)} className="input-style">{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></Field>
                 <Field label="Account size"><input type="number" min="0" step="any" inputMode="decimal" value={form.accountSize} onChange={(e) => setField('accountSize', e.target.value)} placeholder="e.g. 10,000" className="input-style" /></Field>
                 <Field label="Broker lot unit" hint="1 standard · 0.1 mini · 0.01 micro"><select value={form.brokerLotUnit} onChange={(e) => setField('brokerLotUnit', e.target.value)} className="input-style"><option value="1">1 — Standard account</option><option value="0.1">0.1 — Mini account</option><option value="0.01">0.01 — Micro account</option></select></Field>
