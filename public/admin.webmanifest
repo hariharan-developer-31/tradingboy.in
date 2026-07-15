@@ -1,0 +1,26 @@
+{
+  "id": "/admin",
+  "name": "Trading Boy Admin",
+  "short_name": "TB Admin",
+  "description": "Secure administration for Trading Boy Academy.",
+  "start_url": "/admin#admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07131c",
+  "theme_color": "#07131c",
+  "icons": [
+    {
+      "src": "/admin-pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/admin-pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

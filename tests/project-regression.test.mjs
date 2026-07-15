@@ -74,6 +74,28 @@ test('checkout emails both the student and admin with a secure payment verificat
   assert.match(app, /window\.location\.hash === '#admin\/payments' \? 'payments' : 'home'/);
 });
 
+test('admin panel alone exposes an installable PWA with branded icons and an offline shell', () => {
+  const app = read('src/App.tsx');
+  const manifest = read('public/admin.webmanifest');
+  const worker = read('public/admin-sw.js');
+  const vercel = read('vercel.json');
+
+  assert.match(app, /if \(!adminOpen\) return undefined/);
+  assert.match(app, /manifest\.href = '\/admin\.webmanifest'/);
+  assert.match(app, /register\('\/admin-sw\.js', \{ scope: '\/admin' \}\)/);
+  assert.match(app, /'Install Admin App'/);
+  assert.match(manifest, /"start_url": "\/admin#admin"/);
+  assert.match(manifest, /"scope": "\/admin"/);
+  assert.match(manifest, /admin-pwa-192\.png/);
+  assert.match(manifest, /admin-pwa-512\.png/);
+  assert.match(worker, /url\.pathname\.startsWith\('\/api\/'\)/);
+  assert.match(worker, /caches\.match\('\/admin'\)/);
+  assert.match(vercel, /"source": "\/admin", "destination": "\/index\.html"/);
+  assert.match(vercel, /"source": "\/admin-sw\.js"/);
+  assert.match(vercel, /max-age=0, must-revalidate/);
+  assert.doesNotMatch(read('index.html'), /admin\.webmanifest/);
+});
+
 test('local dev admin API returns Razorpay and coupon metadata', () => {
   const viteConfig = read('vite.config.ts');
 

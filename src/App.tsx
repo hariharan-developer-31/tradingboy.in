@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, useRef } from 'react';
-import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Clock, Copy, CreditCard, Edit3, Eye, EyeOff, Globe, History, Instagram, Loader2, LogOut, Mail, MapPin, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, AtSign, BookOpen, CheckCircle, Clock, Copy, CreditCard, Download, Edit3, Eye, EyeOff, Globe, History, Instagram, Loader2, LogOut, Mail, MapPin, MessageSquareQuote, Paperclip, Plus, RefreshCcw, Send, Ticket, Trash2, Upload, X } from 'lucide-react';
 import aboutImageUrl from './assets/About us.webp';
 import forexMasteryThumbnail from './assets/course-forex-mastery.webp';
 import fundedTraderThumbnail from './assets/course-funded-trader.webp';
@@ -10,6 +10,11 @@ import AutoScroll from 'embla-carousel-auto-scroll';
 
 const DEFAULT_COURSE = 'Complete Forex Mastery';
 const PROMO_COUPON_CODE = 'TB1500';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
 
 const fallbackCourses = [
   {
@@ -367,7 +372,7 @@ function MainApp() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutCancelOpen, setCheckoutCancelOpen] = useState(false);
   const [courseDetailsOpen, setCourseDetailsOpen] = useState<PublicCourse | null>(null);
-  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(() => window.location.pathname === '/admin' || window.location.hash.startsWith('#admin'));
   const [hasScrolled, setHasScrolled] = useState(false);
   const [publicCourses, setPublicCourses] = useState<PublicCourse[]>(fallbackCourses);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
@@ -403,6 +408,9 @@ function MainApp() {
   const [showAdminPasscode, setShowAdminPasscode] = useState(false);
   const [adminSection, setAdminSection] = useState<'home' | 'courses' | 'payments' | 'coupons' | 'testimonials' | 'emails' | 'support'>(() => window.location.hash === '#admin/payments' ? 'payments' : 'home');
   const [adminStatus, setAdminStatus] = useState('');
+  const [adminPwaReady, setAdminPwaReady] = useState(false);
+  const [adminPwaInstalled, setAdminPwaInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
+  const [adminInstallPrompt, setAdminInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [adminCourses, setAdminCourses] = useState<PublicCourse[]>([]);
   const [adminOrders, setAdminOrders] = useState<CourseOrder[]>([]);
   const [adminCoupons, setAdminCoupons] = useState<Coupon[]>([]);
@@ -588,7 +596,10 @@ function MainApp() {
         return;
       }
       allowCheckoutExitRef.current = false;
-      const wantsAdmin = window.location.hash.startsWith('#admin');
+      const wantsAdmin = window.location.pathname === '/admin' || window.location.hash.startsWith('#admin');
+      if (wantsAdmin && window.location.pathname !== '/admin') {
+        window.history.replaceState(null, '', `/admin${window.location.search}${window.location.hash || '#admin'}`);
+      }
       setAdminOpen(wantsAdmin);
       if (window.location.hash === '#admin/payments') setAdminSection('payments');
       setCheckoutOpen(wantsCheckout);
@@ -597,6 +608,59 @@ function MainApp() {
     window.addEventListener('hashchange', syncHashPage);
     return () => window.removeEventListener('hashchange', syncHashPage);
   }, []);
+
+  useEffect(() => {
+    if (!adminOpen) return undefined;
+
+    let manifest = document.querySelector<HTMLLinkElement>('link[data-admin-pwa="manifest"]');
+    if (!manifest) {
+      manifest = document.createElement('link');
+      manifest.rel = 'manifest';
+      manifest.href = '/admin.webmanifest';
+      manifest.dataset.adminPwa = 'manifest';
+      document.head.appendChild(manifest);
+    }
+    let appleIcon = document.querySelector<HTMLLinkElement>('link[data-admin-pwa="apple-icon"]');
+    if (!appleIcon) {
+      appleIcon = document.createElement('link');
+      appleIcon.rel = 'apple-touch-icon';
+      appleIcon.href = '/admin-pwa-192.png';
+      appleIcon.dataset.adminPwa = 'apple-icon';
+      document.head.appendChild(appleIcon);
+    }
+    let appleCapable = document.querySelector<HTMLMetaElement>('meta[data-admin-pwa="apple-capable"]');
+    if (!appleCapable) {
+      appleCapable = document.createElement('meta');
+      appleCapable.name = 'apple-mobile-web-app-capable';
+      appleCapable.content = 'yes';
+      appleCapable.dataset.adminPwa = 'apple-capable';
+      document.head.appendChild(appleCapable);
+    }
+    document.title = 'Trading Boy Admin';
+
+    const captureInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setAdminInstallPrompt(event as BeforeInstallPromptEvent);
+      setAdminPwaReady(true);
+    };
+    const markInstalled = () => {
+      setAdminPwaInstalled(true);
+      setAdminInstallPrompt(null);
+    };
+    window.addEventListener('beforeinstallprompt', captureInstallPrompt);
+    window.addEventListener('appinstalled', markInstalled);
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin' })
+        .then(() => setAdminPwaReady(true))
+        .catch(() => setAdminPwaReady(false));
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', captureInstallPrompt);
+      window.removeEventListener('appinstalled', markInstalled);
+    };
+  }, [adminOpen]);
 
   useEffect(() => {
     const syncCoursePage = () => {
@@ -762,7 +826,7 @@ function MainApp() {
         currency: gatewayOrder.currency,
         name: 'TradingBoy',
         description: gatewayOrder.courseName,
-        image: `${window.location.origin}/logo.png`,
+        image: `${window.location.origin}/razorpay-logo.png`,
         order_id: gatewayOrder.razorpayOrderId,
         prefill: { name: joinForm.name, email: joinForm.email, contact: joinForm.phone },
         theme: { color: '#25aef4' },
@@ -977,6 +1041,26 @@ function MainApp() {
       setAdminStatus(error instanceof Error ? error.message : 'Could not log out securely. Please try again.');
     } finally {
       setAdminLoading(false);
+    }
+  };
+
+  const installAdminPwa = async () => {
+    if (adminPwaInstalled) {
+      setAdminStatus('Trading Boy Admin is already installed.');
+      return;
+    }
+    if (!adminInstallPrompt) {
+      setAdminStatus('To install, open your browser menu and choose “Install app” or “Add to Home Screen”.');
+      return;
+    }
+    await adminInstallPrompt.prompt();
+    const choice = await adminInstallPrompt.userChoice;
+    setAdminInstallPrompt(null);
+    if (choice.outcome === 'accepted') {
+      setAdminPwaInstalled(true);
+      setAdminStatus('Trading Boy Admin installed successfully.');
+    } else {
+      setAdminStatus('Admin app installation was cancelled.');
     }
   };
 
@@ -2199,6 +2283,10 @@ function MainApp() {
                     <h2 className="mt-2 font-podium text-3xl uppercase leading-none text-white sm:text-4xl">Trading Boy Admin</h2>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={() => void installAdminPwa()} disabled={!adminPwaReady && !adminPwaInstalled} className="inline-flex items-center gap-2 border border-electric/30 bg-electric/10 px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest text-electric transition hover:bg-electric hover:text-black disabled:cursor-not-allowed disabled:opacity-40">
+                      {adminPwaInstalled ? <CheckCircle className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                      {adminPwaInstalled ? 'App Installed' : 'Install Admin App'}
+                    </button>
                     <button onClick={() => setAdminSection('home')} className={`border px-4 py-3 font-inter text-[11px] font-bold uppercase tracking-widest transition ${adminSection === 'home' ? 'border-electric bg-electric text-black' : 'border-white/10 bg-black text-white/65 hover:border-electric hover:text-white'}`}>
                       Dashboard
                     </button>

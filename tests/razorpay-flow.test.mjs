@@ -35,6 +35,7 @@ test('checkout validates a minimum integer paise amount and the returned gateway
 test('browser opens Razorpay only after details and consent and verifies before success', () => {
   const app = read('src/App.tsx');
   assert.match(app, /checkout\.razorpay\.com\/v1\/checkout\.js/);
+  assert.match(app, /image: `\$\{window\.location\.origin\}\/razorpay-logo\.png`/);
   assert.match(app, /new \(window as any\)\.Razorpay/);
   assert.match(app, /action: 'verifyPayment'/);
   assert.match(app, /termsAccepted: true, privacyAccepted: true/);
