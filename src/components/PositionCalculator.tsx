@@ -5,18 +5,22 @@ type Instrument = { symbol: string; base: string; quote: string; pipSize: number
 type Result = { riskMoney: number; riskPercent: number; units: number; lots: number; brokerSizing: number; pipValue: number; stopLoss: number };
 type FuturesInstrument = { code: string; name: string; size: 'mini' | 'micro'; tickSize: number; tickValue: number; unit: string };
 
+const forexSymbols = [
+  'AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD', 'CADCHF', 'CADJPY', 'CHFJPY',
+  'EURAUD', 'EURCAD', 'EURCHF', 'EURGBP', 'EURJPY', 'EURNZD', 'EURUSD',
+  'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPJPY', 'GBPNZD', 'GBPUSD',
+  'NZDCAD', 'NZDCHF', 'NZDJPY', 'NZDUSD', 'USDCAD', 'USDCHF', 'USDJPY',
+  'EURCZK', 'EURDKK', 'EURHKD', 'EURHUF', 'EURNOK', 'EURPLN', 'EURSEK', 'EURSGD', 'EURTRY', 'EURZAR',
+  'GBPDKK', 'GBPHKD', 'GBPHUF', 'GBPMXN', 'GBPNOK', 'GBPPLN', 'GBPSEK', 'GBPSGD', 'GBPTRY', 'GBPZAR',
+  'USDCNH', 'USDCZK', 'USDDKK', 'USDHKD', 'USDHUF', 'USDINR', 'USDMXN', 'USDNOK', 'USDPLN', 'USDSEK', 'USDSGD', 'USDTHB', 'USDTRY', 'USDZAR',
+];
 const instruments: Instrument[] = [
-  ['EURUSD', 'EUR', 'USD', 0.0001, 100000, 'EUR/USD'], ['GBPUSD', 'GBP', 'USD', 0.0001, 100000, 'GBP/USD'],
-  ['AUDUSD', 'AUD', 'USD', 0.0001, 100000, 'AUD/USD'], ['NZDUSD', 'NZD', 'USD', 0.0001, 100000, 'NZD/USD'],
-  ['USDJPY', 'USD', 'JPY', 0.01, 100000, 'USD/JPY'], ['USDCAD', 'USD', 'CAD', 0.0001, 100000, 'USD/CAD'],
-  ['USDCHF', 'USD', 'CHF', 0.0001, 100000, 'USD/CHF'], ['EURGBP', 'EUR', 'GBP', 0.0001, 100000, 'EUR/GBP'],
-  ['EURJPY', 'EUR', 'JPY', 0.01, 100000, 'EUR/JPY'], ['GBPJPY', 'GBP', 'JPY', 0.01, 100000, 'GBP/JPY'],
-  ['AUDJPY', 'AUD', 'JPY', 0.01, 100000, 'AUD/JPY'], ['EURCAD', 'EUR', 'CAD', 0.0001, 100000, 'EUR/CAD'],
-  ['GBPCAD', 'GBP', 'CAD', 0.0001, 100000, 'GBP/CAD'], ['AUDCAD', 'AUD', 'CAD', 0.0001, 100000, 'AUD/CAD'],
-  ['XAUUSD', 'XAU', 'USD', 0.01, 100, 'Gold / US Dollar'],
-].map(([symbol, base, quote, pipSize, contractSize, label]) => ({ symbol, base, quote, pipSize, contractSize, label } as Instrument));
+  ...forexSymbols.map((symbol) => ({ symbol, base: symbol.slice(0, 3), quote: symbol.slice(3), pipSize: symbol.endsWith('JPY') ? 0.01 : 0.0001, contractSize: 100000, label: `${symbol.slice(0, 3)}/${symbol.slice(3)}` })),
+  { symbol: 'XAUUSD', base: 'XAU', quote: 'USD', pipSize: 0.01, contractSize: 100, label: 'Gold / US Dollar' },
+  { symbol: 'XAGUSD', base: 'XAG', quote: 'USD', pipSize: 0.001, contractSize: 5000, label: 'Silver / US Dollar' },
+];
 
-const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD', 'INR'];
+const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD', 'INR', 'SGD', 'HKD', 'ZAR', 'TRY', 'MXN', 'NOK', 'SEK', 'DKK', 'PLN', 'HUF', 'CZK', 'CNH', 'THB'];
 const initialForm = { symbol: 'EURUSD', accountCurrency: 'USD', accountSize: '', riskMode: 'percent' as 'percent' | 'money', riskPercent: '1', riskMoney: '', stopMode: 'pips' as 'pips' | 'levels', stopLoss: '', entryPrice: '', stopPrice: '', brokerLotUnit: '1', conversionRate: '', pairPrice: '' };
 const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 
@@ -33,11 +37,13 @@ const futuresInstruments: FuturesInstrument[] = [
 
 export default function PositionCalculator() {
   const [calculatorType, setCalculatorType] = useState<'forex' | 'futures' | null>(null);
-  return <div className="[&>div>header]:hidden [&>div]:!min-h-[calc(100vh-73px)]">
+  const shellClass = calculatorType === 'forex' ? 'calculator-shell calculator-forex' : calculatorType === 'futures' ? 'calculator-shell calculator-futures' : 'calculator-shell calculator-choice';
+  const heading = calculatorType === 'forex' ? 'Forex Calculator' : calculatorType === 'futures' ? 'Future Calculator' : 'Position Calculator';
+  return <div className={`${shellClass} [&>div>header]:hidden [&>div]:!min-h-[calc(100vh-73px)]`}>
     <header className="border-b border-white/10 bg-[#080d12]/95 px-5 py-4 text-white sm:px-10 lg:px-16">
       <nav className="mx-auto flex max-w-7xl items-center gap-4" aria-label="Calculator navigation">
-        <a href="/" aria-label="Back to home" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></a>
-        <button type="button" onClick={() => setCalculatorType(null)} className="text-left font-podium text-lg uppercase transition hover:text-electric">Position Calculator</button>
+        {calculatorType ? <button type="button" onClick={() => setCalculatorType(null)} aria-label="Back to calculator selection" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></button> : <a href="/" aria-label="Back to home" className="flex h-10 w-10 shrink-0 items-center justify-center text-white/65 transition hover:text-electric"><ArrowLeft className="h-5 w-5" /></a>}
+        <button type="button" onClick={() => setCalculatorType(null)} className="text-left font-podium text-lg uppercase transition hover:text-electric">{heading}</button>
       </nav>
     </header>
     {calculatorType === 'forex' ? <ForexCalculator onChangeType={() => setCalculatorType(null)} /> : calculatorType === 'futures' ? <FuturesCalculator onChangeType={() => setCalculatorType(null)} /> : <CalculatorChoice onSelect={setCalculatorType} />}
@@ -49,7 +55,14 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
   const [error, setError] = useState('');
   const [result, setResult] = useState<Result | null>(null);
   const [calculating, setCalculating] = useState(false);
-  const instrument = useMemo(() => instruments.find((item) => item.symbol === form.symbol) || instruments[0], [form.symbol]);
+  const selectedInstrument = useMemo(() => {
+    const symbol = form.symbol.trim().toUpperCase();
+    const listed = instruments.find((item) => item.symbol === symbol);
+    if (listed) return listed;
+    if (/^[A-Z]{6}$/.test(symbol)) return { symbol, base: symbol.slice(0, 3), quote: symbol.slice(3), pipSize: symbol.endsWith('JPY') ? 0.01 : 0.0001, contractSize: 100000, label: `${symbol.slice(0, 3)}/${symbol.slice(3)}` };
+    return undefined;
+  }, [form.symbol]);
+  const instrument = selectedInstrument || instruments[0];
   const needsPairPrice = form.accountCurrency === instrument.base;
   const needsConversion = form.accountCurrency !== instrument.quote && !needsPairPrice;
 
@@ -62,6 +75,7 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
   const calculate = (event: FormEvent) => {
     event.preventDefault();
     const accountSize = Number(form.accountSize);
+    if (!selectedInstrument) return setError('Enter a valid six-letter currency pair, such as EURUSD.');
     const entryPrice = Number(form.entryPrice);
     const stopPrice = Number(form.stopPrice);
     const stopLoss = form.stopMode === 'pips' ? Number(form.stopLoss) : Math.abs(entryPrice - stopPrice) / instrument.pipSize;
@@ -112,12 +126,6 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
       <main className="relative overflow-hidden px-5 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
         <div className="pointer-events-none absolute left-1/2 top-0 h-96 w-[75%] -translate-x-1/2 bg-electric/10 blur-[130px]" />
         <div className="relative mx-auto max-w-6xl">
-          {!result && <div className="max-w-3xl">
-            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-electric">Risk Management Tool</div>
-            <h1 className="mt-4 font-podium text-[2.5rem] uppercase leading-none sm:text-7xl">Position Size Calculator</h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">Calculate a risk-based forex or gold position before placing a trade. Enter the same values you use with your broker; the result is informational, not financial advice.</p>
-          </div>}
-
           {result ? (
             <section className="mx-auto mt-10 max-w-2xl border border-electric/25 bg-electric/[0.06] p-5 sm:p-8" aria-live="polite">
               <div className="flex items-center gap-3"><ShieldCheck className="h-6 w-6 text-electric" /><h2 className="font-podium text-3xl uppercase">Position Size Results</h2></div>
@@ -134,10 +142,10 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
               </div>
               <button type="button" onClick={reset} className="mt-7 inline-flex w-full items-center justify-center gap-2 border border-electric/40 px-6 py-4 text-xs font-bold uppercase tracking-widest text-electric hover:bg-electric hover:text-black"><RefreshCcw className="h-4 w-4" /> New Calculation</button>
             </section>
-          ) : <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+          ) : <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
             <form onSubmit={calculate} className="border border-white/10 bg-black/35 p-5 sm:p-8">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Currency pair"><select value={form.symbol} onChange={(e) => setField('symbol', e.target.value)} className="input-style">{instruments.map((item) => <option key={item.symbol} value={item.symbol}>{item.symbol} — {item.label}</option>)}</select></Field>
+              <div className="grid gap-5">
+                <Field label="Search currency pair" hint={`${instruments.length} supported forex and metal pairs`}><input list="forex-pairs" value={form.symbol} onChange={(e) => setField('symbol', e.target.value.toUpperCase())} autoComplete="off" placeholder="Type EURUSD, GBPJPY, XAUUSD..." className="input-style" /><datalist id="forex-pairs">{instruments.map((item) => <option key={item.symbol} value={item.symbol}>{item.label}</option>)}</datalist></Field>
                 <Field label="Account currency"><select value={form.accountCurrency} onChange={(e) => setField('accountCurrency', e.target.value)} className="input-style">{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></Field>
                 <Field label="Account size"><input type="number" min="0" step="any" inputMode="decimal" value={form.accountSize} onChange={(e) => setField('accountSize', e.target.value)} placeholder="e.g. 10,000" className="input-style" /></Field>
                 <Field label="Broker lot unit" hint="1 standard · 0.1 mini · 0.01 micro"><select value={form.brokerLotUnit} onChange={(e) => setField('brokerLotUnit', e.target.value)} className="input-style"><option value="1">1 — Standard account</option><option value="0.1">0.1 — Mini account</option><option value="0.01">0.01 — Micro account</option></select></Field>
@@ -164,10 +172,6 @@ function ForexCalculator({ onChangeType }: { onChangeType: () => void }) {
               <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={reset} className="inline-flex items-center justify-center gap-2 border border-white/15 px-5 py-4 text-xs font-bold uppercase tracking-widest text-white/65 hover:border-electric hover:text-white"><RefreshCcw className="h-4 w-4" /> Reset</button><button className="inline-flex items-center justify-center gap-2 bg-electric px-7 py-4 text-xs font-bold uppercase tracking-widest text-black shadow-glow hover:bg-skyline"><Calculator className="h-4 w-4" /> Calculate</button></div>
             </form>
 
-            <aside className="h-fit border border-electric/25 bg-electric/[0.06] p-5 sm:p-7">
-              <div className="flex items-center gap-3"><ShieldCheck className="h-6 w-6 text-electric" /><h2 className="font-podium text-2xl uppercase">Results</h2></div>
-              <div className="mt-6 border border-dashed border-white/15 px-5 py-12 text-center text-sm leading-6 text-white/40">Complete the values and select Calculate. Your results will open on a clean summary screen.</div>
-            </aside>
           </div>}
         </div>
       </main>

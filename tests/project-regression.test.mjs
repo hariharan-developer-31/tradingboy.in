@@ -69,6 +69,7 @@ test('checkout URL preserves the selected course across refreshes', () => {
 test('position calculator is linked from navigation and exposes complete risk sizing results', () => {
   const app = read('src/App.tsx');
   const calculator = read('src/components/PositionCalculator.tsx');
+  const css = read('src/index.css');
   const vercel = read('vercel.json');
 
   assert.match(app, /href="\/position-calculator"/);
@@ -94,6 +95,13 @@ test('position calculator is linked from navigation and exposes complete risk si
   assert.match(calculator, /Math\.abs\(entry - stop\) \/ instrument\.tickSize/);
   assert.match(calculator, /Calculating Futures Size/);
   assert.match(calculator, /risk budget too small/);
+  assert.match(calculator, /aria-label="Back to calculator selection"/);
+  assert.match(calculator, /calculatorType === 'forex' \? 'Forex Calculator'/);
+  assert.match(calculator, /calculatorType === 'futures' \? 'Future Calculator'/);
+  assert.match(calculator, /list="forex-pairs"/);
+  assert.match(calculator, /\^\[A-Z\]\{6\}\$/);
+  assert.match(css, /\.calculator-choice[\s\S]*grid-template-columns|\.calculator-choice[\s\S]*display: block/);
+  assert.match(css, /form \+ aside[\s\S]*display: none/);
   assert.doesNotMatch(app, /<Calculator className=.*Calculator/);
   assert.match(calculator, /aria-label="Back to home"[\s\S]*<ArrowLeft/);
   assert.match(app, /href="\/position-calculator"[^>]*>Calculator<\/a>/);
